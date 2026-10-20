@@ -45,6 +45,13 @@ uptime and whether ADB is on.
   rows, rearranging apps and the date belong to the rows layout and are hidden. The wallpaper
   still shows in ambient mode.
 
+## Fire TV recommendations
+
+On Fire TV most apps (Netflix, Amazon Kids…) post recommendations instead of publishing
+preview channels. Couch shows each app's recommendations as one channel, "Suggestions", in both
+layouts and in the App channels list. It reads them through notification access (see
+[setup](setup.md#3-permissions)); an app that also publishes preview channels keeps only those.
+
 ## Long-press menus
 
 - **App**: Move, Rename, Hide, App info.

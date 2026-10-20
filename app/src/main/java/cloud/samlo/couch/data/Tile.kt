@@ -1,5 +1,6 @@
 package cloud.samlo.couch.data
 
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -31,6 +32,8 @@ class Tile(
     /** Solid card colour behind the icon, for brand marks. */
     val cardColor: Int? = null,
     val iconWide: Boolean = false,
+    /** Launches instead of [intent] when set (Fire TV recommendations); [intent] stays the fallback. */
+    private val pendingIntent: PendingIntent? = null,
 ) {
     enum class Kind { APP, INPUT, PROGRAM }
 
@@ -38,6 +41,14 @@ class Tile(
     val signature: String get() = "$key|$label|$subtitle|$imageUrl|$dimmed|$iconRes|$cardColor|${(progress * 100).toInt()}|${banner?.generationId}"
 
     fun launch(context: Context) {
+        if (pendingIntent != null) {
+            try {
+                pendingIntent.send()
+                return
+            } catch (e: PendingIntent.CanceledException) {
+                // The app withdrew it: open the app instead.
+            }
+        }
         try {
             context.startActivity(intent)
         } catch (e: ActivityNotFoundException) {

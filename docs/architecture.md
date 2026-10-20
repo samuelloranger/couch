@@ -68,6 +68,8 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
   `FocusRow` of `Card`s with a thin ring) and the top pills.
 - **`Spotlight`** shows the focused program's art at its own shape with the text beside it, or the
   app's banner; like `Hero`, art waits until focus rests. `Backdrop` crossfades a faint copy.
+- **`Recommendations`** turns Fire TV's recommendation notifications (read through `MediaListener`)
+  into one channel per app that has no preview channel; `Programs` lists them with the others.
 - **`Usage`** reads usage events (with usage access) into seven days per app; `Usage.Tally` is the
   pure part and is unit tested. **`SystemInfo`** gives `SystemLine` its readings every few seconds.
 - Text uses Hanken Grotesk (`Fonts`, a Latin subset of the variable font in `assets/fonts`, OFL).

@@ -48,7 +48,7 @@ The compile step makes the very first launch as smooth as later ones.
 | Permission | What it unlocks | Command |
 |---|---|---|
 | TV listings | App channel rows (YouTube, Jellyfin…) | `adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS` |
-| Notification access | The now-playing pill | `adb shell cmd notification allow_listener cloud.samlo.couch/cloud.samlo.couch.MediaListener` |
+| Notification access | The now-playing pill, and Fire TV apps' recommendations | `adb shell cmd notification allow_listener cloud.samlo.couch/cloud.samlo.couch.MediaListener` |
 | Secure settings | Repairing the HOME takeover by itself | `adb shell pm grant cloud.samlo.couch android.permission.WRITE_SECURE_SETTINGS` |
 | Usage access | Screen time in the Index layout | `adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow` |
 
