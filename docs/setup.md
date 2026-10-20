@@ -76,8 +76,9 @@ memory). With the secure-settings permission above, Couch turns its service back
 opens and at boot. Without it, re-run the two commands.
 
 On Fire TV, the same service replaces Amazon's home screen. Fire TV Settings belongs to the same
-app, so only the home screen is replaced and Settings stays open. If you used a home-redirect app
-before, turn its accessibility service off, so only one app reacts to HOME.
+app, so only the home screen is replaced: Settings opened from the quick menu (hold HOME) stays
+open. If you used a home-redirect app before, only one app should react to HOME; the command above
+replaces the whole list of enabled services, which turns the other app's service off.
 
 ## Updating
 
