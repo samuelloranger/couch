@@ -3,6 +3,7 @@ package cloud.samlo.couch.home
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Typeface
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
@@ -77,9 +78,18 @@ class TopBar(context: Context, onSettings: () -> Unit, onUpdate: () -> Unit) : L
             return
         }
         weatherIcon.setImageResource(now.icon)
+        if (animating) (weatherIcon.drawable as? Animatable)?.start()
         weatherTemp.text = context.getString(R.string.weather_temperature, now.temperature)
         weatherPlace.text = context.getString(R.string.weather_place_range, now.place, now.high, now.low)
         weatherBox.visibility = View.VISIBLE
+    }
+
+    private var animating = false
+
+    /** The weather icon moves, like Labby's, while the home screen is showing. */
+    fun animateWeather(on: Boolean) {
+        animating = on
+        (weatherIcon.drawable as? Animatable)?.let { if (on) it.start() else it.stop() }
     }
 
     private fun buildWeather() = weatherBox.apply {

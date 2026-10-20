@@ -104,7 +104,8 @@ class HomeScreen(private val activity: Activity) {
     fun load() = loader.load()
 
     /** True when the key was consumed (waking from ambient, or reorder mode). */
-    fun consumesKey(event: KeyEvent) = ambientMode.consumesKey(event) || organizer.consumesKey(event)
+    fun consumesKey(event: KeyEvent) = ambientMode.consumesKey(event) || organizer.consumesKey(event) ||
+        (views.indexShown && views.index.consumesKey(event))
 
     private fun onLoaded(data: HomeData) {
         val lookChanged = config.look != data.config.look
@@ -141,15 +142,19 @@ class HomeScreen(private val activity: Activity) {
         if (views.indexShown) {
             views.index.topBar.nowPlaying.start()
             views.index.systemLine.start()
+            views.index.topBar.animateWeather(true)
         } else {
             views.topBar.nowPlaying.start()
+            views.topBar.animateWeather(true)
         }
     }
 
     private fun stopLive() {
         views.topBar.nowPlaying.stop()
+        views.topBar.animateWeather(false)
         views.index.topBar.nowPlaying.stop()
         views.index.systemLine.stop()
+        views.index.topBar.animateWeather(false)
     }
 
     /** Settings that change existing views rather than cards. */

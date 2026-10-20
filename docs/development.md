@@ -69,6 +69,11 @@ adb shell dumpsys gfxinfo cloud.samlo.couch | grep -E "Janky|percentile"
 Frame times above 16.7 ms drop a frame at 60 Hz. Check the 90th and 99th percentiles after any UI
 change.
 
+## Weather icons
+
+The `wx_*` drawables are Meteocons (MIT) turned into animated vectors by a script; regenerate
+them with `bun scripts/meteocons.ts` instead of editing them.
+
 ## Documentation site
 
 The pages in `docs/` are a [VitePress](https://vitepress.dev) site:

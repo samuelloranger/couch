@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.AlertDialog
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
 import cloud.samlo.couch.R
@@ -37,6 +38,7 @@ class IndexScreen(
     private val spotlight = Spotlight(activity, images)
     private val programs = FocusRow(activity).apply {
         gapDp = IndexTokens.CARD_GAP
+        leavesAtStart = true
         setStartPadding(activity.dp(STRIP_START) - activity.dp(Tokens.RING_INSET))
     }
     private val empty = IndexText(activity, 11f, 500, Tokens.textMuted, 1.4f)
@@ -111,6 +113,15 @@ class IndexScreen(
         }
         binding = false
         select(target, refresh = true)
+    }
+
+    /** Back from the channel row or the top pills returns to the selected app. True when handled. */
+    fun consumesKey(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
+        val focused = activity.currentFocus ?: return false
+        if (!programs.isAncestorOf(focused) && !topBar.isAncestorOf(focused)) return false
+        if (event.action == KeyEvent.ACTION_UP) selectedRow()?.requestFocus()
+        return true
     }
 
     /** HOME while home: back to the first app. */

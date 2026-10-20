@@ -2,6 +2,7 @@ package cloud.samlo.couch.index
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.drawable.Animatable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
@@ -57,6 +58,7 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
             return
         }
         weatherIcon.setImageResource(now.icon)
+        if (animating) (weatherIcon.drawable as? Animatable)?.start()
         temperature.text = context.getString(R.string.weather_temperature, now.temperature)
         place.text = context.getString(R.string.index_place_range, now.place, now.high, now.low)
         weather.visibility = VISIBLE
@@ -89,6 +91,14 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
 
     private fun text(sizeSp: Float, weight: Int, color: Int, lineHeight: Float = 1f) =
         IndexText(context, sizeSp, weight, color, lineHeight).apply { maxLines = 1 }
+
+    private var animating = false
+
+    /** The weather icon moves, like Labby's, while the home screen is showing. */
+    fun animateWeather(on: Boolean) {
+        animating = on
+        (weatherIcon.drawable as? Animatable)?.let { if (on) it.start() else it.stop() }
+    }
 
     /** Hidden when the TV has no inputs to switch to. */
     fun setHasInputs(has: Boolean) {

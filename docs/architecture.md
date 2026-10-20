@@ -81,7 +81,7 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
   `InputIcon.resolve`.
 - **`Images`** is the image pipeline: `Fetcher` downloads, `DiskCache` keeps remote art on disk
   (60 MB budget), and decoded bitmaps sit in a memory cache sized from the heap.
-- **`Weather`** (Open-Meteo, with Meteocons icons by Bas Milius, MIT) and **`Wallpapers`** (Bing, a subreddit through Arctic Shift, a local
+- **`Weather`** (Open-Meteo, with Meteocons icons by Bas Milius, MIT, as animated vectors) and **`Wallpapers`** (Bing, a subreddit through Arctic Shift, a local
   image) cache every answer in preferences, so a network hiccup keeps the last good result.
 
 ## Settings

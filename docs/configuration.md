@@ -37,11 +37,13 @@ it, and how often. The bottom line shows the TV's address, network traffic, memo
 uptime and whether ADB is on.
 
 - Up and down move through the apps, OK opens one. Right enters its channel; left (from the first
-  card), up or down comes back. Up from the first app reaches Inputs and Settings.
+  card), up, down or Back comes back. Up from the first app reaches Inputs and Settings.
 - With usage access ([setup](setup.md#3-permissions)), apps are ordered by screen time over the
   last seven days. Without it they keep your order and the figures are replaced by a hint.
-- Long-press an app for Rename, Hide and App info. Card size and names under cards only apply to
-  the rows layout.
+- Long-press an app for Rename, Hide and App info.
+- Customize only lists what applies to Index: card size, names under cards, descriptions, dim,
+  rows, rearranging apps and the date belong to the rows layout and are hidden. The wallpaper
+  still shows in ambient mode.
 
 ## Long-press menus
 

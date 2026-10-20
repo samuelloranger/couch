@@ -14,11 +14,13 @@ import cloud.samlo.couch.update.Versions
 
 /**
  * "Customize": every option on one TV-friendly list. Left/right changes a value in place,
- * OK cycles or opens it, and the panel on the right explains the focused option.
+ * OK cycles or opens it, and the panel on the right explains the focused option. Options that do
+ * nothing in the chosen layout are left out, and the list rebuilds when the layout changes.
  */
 class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
     private val config get() = ctx.config
+    private val rows get() = config.layout != Config.LAYOUT_INDEX
 
     override fun build() {
         look()
@@ -37,9 +39,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 Option(ctx.str(R.string.layout_rows), Config.LAYOUT_ROWS),
                 Option(ctx.str(R.string.layout_index), Config.LAYOUT_INDEX),
             ),
-            { config.layout }, { config.layout = it },
+            { config.layout },
+            {
+                config.layout = it
+                rebuild()
+            },
         )
-        o.choice(
+        if (rows) o.choice(
             ctx.str(R.string.card_size), ctx.str(R.string.card_size_help),
             listOf(
                 Option(ctx.str(R.string.size_small), "small"),
@@ -59,6 +65,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 o.restyle()
             },
         )
+        if (!rows) return
         o.toggle(ctx.str(R.string.show_labels), ctx.str(R.string.show_labels_help), { config.showLabels }, { config.showLabels = it })
         o.toggle(ctx.str(R.string.show_descriptions), ctx.str(R.string.show_descriptions_help), { config.showDescriptions }, { config.showDescriptions = it })
     }
@@ -89,7 +96,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             ),
             { config.wallpaperHours.toString() }, { config.wallpaperHours = it.toInt() },
         )
-        o.choice(
+        // Index has no hero to darken; its wallpaper only shows in ambient mode.
+        if (rows) o.choice(
             ctx.str(R.string.dim), ctx.str(R.string.dim_help),
             listOf(
                 Option(ctx.str(R.string.dim_light), "light"),
@@ -102,13 +110,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun home() {
         o.header(ctx.str(R.string.group_home))
-        o.link(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) }
+        if (rows) o.link(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) }
         o.link(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
         o.link(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
         o.link(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
             Dialogs.visibility(ctx.activity, config, ctx.files.dir) {}
         }
-        o.link(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
+        if (rows) o.link(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
             ctx.activity.setResult(SettingsActivity.RESULT_ORGANIZE)
             ctx.activity.finish()
         }
@@ -117,7 +125,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private fun clock() {
         o.header(ctx.str(R.string.group_clock))
         o.toggle(ctx.str(R.string.clock24h), ctx.str(R.string.clock24h_help), { config.clock24h }, { config.clock24h = it })
-        o.toggle(ctx.str(R.string.show_date), ctx.str(R.string.show_date_help), { config.showDate }, { config.showDate = it })
+        if (rows) o.toggle(ctx.str(R.string.show_date), ctx.str(R.string.show_date_help), { config.showDate }, { config.showDate = it })
         o.toggle(ctx.str(R.string.weather), ctx.str(R.string.weather_help), { config.weather }, { config.weather = it })
         val auto = ctx.str(R.string.city_auto)
         o.text(
@@ -165,4 +173,11 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     }
 
     private fun open(page: String) = ctx.activity.startActivity(SettingsActivity.intent(ctx.activity, page))
+
+    /** After a layout change: the same list for the other layout, focus back on the Layout row. */
+    private fun rebuild() = ctx.layout.list.post {
+        ctx.layout.list.removeAllViews()
+        build()
+        o.rows().firstOrNull { it.label.text == ctx.str(R.string.layout) }?.requestFocus()
+    }
 }

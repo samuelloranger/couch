@@ -25,6 +25,9 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
     /** The visible gap between cards, in dp; call [fixMargins] after changing it. */
     var gapDp = Tokens.CARD_GAP
 
+    /** Left from the first card may leave the row (to whatever the parent finds), as in the Index layout. */
+    var leavesAtStart = false
+
     val strip: LinearLayout = object : LinearLayout(context) {
         init {
             isChildrenDrawingOrderEnabled = true
@@ -132,10 +135,13 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
         strip.animate().translationX(target).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
     }
 
-    /** Left/right never leave the row: at either end, focus stays put. */
+    /** Left/right never leave the row (unless [leavesAtStart]): at either end, focus stays put. */
     override fun focusSearch(focused: View?, direction: Int): View? {
         val next = super.focusSearch(focused, direction)
-        if ((direction == FOCUS_LEFT || direction == FOCUS_RIGHT) && next != null && !contains(next)) return focused
+        if ((direction == FOCUS_LEFT || direction == FOCUS_RIGHT) && next != null && !contains(next)) {
+            val leaving = leavesAtStart && direction == FOCUS_LEFT && focused === strip.getChildAt(0)
+            return if (leaving) next else focused
+        }
         return next
     }
 
