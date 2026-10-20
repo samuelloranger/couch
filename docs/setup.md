@@ -75,8 +75,9 @@ replaces it. See [decisions](decisions.md#home-button) for why.
 memory). With the secure-settings permission above, Couch turns its service back on whenever it
 opens and at boot. Without it, re-run the two commands.
 
-On Fire TV, use a home-redirect app pointed at Couch instead; the accessibility service isn't
-needed.
+On Fire TV, the same service replaces Amazon's home screen. Fire TV Settings belongs to the same
+app, so only the home screen is replaced and Settings stays open. If you used a home-redirect app
+before, turn its accessibility service off, so only one app reacts to HOME.
 
 ## Updating
 

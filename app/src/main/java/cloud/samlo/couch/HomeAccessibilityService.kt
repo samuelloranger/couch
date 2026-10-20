@@ -16,7 +16,10 @@ import cloud.samlo.couch.data.Prefs
  */
 class HomeAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) openCouch()
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        // Amazon's launcher package also hosts Fire TV Settings: only its home screen is replaced.
+        if (event.packageName?.toString() == AMAZON_LAUNCHER && event.className?.toString() != AMAZON_HOME) return
+        openCouch()
     }
 
     override fun onInterrupt() = Unit
@@ -39,6 +42,8 @@ class HomeAccessibilityService : AccessibilityService() {
     companion object {
         private const val WANTED = "homeCaptureWanted"
         private const val REOPEN = "update:reopenAt"
+        private const val AMAZON_LAUNCHER = "com.amazon.tv.launcher"
+        private const val AMAZON_HOME = "com.amazon.tv.launcher.ui.HomeActivity_vNext"
         /** An update that hasn't landed by then was cancelled or failed: never reopen on a later connect. */
         private const val REOPEN_WINDOW_MS = 10 * 60_000L
         private const val WRITE_SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"

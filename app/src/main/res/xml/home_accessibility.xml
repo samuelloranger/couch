@@ -8,4 +8,4 @@
     android:canRetrieveWindowContent="false"
     android:description="@string/accessibility_description"
     android:notificationTimeout="0"
-    android:packageNames="com.google.android.tvlauncher,com.google.android.leanbacklauncher" />
+    android:packageNames="com.google.android.tvlauncher,com.google.android.leanbacklauncher,com.amazon.tv.launcher" />
