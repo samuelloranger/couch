@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.database.Cursor
 import android.media.tv.TvContract
 import android.net.Uri
-import cloud.samlo.couch.R
 
 /**
  * Reads the preview channels apps publish to the system TV provider. Other apps' rows are only
@@ -28,14 +27,15 @@ object Programs {
         context.checkSelfPermission(READ_TV_LISTINGS) == PackageManager.PERMISSION_GRANTED
 
     /**
-     * Every preview channel any app has published, for the settings list, plus one channel of
-     * [Recommendations] for each app that posts those but publishes no preview channel (Fire TV).
+     * Every preview channel any app has published, for the settings list, plus one channel per
+     * group of [Recommendations] for each app that posts those but publishes no preview channel
+     * (Fire TV).
      */
     fun allChannels(
         context: Context,
         config: Config,
         // The home loader reads fresh ones; settings pages reuse its last read instead of a binder call.
-        recommendations: Map<String, List<Recommendations.Item>> = Recommendations.lastKnown,
+        recommendations: List<Recommendations.Group> = Recommendations.lastKnown,
     ): List<ChannelInfo> {
         val order = { pkg: String -> config.pinnedApps.indexOf(pkg).let { if (it < 0) Int.MAX_VALUE else it } }
         val preview = if (!canRead(context)) emptyList() else query(context, TvContract.Channels.CONTENT_URI) { c ->
@@ -46,15 +46,17 @@ object Programs {
             ChannelInfo(c.long("_id"), pkg, c.string("display_name").orEmpty(), c.int("browsable", 0) != 0)
         }.filterNotNull()
         val withChannels = preview.map { it.packageName }.toSet()
-        val recommended = recommendations.keys
-            .filter { it !in withChannels && it !in config.hiddenApps }
-            .map { ChannelInfo(Recommendations.channelId(it), it, context.getString(R.string.channel_recommended), true) }
-        return (preview + recommended).sortedWith(compareBy({ order(it.packageName) }, { it.packageName }, { it.name }))
+        val recommended = recommendations
+            .filter { it.packageName !in withChannels && it.packageName !in config.hiddenApps }
+            .map { ChannelInfo(it.id, it.packageName, Recommendations.name(context, it.key), true) }
+        // Recommendation groups keep their rank order (stable sort); preview channels sort by name.
+        return preview.sortedBy { it.name }.plus(recommended)
+            .sortedWith(compareBy({ order(it.packageName) }, { it.packageName }))
     }
 
     /** The channels to show as rows, each with its best programs first. */
     fun channels(context: Context, config: Config): List<Channel> {
-        val recommendations = Recommendations.byPackage()
+        val recommendations = Recommendations.groups()
         return allChannels(context, config, recommendations)
             .asSequence()
             .filter { it.shown(config) }
@@ -64,8 +66,8 @@ object Programs {
             .toList()
     }
 
-    private fun programs(context: Context, info: ChannelInfo, recommendations: Map<String, List<Recommendations.Item>>): List<Tile> {
-        if (info.id < 0) return Recommendations.tiles(context, recommendations[info.packageName].orEmpty().take(MAX_ROW))
+    private fun programs(context: Context, info: ChannelInfo, recommendations: List<Recommendations.Group>): List<Tile> {
+        if (info.id < 0) return Recommendations.tiles(context, recommendations.find { it.id == info.id }?.items.orEmpty().take(MAX_ROW))
         return previewPrograms(context, info)
     }
 

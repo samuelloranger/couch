@@ -48,9 +48,10 @@ uptime and whether ADB is on.
 ## Fire TV recommendations
 
 On Fire TV most apps (Netflix, Amazon Kids…) post recommendations instead of publishing
-preview channels. Couch shows each app's recommendations as one channel, "Suggestions", in both
-layouts and in the App channels list. It reads them through notification access (see
-[setup](setup.md#3-permissions)); an app that also publishes preview channels keeps only those.
+preview channels. Apps sort them into groups ("Continue watching", "Trending now"), and Couch
+shows each group as its own channel, in both layouts and in the App channels list; an app that
+doesn't group them gets one "Suggestions" channel. Couch reads them through notification access
+(see [setup](setup.md#3-permissions)); an app that also publishes preview channels keeps only those.
 
 ## Long-press menus
 
