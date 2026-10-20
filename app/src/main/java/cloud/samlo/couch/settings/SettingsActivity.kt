@@ -40,6 +40,11 @@ class SettingsActivity : Activity() {
         if (::page.isInitialized) page.onResume()
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        Setup.onPermissionResult(this, requestCode, grantResults)
+        if (::page.isInitialized) page.onResume()
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = page.consumesKey(event) || super.dispatchKeyEvent(event)
 
     companion object {

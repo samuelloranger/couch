@@ -208,7 +208,7 @@
     <string name="setup_usage">Accès à l’utilisation</string>
     <string name="setup_usage_help">Le temps d’écran de la disposition Index et la rangée Récentes. Si la télé n’a pas d’écran pour ça : adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow</string>
     <string name="setup_channels">Programmes télé</string>
-    <string name="setup_channels_help">Les chaînes d’aperçu que publient les applis (YouTube, Jellyfin et autres).</string>
+    <string name="setup_channels_help">Les chaînes d’aperçu que publient les applis (YouTube, Jellyfin et autres). Si la télé n’a pas d’écran pour ça : adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS</string>
     <string name="group_system">Système</string>
     <string name="android_settings">Paramètres Android</string>
     <string name="android_settings_help">Les réglages de la télé.</string>

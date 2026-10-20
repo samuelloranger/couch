@@ -50,13 +50,20 @@ object Setup {
         return manager.isNotificationListenerAccessGranted(ComponentName(context, MediaListener::class.java))
     }
 
-    /** Asked in place while Android still allows it; once refused for good, only the app's own page can grant it. */
-    private fun channels(activity: Activity) {
-        if (activity.shouldShowRequestPermissionRationale(Programs.READ_TV_LISTINGS)) {
-            activity.requestPermissions(arrayOf(Programs.READ_TV_LISTINGS), REQUEST_CHANNELS)
-        } else {
-            openSettings(activity, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null)))
-        }
+    /** Asked in place; see [onPermissionResult] for a refusal Android won't ask about again. */
+    private fun channels(activity: Activity) =
+        activity.requestPermissions(arrayOf(Programs.READ_TV_LISTINGS), REQUEST_CHANNELS)
+
+    /**
+     * After a refusal "for good", Android answers [channels] at once without asking: only the
+     * app's own page can grant it then.
+     */
+    fun onPermissionResult(activity: Activity, requestCode: Int, results: IntArray) {
+        if (requestCode != REQUEST_CHANNELS) return
+        // An empty result is a cancelled request, not a refusal.
+        if ((results.firstOrNull() ?: return) == PackageManager.PERMISSION_GRANTED) return
+        if (activity.shouldShowRequestPermissionRationale(Programs.READ_TV_LISTINGS)) return
+        openSettings(activity, Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null)))
     }
 
     /** Many TVs (Fire TV among them) leave these screens out; the help text then gives the ADB command. */

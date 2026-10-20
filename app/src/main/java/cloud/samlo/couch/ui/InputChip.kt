@@ -9,7 +9,8 @@ import cloud.samlo.couch.data.Tile
 
 /**
  * "Switch to PlayStation" in the top bar, offered when a device on an input turns on. It never
- * takes focus: the TV may already have switched, and a press elsewhere must not be stolen.
+ * moves focus to itself: the TV may already have switched, and a press elsewhere must not be
+ * stolen. Up reaches it like the other chips.
  * It goes away on its own after a while, once used, or when Couch leaves the screen.
  */
 class InputChip(context: Context) : TextView(context) {

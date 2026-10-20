@@ -208,7 +208,7 @@
     <string name="setup_usage">Usage access</string>
     <string name="setup_usage_help">Screen time in the Index layout and the Recent row. If the TV has no screen for it: adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow</string>
     <string name="setup_channels">TV listings</string>
-    <string name="setup_channels_help">The preview channels apps publish (YouTube, Jellyfin and others).</string>
+    <string name="setup_channels_help">The preview channels apps publish (YouTube, Jellyfin and others). If the TV has no screen for it: adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS</string>
     <string name="group_system">System</string>
     <string name="android_settings">Android settings</string>
     <string name="android_settings_help">The TV’s own settings.</string>
