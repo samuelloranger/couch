@@ -23,12 +23,28 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private val rows get() = config.layout != Config.LAYOUT_INDEX
 
     override fun build() {
+        // Something missing goes first, where it's seen; once all is granted it moves out of the way.
+        val missing = !Setup.allOn(ctx.activity)
+        if (missing) setup()
         look()
         wallpaper()
         home()
         clock()
         standby()
+        if (!missing) setup()
         system()
+    }
+
+    /** Back from Android's settings: show what was just granted. */
+    override fun onResume() = o.rows().forEach { it.refresh() }
+
+    private fun setup() {
+        o.header(ctx.str(R.string.group_setup))
+        for (item in Setup.items) {
+            o.link(ctx.str(item.title), ctx.str(item.help), { ctx.str(if (item.isOn(ctx.activity)) R.string.yes else R.string.setup_turn_on) }) {
+                item.open(ctx.activity)
+            }
+        }
     }
 
     private fun look() {

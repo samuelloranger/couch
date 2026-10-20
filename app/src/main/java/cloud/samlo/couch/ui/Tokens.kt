@@ -69,6 +69,9 @@ object Tokens {
     const val FOCUS_OUT_MS = 140L
     const val PRESS_MS = 80L
 
+    /** Chips and pills that come and go, and card art arriving after its card. */
+    const val APPEAR_MS = 220L
+
     /** Expo-out: fast start, long soft landing. */
     val ease = PathInterpolator(0.16f, 1f, 0.3f, 1f)
 }

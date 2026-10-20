@@ -50,10 +50,15 @@ The compile step makes the very first launch as smooth as later ones.
 | TV listings | App channel rows (YouTube, Jellyfin…) | `adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS` |
 | Notification access | The now-playing pill, and Fire TV apps' recommendations | `adb shell cmd notification allow_listener cloud.samlo.couch/cloud.samlo.couch.MediaListener` |
 | Secure settings | Repairing the HOME takeover by itself | `adb shell pm grant cloud.samlo.couch android.permission.WRITE_SECURE_SETTINGS` |
-| Usage access | Screen time in the Index layout | `adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow` |
+| Usage access | Screen time in the Index layout, and the Recent row | `adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow` |
 
 Couch asks for TV listings itself on first launch; the others are only possible over ADB.
 Everything works without them, minus the feature in that row.
+
+**Customize → Permissions** shows which of them are on. OK on one that is off opens the TV's
+own settings screen for it, when the TV has one (many leave these screens out, Fire TV among
+them; the command above still works). The group sits at the top of Customize while something is
+missing, and near the bottom once everything is granted.
 
 ### 4. Make HOME open Couch
 

@@ -11,6 +11,7 @@ import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.FocusRow
 import cloud.samlo.couch.ui.Hero
 import cloud.samlo.couch.ui.Rows
+import cloud.samlo.couch.ui.glideToNewPlaces
 
 /**
  * Reorder mode for the apps row: OK picks an app up and puts it down, left/right moves it,
@@ -31,8 +32,10 @@ class Organizer(
     fun start(pick: Card? = null) {
         val row = rows.section(Sections.APPS)?.row ?: return
         active = true
-        if (pick != null) pick.requestFocus() else row.restoreFocus()
-        if (pick != null) startMoving(pick) else hint()
+        // Move from Recent moves the app in the apps row, whose order is the one saved.
+        val card = pick?.let { p -> row.cards().firstOrNull { it.tile.key == p.tile.key } }
+        if (card != null) card.requestFocus() else row.restoreFocus()
+        if (card != null) startMoving(card) else hint()
     }
 
     fun stop() {
@@ -102,6 +105,7 @@ class Organizer(
         if (to < 0 || to >= strip.childCount) return
         // Move the neighbour rather than the card, so the focused card never detaches.
         val neighbour = strip.getChildAt(to)
+        glideToNewPlaces(card, neighbour)
         strip.removeView(neighbour)
         strip.addView(neighbour, from)
         row.fixMargins()

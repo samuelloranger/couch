@@ -8,6 +8,7 @@ import cloud.samlo.couch.data.InputSource
 import cloud.samlo.couch.data.Programs
 import cloud.samlo.couch.data.Sections
 import cloud.samlo.couch.data.Tile
+import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 import java.io.File
@@ -18,7 +19,7 @@ class SectionData(val id: String, val title: String, val tiles: List<Tile>, val 
     val signature = "$title|$w|$h|$look|" + tiles.joinToString(";") { it.signature }
 }
 
-/** Assembles the rows (apps, inputs, app channels) in the user's order, minus hidden ones. */
+/** Assembles the rows (apps, recent apps, inputs, app channels) in the user's order, minus hidden ones. */
 object SectionBuilder {
     fun build(context: Context, config: Config, iconsDir: File?): List<SectionData> {
         val scale = config.cardScale
@@ -28,6 +29,13 @@ object SectionBuilder {
         val (appW, appH) = size(Tokens.APP_W, Tokens.APP_H)
         val apps = AppSource.tiles(context, config, iconsDir, context.dp(appW), context.dp(appH))
         byId[Sections.APPS] = SectionData(Sections.APPS, context.getString(R.string.section_apps), apps, appW, appH, config.look)
+
+        // The same cards as the apps row, so they share its banners; empty without usage access.
+        val byKey = apps.associateBy { it.key }
+        val recent = Sections.recent(apps.map { it.key }, Usage.lastWeek(context)).map { byKey.getValue(it) }
+        if (recent.isNotEmpty()) {
+            byId[Sections.RECENT] = SectionData(Sections.RECENT, context.getString(R.string.section_recent), recent, appW, appH, config.look)
+        }
 
         val (inputW, inputH) = size(Tokens.INPUT_W, Tokens.INPUT_H)
         val inputs = InputSource.tiles(context, config, iconsDir, context.dp(inputW), context.dp(inputH))

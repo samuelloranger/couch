@@ -127,8 +127,9 @@ class IndexScreen(
     /** HOME while home: back to the first app. */
     fun reset() {
         val first = list.rows().firstOrNull() ?: return
-        list.reveal(0, animate = false)
+        // Focus first: its listener selects the row, then the jump lands the selection with the list.
         first.requestFocus()
+        list.reveal(0, animate = false)
     }
 
     private fun row(entry: IndexEntry) = AppRow(activity, entry).apply {
@@ -145,10 +146,7 @@ class IndexScreen(
         val changed = row.entry.key != selectedKey
         selectedKey = row.entry.key
         val inRow = programs.hasFocus()
-        list.rows().forEach {
-            it.chosen = it === row
-            it.inRow = it === row && inRow
-        }
+        list.select(row, inRow)
         if (row.hasFocus()) list.reveal(list.rows().indexOf(row))
         if (changed || refresh) show(row.entry, deferStrip = changed && !refresh)
         else if (!inRow) showProgram(row.entry, null)
@@ -237,7 +235,7 @@ class IndexScreen(
 
     private fun onProgramFocused(card: Card) {
         val row = selectedRow() ?: return
-        row.inRow = true
+        list.select(row, inRow = true)
         showProgram(row.entry, card.tile)
     }
 

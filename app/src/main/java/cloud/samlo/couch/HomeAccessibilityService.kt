@@ -67,11 +67,10 @@ class HomeAccessibilityService : AccessibilityService() {
         fun restore(context: Context) {
             if (!Prefs.of(context).getBoolean(WANTED, false)) return
             if (context.checkSelfPermission(WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) return
+            if (isEnabled(context)) return
             val me = ComponentName(context, HomeAccessibilityService::class.java).flattenToString()
             val resolver = context.contentResolver
-            val enabled = Settings.Secure.getString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
-            val services = enabled.split(':').filter { it.isNotBlank() }
-            if (me in services && Settings.Secure.getInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1) return
+            val services = enabledServices(context)
             try {
                 Settings.Secure.putString(resolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, (services + me).distinct().joinToString(":"))
                 Settings.Secure.putInt(resolver, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
@@ -79,5 +78,16 @@ class HomeAccessibilityService : AccessibilityService() {
                 // Permission revoked since the check: nothing to do.
             }
         }
+
+        /** True while Android has the service turned on. */
+        fun isEnabled(context: Context): Boolean {
+            val me = ComponentName(context, HomeAccessibilityService::class.java).flattenToString()
+            return me in enabledServices(context) &&
+                Settings.Secure.getInt(context.contentResolver, Settings.Secure.ACCESSIBILITY_ENABLED, 0) == 1
+        }
+
+        private fun enabledServices(context: Context) =
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
+                .split(':').filter { it.isNotBlank() }
     }
 }

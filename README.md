@@ -35,14 +35,16 @@ launcher. Plain Android Views, no AndroidX, no Compose, no tracking: the APK is 
 
 - Two layouts: rows of cards with a hero area for the focused show or film, or **Index**, a list
   of your apps beside what the selected one offers and your screen time with it.
-- Apps row, HDMI inputs row with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…),
-  and the preview channels apps publish (YouTube, Jellyfin and others).
+- Apps row, recently used apps, HDMI inputs row with brand logos (PlayStation, Xbox, Nintendo
+  Switch, Apple TV…), and the preview channels apps publish (YouTube, Jellyfin and others).
+- When a console or player on an input turns on, a chip offers to switch to it.
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
 - Weather (Open-Meteo, located automatically or by city), clock, now playing.
 - Ambient mode after a few idle minutes: full-screen wallpaper, large clock, weather.
 - Long-press any card to move, rename, hide or change its icon.
 - **Customize**: card size, accent colour, dimming, names under cards, row order and
-  visibility, app channels, inputs, clock format, weather, ambient delay.
+  visibility, app channels, inputs, clock format, weather, ambient delay, and which permissions
+  are still missing.
 - HOME button takeover on TVs that hardwire HOME to the stock launcher, repairing itself if
   Android drops it.
 - Updates itself: an Update button appears when a new release is out, one confirmation installs it.

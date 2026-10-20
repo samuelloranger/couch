@@ -128,7 +128,7 @@ class NowPlaying(context: Context) : LinearLayout(context) {
         val name = meta?.getString(MediaMetadata.METADATA_KEY_TITLE)
         if (chosen == null || name == null) {
             if (hasFocus()) focusSearch(View.FOCUS_DOWN)?.requestFocus()
-            visibility = View.GONE
+            fadeOut()
             return
         }
         title.text = name
@@ -139,7 +139,7 @@ class NowPlaying(context: Context) : LinearLayout(context) {
         val bitmap: Bitmap? = meta.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART) ?: meta.getBitmap(MediaMetadata.METADATA_KEY_ART)
         art.setImageBitmap(bitmap)
         art.visibility = if (bitmap != null) View.VISIBLE else View.GONE
-        visibility = View.VISIBLE
+        fadeIn()
     }
 
     private fun pill(color: Int, stroke: Int?) = GradientDrawable().apply {

@@ -16,6 +16,7 @@ import android.widget.TextView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.WeatherNow
+import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.UpdateChip
@@ -23,14 +24,15 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.showLongDate
 
 /**
- * The strip in the top right corner: what's playing, an update when there is one, the weather,
- * the settings gear and the clock. Reading order is right to left, so the gear sits between the
- * weather and the clock. The strip is anchored right, so the update chip appears without moving
- * the weather, gear or clock.
+ * The strip in the top right corner: an input that just turned on, what's playing, an update when
+ * there is one, the weather, the settings gear and the clock. Reading order is right to left, so
+ * the gear sits between the weather and the clock. The strip is anchored right, so the chips
+ * appear without moving the weather, gear or clock.
  */
 @SuppressLint("ViewConstructor")
 class TopBar(context: Context, onSettings: () -> Unit, onUpdate: () -> Unit) : LinearLayout(context) {
     val nowPlaying = NowPlaying(context)
+    val inputOffer = InputChip(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
     private val weatherBox = LinearLayout(context)
     private val weatherIcon = ImageView(context)
@@ -53,6 +55,7 @@ class TopBar(context: Context, onSettings: () -> Unit, onUpdate: () -> Unit) : L
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
+        addView(inputOffer, LayoutParams(WRAP_CONTENT, context.dp(40)).apply { marginEnd = context.dp(24) })
         addView(nowPlaying, LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginEnd = context.dp(24) })
         addView(update, LayoutParams(WRAP_CONTENT, context.dp(40)).apply { marginEnd = context.dp(24) })
         addView(buildWeather(), LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginEnd = context.dp(28) })

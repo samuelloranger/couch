@@ -9,6 +9,8 @@
     <!-- Home -->
     <string name="section_inputs">Entrées</string>
     <string name="section_apps">Applications</string>
+    <string name="section_recent">Récentes</string>
+    <string name="input_offer">Passer à %1$s</string>
     <string name="input_disconnected">Débranché</string>
     <string name="launch_failed">Impossible d’ouvrir %1$s</string>
     <string name="settings">Paramètres</string>
@@ -196,6 +198,17 @@
     <string name="ambient">Mode ambiant</string>
     <string name="ambient_help">Après ce délai sans toucher la télécommande sur l’accueil : grande horloge, météo et fond d’écran. N’importe quelle touche le ferme.</string>
     <string name="ambient_never">Jamais</string>
+    <string name="group_setup">Autorisations</string>
+    <string name="setup_turn_on">Activer  ›</string>
+    <string name="setup_no_screen">Cette télé n’a pas d’écran de réglage pour ça. L’aide à droite donne une autre façon.</string>
+    <string name="setup_home">Bouton HOME</string>
+    <string name="setup_home_help">Ouvre Couch quand tu appuies sur HOME, sur les télés qui envoient HOME à leur propre lanceur. Active « Couch : bouton Accueil » dans les réglages d’accessibilité. Inutile si HOME ouvre déjà Couch.</string>
+    <string name="setup_notifications">Accès aux notifications</string>
+    <string name="setup_notifications_help">Affiche ce qui joue dans la barre du haut et, sur Fire TV, les recommandations des applis. Si la télé n’a pas d’écran pour ça : adb shell cmd notification allow_listener cloud.samlo.couch/cloud.samlo.couch.MediaListener</string>
+    <string name="setup_usage">Accès à l’utilisation</string>
+    <string name="setup_usage_help">Le temps d’écran de la disposition Index et la rangée Récentes. Si la télé n’a pas d’écran pour ça : adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow</string>
+    <string name="setup_channels">Programmes télé</string>
+    <string name="setup_channels_help">Les chaînes d’aperçu que publient les applis (YouTube, Jellyfin et autres).</string>
     <string name="group_system">Système</string>
     <string name="android_settings">Paramètres Android</string>
     <string name="android_settings_help">Les réglages de la télé.</string>

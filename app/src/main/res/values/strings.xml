@@ -9,6 +9,8 @@
     <!-- Home -->
     <string name="section_inputs">Inputs</string>
     <string name="section_apps">Apps</string>
+    <string name="section_recent">Recent</string>
+    <string name="input_offer">Switch to %1$s</string>
     <string name="input_disconnected">Disconnected</string>
     <string name="launch_failed">Couldn’t open %1$s</string>
     <string name="settings">Settings</string>
@@ -196,6 +198,17 @@
     <string name="ambient">Ambient mode</string>
     <string name="ambient_help">After this long on the home screen without touching the remote: large clock, weather and wallpaper. Any button closes it.</string>
     <string name="ambient_never">Never</string>
+    <string name="group_setup">Permissions</string>
+    <string name="setup_turn_on">Turn on  ›</string>
+    <string name="setup_no_screen">This TV has no settings screen for this. The help on the right gives another way.</string>
+    <string name="setup_home">HOME button</string>
+    <string name="setup_home_help">Opens Couch when you press HOME, on TVs that send HOME to their own launcher. Turn on “Couch: Home button” in the accessibility settings. Not needed if HOME already opens Couch.</string>
+    <string name="setup_notifications">Notification access</string>
+    <string name="setup_notifications_help">Shows what’s playing in the top bar and, on Fire TV, the recommendations apps post. If the TV has no screen for it: adb shell cmd notification allow_listener cloud.samlo.couch/cloud.samlo.couch.MediaListener</string>
+    <string name="setup_usage">Usage access</string>
+    <string name="setup_usage_help">Screen time in the Index layout and the Recent row. If the TV has no screen for it: adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow</string>
+    <string name="setup_channels">TV listings</string>
+    <string name="setup_channels_help">The preview channels apps publish (YouTube, Jellyfin and others).</string>
     <string name="group_system">System</string>
     <string name="android_settings">Android settings</string>
     <string name="android_settings_help">The TV’s own settings.</string>

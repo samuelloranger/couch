@@ -49,13 +49,23 @@ class CardContent(
         }, fill())
         val view = image()
         addView(view, fill())
+        // Art already in memory is set before the card is drawn; art that arrives later fades in
+        // over the title (an ImageView without a background fades without an offscreen layer).
+        var arrivedLate = false
         images.load(
             url,
             context.dp(widthDp),
             context.dp(heightDp),
             context.dpf(radiusDp),
             isCurrent = isAlive,
-        ) { view.setImageBitmap(it) }
+        ) {
+            view.setImageBitmap(it)
+            if (arrivedLate) {
+                view.alpha = 0f
+                view.animate().alpha(1f).setDuration(Tokens.APPEAR_MS).setInterpolator(Tokens.ease).start()
+            }
+        }
+        arrivedLate = true
     }
 
     private fun iconColumn() = LinearLayout(context).apply {

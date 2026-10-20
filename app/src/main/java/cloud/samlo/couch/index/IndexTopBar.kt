@@ -11,16 +11,21 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.WeatherNow
+import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.UpdateChip
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
-/** Top right: what's playing, an update when there is one, the weather, then Inputs and Settings. */
+/**
+ * Top right: an input that just turned on, what's playing, an update when there is one, the
+ * weather, then Inputs and Settings.
+ */
 @SuppressLint("ViewConstructor")
 class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit, onUpdate: () -> Unit) : LinearLayout(context) {
     val nowPlaying = NowPlaying(context)
+    val inputOffer = InputChip(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
     val inputs = pill(R.drawable.ic_pill_inputs, R.string.section_inputs, onInputs)
     val settings = pill(R.drawable.ic_pill_settings, R.string.settings, onSettings)
@@ -36,6 +41,7 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
+        addView(inputOffer, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(15) })
         addView(nowPlaying, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(15) })
         addView(update, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(15) })
         // Meteocons leave a margin around the drawing; 30dp draws the sky at about 20dp.

@@ -7,6 +7,7 @@ Everything can be changed from the TV: press UP from the top row to reach ⚙ an
 
 | Section | Option | Values |
 |---|---|---|
+| Permissions | HOME button, Notification access, Usage access, TV listings | On, or OK to turn it on ([setup](setup.md#3-permissions)) |
 | Appearance | Layout | Rows, Index (see below) |
 | | Card size | Small, Medium, Large |
 | | Accent colour | Mint, Ember, Amber, Sky, Coral, White |
@@ -44,6 +45,19 @@ uptime and whether ADB is on.
 - Customize only lists what applies to Index: card size, names under cards, descriptions, dim,
   rows, rearranging apps and the date belong to the rows layout and are hidden. The wallpaper
   still shows in ambient mode.
+
+## Recent row
+
+With usage access, the rows layout adds a **Recent** row: the apps you opened in the last seven
+days, most recent first, up to eight. Until you move it, it sits right below Apps; hide or move
+it in **Rows**. Move from a Recent card moves the app in the Apps row, whose order is the one kept.
+
+## Inputs turning on
+
+When a device on an input turns on while the home screen shows (a console woken from its
+controller, say), a **Switch to …** chip appears in the top bar. OK switches to that input. The
+chip never takes focus, and goes away after 30 seconds or when you leave the home screen. Hidden
+inputs never offer themselves.
 
 ## Fire TV recommendations
 

@@ -14,13 +14,19 @@ import cloud.samlo.couch.ui.Rows
 
 /**
  * Listens for installs, removals and TV input changes. Anything that changes what the rows
- * contain calls [onChanged]; an input merely (dis)connecting is a cheap in-place dim instead.
+ * contain calls [onChanged]; an input merely (dis)connecting is a cheap in-place dim instead,
+ * and one that turns on also calls [onInputWoke] with its port's input id.
  */
 class SystemWatchers(
     private val activity: Activity,
     private val rows: Rows,
     private val onChanged: () -> Unit,
+    private val onInputWoke: (String) -> Unit,
 ) {
+    private val inputs = activity.getSystemService(TvInputManager::class.java)
+    /** Each input's last known state; an input first heard of now has no "before" to wake from. */
+    private val states = HashMap<String, Int>()
+
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) = onChanged()
     }
@@ -30,9 +36,18 @@ class SystemWatchers(
             // Cheap in-place update: no rebuild, no layout pass.
             rows.section(Sections.INPUTS)?.row?.cards()?.firstOrNull { it.tile.inputId == inputId }
                 ?.setDimmed(state == TvInputManager.INPUT_STATE_DISCONNECTED)
+            val before = states.put(inputId, state)
+            if (state == TvInputManager.INPUT_STATE_CONNECTED && before != null && before != state) {
+                // A CEC device reports as a child of its HDMI port; the Inputs row knows the port.
+                onInputWoke(inputs?.getTvInputInfo(inputId)?.parentId ?: inputId)
+            }
         }
 
-        override fun onInputAdded(inputId: String) = onChanged()
+        override fun onInputAdded(inputId: String) {
+            inputs?.let { states[inputId] = it.getInputState(inputId) }
+            onChanged()
+        }
+
         override fun onInputRemoved(inputId: String) = onChanged()
         override fun onInputUpdated(inputId: String) = onChanged()
     }
@@ -49,11 +64,14 @@ class SystemWatchers(
         } else {
             activity.registerReceiver(packageReceiver, filter)
         }
-        activity.getSystemService(TvInputManager::class.java)?.registerCallback(inputCallback, Handler(Looper.getMainLooper()))
+        inputs?.let { manager ->
+            manager.tvInputList.forEach { states[it.id] = manager.getInputState(it.id) }
+            manager.registerCallback(inputCallback, Handler(Looper.getMainLooper()))
+        }
     }
 
     fun unregister() {
         activity.unregisterReceiver(packageReceiver)
-        activity.getSystemService(TvInputManager::class.java)?.unregisterCallback(inputCallback)
+        inputs?.unregisterCallback(inputCallback)
     }
 }

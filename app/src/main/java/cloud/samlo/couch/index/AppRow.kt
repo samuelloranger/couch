@@ -13,17 +13,15 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
 /**
- * One app in the list: icon, name, and its screen time on the right. Selecting it swaps the
- * background and text colours and shows the accent marker; no size changes, so no layout pass.
+ * One app in the list: icon, name, and its screen time on the right. Selecting it only swaps
+ * the text colours; the background and accent marker belong to [AppList], which glides them
+ * between rows. No size changes, so no layout pass.
  */
 @SuppressLint("ViewConstructor")
 class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
     var entry: IndexEntry = entry
         private set
 
-    private val fill = GradientDrawable().apply { cornerRadius = context.dpf(6f) }
-    private val marker = GradientDrawable().apply { cornerRadius = context.dpf(1.5f) }
-    private val markerView = android.view.View(context).apply { this.background = marker }
     private val icon = ImageView(context).apply {
         this.background = GradientDrawable().apply {
             cornerRadius = context.dpf(ICON_RADIUS)
@@ -48,19 +46,10 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
             restyle()
         }
 
-    /** Focus is in this app's channel row: still selected, but quieter. */
-    var inRow = false
-        set(value) {
-            if (field == value) return
-            field = value
-            restyle()
-        }
-
     init {
         isFocusable = true
         isClickable = true
         isLongClickable = true
-        background = fill
         val line = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -70,7 +59,6 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
             addView(hours, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(8) })
         }
         addView(line, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
-        addView(markerView, LayoutParams(context.dp(3), context.dp(IndexTokens.ROW_H - 22), Gravity.CENTER_VERTICAL))
         bind(entry)
     }
 
@@ -84,15 +72,6 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
     }
 
     private fun restyle() {
-        fill.setColor(
-            when {
-                !chosen -> 0
-                inRow -> Tokens.surface
-                else -> Tokens.surfaceFocused
-            },
-        )
-        marker.setColor(if (inRow) IndexTokens.markerIdle else Tokens.accent)
-        markerView.visibility = if (chosen) VISIBLE else INVISIBLE
         name.setTextColor(if (chosen) Tokens.textPrimary else Tokens.textMuted)
         hours.setTextColor(if (chosen) Tokens.accent else IndexTokens.hours)
     }

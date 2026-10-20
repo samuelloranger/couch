@@ -2,6 +2,7 @@ package cloud.samlo.couch.settings
 
 import android.view.KeyEvent
 import cloud.samlo.couch.R
+import cloud.samlo.couch.ui.glideToNewPlaces
 
 /**
  * Move mode on the rows page: up/down shifts the held row, OK or Back puts it down and saves
@@ -42,6 +43,7 @@ class RowMover(private val ctx: SettingsContext) {
         val from = list.indexOfChild(row)
         val neighbour = list.getChildAt(from + by) as? OptionRow ?: return
         // Move the neighbour so the focused row never detaches.
+        glideToNewPlaces(row, neighbour)
         list.removeView(neighbour)
         list.addView(neighbour, from)
     }

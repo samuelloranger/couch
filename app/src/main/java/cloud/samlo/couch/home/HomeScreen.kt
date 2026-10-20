@@ -12,6 +12,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Fetcher
 import cloud.samlo.couch.data.Images
+import cloud.samlo.couch.data.InputSource
 import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.Programs
 import cloud.samlo.couch.data.UserFiles
@@ -58,7 +59,7 @@ class HomeScreen(private val activity: Activity) {
     private val loader = HomeLoader(
         activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded,
     )
-    private val watchers = SystemWatchers(activity, views.rows) { load() }
+    private val watchers = SystemWatchers(activity, views.rows, { load() }) { offerInput(it) }
     private val reloadForRecommendations = Runnable { if (resumed) load() }
 
     fun onCreate() {
@@ -88,6 +89,8 @@ class HomeScreen(private val activity: Activity) {
         if (organizer.active) organizer.stop()
         stopLive()
         ambientMode.cancel()
+        views.topBar.inputOffer.hide()
+        views.index.topBar.inputOffer.hide()
     }
 
     fun onDestroy() {
@@ -194,6 +197,13 @@ class HomeScreen(private val activity: Activity) {
             views.topBar.update.show(release.version)
             views.index.topBar.update.show(release.version)
         }
+    }
+
+    /** A device on an input just turned on: while home shows, offer to switch to it (unless hidden). */
+    private fun offerInput(inputId: String) {
+        if (!resumed) return
+        val tile = InputSource.tiles(activity, config, null).firstOrNull { it.inputId == inputId } ?: return
+        if (views.indexShown) views.index.topBar.inputOffer.offer(tile) else views.topBar.inputOffer.offer(tile)
     }
 
     @Suppress("DEPRECATION")
