@@ -32,7 +32,11 @@ class HomeScreen(private val activity: Activity) {
     private val prefs = Prefs.of(activity)
     private val fetcher = Fetcher(activity)
     private val images = Images(activity, fetcher)
-    private val views = HomeViews(activity, images, { openSettings() }, { installUpdate() })
+    private val views: HomeViews = HomeViews(
+        activity, images, { openSettings() }, { installUpdate() },
+        onAppMenu = { menus.show(it) },
+        onProgramMenu = { menus.show(it) },
+    )
     private val installer = Installer(activity, fetcher)
     private var update: Release? = null
     private val main = Handler(Looper.getMainLooper())
@@ -42,8 +46,8 @@ class HomeScreen(private val activity: Activity) {
 
     private val ambientMode = AmbientMode(views.ambient, { resumed }, { organizer.active })
         .also { it.minutes = config.ambientMinutes }
-    private val organizer = Organizer(activity, views.rows, views.hero, { config }, files) { load() }
-    private val menus = CardMenus(activity, { config }, files, { load() }) { organizer.start(it) }
+    private val organizer: Organizer = Organizer(activity, views.rows, views.hero, { config }, files) { load() }
+    private val menus: CardMenus = CardMenus(activity, { config }, files, { load() }) { organizer.start(it) }
     private val binder = SectionBinder(
         activity, views.rows, images,
         isOrganizing = { organizer.active },
@@ -66,14 +70,14 @@ class HomeScreen(private val activity: Activity) {
         HomeAccessibilityService.restore(activity)
         // Watch progress moves while you're in an app; unchanged rows are not rebuilt.
         load()
-        views.topBar.nowPlaying.start()
+        startLive()
         ambientMode.schedule(activity = true)
     }
 
     fun onPause() {
         resumed = false
         if (organizer.active) organizer.stop()
-        views.topBar.nowPlaying.stop()
+        stopLive()
         ambientMode.cancel()
     }
 
@@ -85,12 +89,16 @@ class HomeScreen(private val activity: Activity) {
     /** HOME while already home goes back to the start, like the stock launcher. */
     fun onHomePressed() {
         if (!resumed) return
+        if (views.indexShown) {
+            views.index.reset()
+            return
+        }
         views.rows.reset()
         views.rows.sections().firstOrNull()?.row?.focusFirst()
     }
 
     fun onSettingsResult(resultCode: Int) {
-        if (resultCode == SettingsActivity.RESULT_ORGANIZE) main.post { organizer.start() }
+        if (resultCode == SettingsActivity.RESULT_ORGANIZE && !views.indexShown) main.post { organizer.start() }
     }
 
     fun load() = loader.load()
@@ -109,9 +117,39 @@ class HomeScreen(private val activity: Activity) {
         showWeather(data.weather)
         update = data.update
         // A reload mid-download keeps the "Downloading" label.
-        if (!Installer.running) views.topBar.update.show(update?.version)
-        binder.bind(data.sections, config)
+        if (!Installer.running) {
+            views.topBar.update.show(update?.version)
+            views.index.topBar.update.show(update?.version)
+        }
+        val index = data.index
+        switchLayout(index != null)
+        if (index != null) views.index.bind(index, config) else binder.bind(data.sections, config)
         ambientMode.schedule()
+    }
+
+    /** Swaps layouts after a settings change; the live parts (now playing, readings) follow. */
+    private fun switchLayout(index: Boolean) {
+        if (index == views.indexShown) return
+        if (resumed) stopLive()
+        views.showIndex(index)
+        // The hidden rows would keep every card and its art in memory; they rebuild on the way back.
+        if (index) views.rows.column.removeAllViews()
+        if (resumed) startLive()
+    }
+
+    private fun startLive() {
+        if (views.indexShown) {
+            views.index.topBar.nowPlaying.start()
+            views.index.systemLine.start()
+        } else {
+            views.topBar.nowPlaying.start()
+        }
+    }
+
+    private fun stopLive() {
+        views.topBar.nowPlaying.stop()
+        views.index.topBar.nowPlaying.stop()
+        views.index.systemLine.stop()
     }
 
     /** Settings that change existing views rather than cards. */
@@ -125,6 +163,7 @@ class HomeScreen(private val activity: Activity) {
 
     private fun showWeather(now: WeatherNow?) {
         views.topBar.showWeather(now)
+        views.index.topBar.showWeather(now)
         ambientMode.weatherLine = now?.let {
             val label = if (it.condition.label != 0) activity.getString(it.condition.label) else ""
             activity.getString(R.string.weather_line, it.temperature, label, it.place)
@@ -135,9 +174,11 @@ class HomeScreen(private val activity: Activity) {
         val release = update ?: return
         if (Installer.running) return
         views.topBar.update.downloading()
+        views.index.topBar.update.downloading()
         installer.install(release) { message ->
             if (message != null) Toast.makeText(activity, message, Toast.LENGTH_LONG).show()
             views.topBar.update.show(release.version)
+            views.index.topBar.update.show(release.version)
         }
     }
 

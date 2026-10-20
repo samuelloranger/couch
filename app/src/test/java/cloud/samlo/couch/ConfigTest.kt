@@ -19,6 +19,7 @@ class ConfigTest {
         assertTrue(config.pinnedApps.isEmpty())
         assertTrue("com.sony.dtv.promos" in config.hiddenApps)
         assertEquals("medium", config.cardSize)
+        assertEquals("rows", config.layout)
         assertEquals(5, config.ambientMinutes)
         assertEquals(3, config.wallpaperHours)
         assertEquals(Config.DEFAULT_SUBREDDIT, config.subreddit)
@@ -35,6 +36,7 @@ class ConfigTest {
             sectionOrder = listOf("inputs", "apps", "ch:7")
             hiddenSections = setOf("ch:7")
             channels = mapOf("7" to true, "8" to false)
+            layout = "index"
             cardSize = "large"
             accent = "#34D399"
             wallpaper = "reddit"
@@ -57,6 +59,7 @@ class ConfigTest {
         assertEquals("ps5", copy.inputIcons["hdmi4"])
         assertEquals("Montréal", copy.weatherCity)
         assertFalse(copy.showDescriptions)
+        assertEquals("index", copy.layout)
     }
 
     @Test

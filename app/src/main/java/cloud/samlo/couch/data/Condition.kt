@@ -5,18 +5,19 @@ import cloud.samlo.couch.R
 /**
  * Sky conditions, from WMO weather codes as used by Open-Meteo. [label] is a string resource
  * (0 when the code is unknown, which shows no text) and [icon] picks the day or night drawable.
+ * The icons are Meteocons (fill style), mapped the way Labby maps its weather.
  */
 enum class Condition(val label: Int, private val dayIcon: Int, private val nightIcon: Int = dayIcon) {
-    CLEAR(R.string.weather_clear, R.drawable.wx_sun, R.drawable.wx_moon),
-    MOSTLY_CLEAR(R.string.weather_mostly_clear, R.drawable.wx_sun, R.drawable.wx_moon),
-    PARTLY_CLOUDY(R.string.weather_partly_cloudy, R.drawable.wx_cloud),
-    CLOUDY(R.string.weather_cloudy, R.drawable.wx_cloud),
-    FOG(R.string.weather_fog, R.drawable.wx_fog),
-    DRIZZLE(R.string.weather_drizzle, R.drawable.wx_rain),
-    RAIN(R.string.weather_rain, R.drawable.wx_rain),
-    SNOW(R.string.weather_snow, R.drawable.wx_snow),
-    STORM(R.string.weather_storm, R.drawable.wx_storm),
-    UNKNOWN(0, R.drawable.wx_cloud),
+    CLEAR(R.string.weather_clear, R.drawable.wx_clear_day, R.drawable.wx_clear_night),
+    MOSTLY_CLEAR(R.string.weather_mostly_clear, R.drawable.wx_partly_cloudy_day, R.drawable.wx_partly_cloudy_night),
+    PARTLY_CLOUDY(R.string.weather_partly_cloudy, R.drawable.wx_cloudy),
+    CLOUDY(R.string.weather_cloudy, R.drawable.wx_overcast),
+    FOG(R.string.weather_fog, R.drawable.wx_mist),
+    DRIZZLE(R.string.weather_drizzle, R.drawable.wx_drizzle),
+    RAIN(R.string.weather_rain, R.drawable.wx_partly_cloudy_day_rain, R.drawable.wx_partly_cloudy_night_rain),
+    SNOW(R.string.weather_snow, R.drawable.wx_partly_cloudy_day_snow, R.drawable.wx_partly_cloudy_night_snow),
+    STORM(R.string.weather_storm, R.drawable.wx_thunderstorms_day_rain, R.drawable.wx_thunderstorms_night_rain),
+    UNKNOWN(0, R.drawable.wx_cloudy),
     ;
 
     fun icon(isDay: Boolean) = if (isDay) dayIcon else nightIcon

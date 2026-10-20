@@ -7,6 +7,7 @@ import android.graphics.BitmapShader
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
 import android.os.Handler
@@ -38,10 +39,18 @@ class Images(context: Context, fetcher: Fetcher) {
         h: Int,
         radius: Float,
         opaque: Boolean = false,
+        /** Round only the left corners, for art that sits against the left edge of a rounded panel. */
+        leftCorners: Boolean = false,
+        /**
+         * Painted over the art once it's decoded, on the worker thread, so layers that would
+         * otherwise be drawn over it every frame cost nothing. [decorateKey] names it in the cache.
+         */
+        decorate: ((Canvas, Int, Int) -> Unit)? = null,
+        decorateKey: String = "",
         isCurrent: () -> Boolean,
         onReady: (Bitmap) -> Unit,
     ) {
-        val key = "$url|$w|$h|$radius|$opaque"
+        val key = "$url|$w|$h|$radius|$opaque|$leftCorners|$decorateKey"
         memory.get(key)?.let {
             onReady(it)
             return
@@ -49,7 +58,7 @@ class Images(context: Context, fetcher: Fetcher) {
         pool.execute {
             if (!isCurrent()) return@execute
             val bitmap = try {
-                decode(url, w, h, radius, opaque)
+                decode(url, w, h, radius, opaque, leftCorners)?.also { bitmap -> decorate?.invoke(Canvas(bitmap), w, h) }
             } catch (e: Exception) {
                 null
             } ?: return@execute
@@ -58,7 +67,7 @@ class Images(context: Context, fetcher: Fetcher) {
         }
     }
 
-    private fun decode(url: String, w: Int, h: Int, radius: Float, opaque: Boolean): Bitmap? {
+    private fun decode(url: String, w: Int, h: Int, radius: Float, opaque: Boolean, leftCorners: Boolean): Bitmap? {
         val file = disk.file(url) ?: return null
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)
@@ -69,11 +78,11 @@ class Images(context: Context, fetcher: Fetcher) {
             inSampleSize = sample
             if (opaque) inPreferredConfig = Bitmap.Config.RGB_565
         }) ?: return null
-        return fit(raw, w, h, radius, opaque)
+        return fit(raw, w, h, radius, opaque, leftCorners)
     }
 
     /** Center-crops [raw] into a w x h bitmap, rounding the corners when [radius] is set. */
-    private fun fit(raw: Bitmap, w: Int, h: Int, radius: Float, opaque: Boolean): Bitmap {
+    private fun fit(raw: Bitmap, w: Int, h: Int, radius: Float, opaque: Boolean, leftCorners: Boolean): Bitmap {
         val scale = maxOf(w.toFloat() / raw.width, h.toFloat() / raw.height)
         val matrix = Matrix().apply {
             setScale(scale, scale)
@@ -84,7 +93,13 @@ class Images(context: Context, fetcher: Fetcher) {
         val canvas = Canvas(out)
         if (radius > 0f) {
             paint.shader = BitmapShader(raw, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP).apply { setLocalMatrix(matrix) }
-            canvas.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), radius, radius, paint)
+            val rect = RectF(0f, 0f, w.toFloat(), h.toFloat())
+            if (leftCorners) {
+                val radii = floatArrayOf(radius, radius, 0f, 0f, 0f, 0f, radius, radius)
+                canvas.drawPath(Path().apply { addRoundRect(rect, radii, Path.Direction.CW) }, paint)
+            } else {
+                canvas.drawRoundRect(rect, radius, radius, paint)
+            }
         } else {
             canvas.drawBitmap(raw, matrix, paint)
         }

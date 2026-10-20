@@ -18,6 +18,40 @@
     <string name="program_remaining_hours">Reste %1$d h %2$s</string>
     <string name="program_remaining_minutes">Reste %1$d min</string>
 
+    <!-- Index layout -->
+    <string name="index_minutes">%1$d min</string>
+    <string name="index_hours">%1$d h</string>
+    <string name="index_hours_minutes">%1$d h %2$02d</string>
+    <string name="index_days_hours">%1$d j %2$d h</string>
+    <string name="index_under_minute">&lt; 1 min</string>
+    <string name="index_none">—</string>
+    <string name="index_week">7 derniers jours</string>
+    <string name="index_last_opened">Dernière ouverture</string>
+    <string name="index_opens">Ouvertures</string>
+    <string name="index_today">Aujourd’hui</string>
+    <string name="index_yesterday">Hier</string>
+    <string name="index_at">à %1$s</string>
+    <string name="index_date_at">%1$s à %2$s</string>
+    <string name="index_not_opened">Pas ouverte cette semaine</string>
+    <string name="index_opened_briefly">Ouverte, mais moins d’une minute</string>
+    <string name="index_rank_first">App la plus utilisée</string>
+    <string name="index_rank">%1$s app la plus utilisée</string>
+    <string name="index_no_channel">Pas de chaîne pour %1$s. Appuie sur OK pour l’ouvrir.</string>
+    <string name="index_no_usage">Le temps d’écran s’affiche ici quand Couch a l’accès aux données d’utilisation. Le guide d’installation explique comment l’activer.</string>
+    <string name="index_place_range">%1$s\n%2$d° / %3$d°</string>
+    <string name="index_ethernet">Ethernet</string>
+    <string name="index_wifi">Wi-Fi</string>
+    <string name="index_offline">Hors ligne</string>
+    <string name="index_rate">"↓ %1$s  ↑ %2$s"</string>
+    <string name="index_rate_unit">Ko/s</string>
+    <string name="index_rate_unit_mb">Mo/s</string>
+    <string name="index_percent">%1$d %%</string>
+    <string name="index_memory">mémoire utilisée</string>
+    <string name="index_storage">stockage, %1$s libres</string>
+    <string name="index_uptime">depuis le démarrage</string>
+    <string name="index_adb">ADB</string>
+    <string name="index_adb_on">activé</string>
+
     <!-- Card menus and reordering -->
     <string name="menu_move">Déplacer</string>
     <string name="menu_hide">Masquer</string>
@@ -86,6 +120,10 @@
 
     <!-- Settings: appearance -->
     <string name="group_look">Apparence</string>
+    <string name="layout">Disposition</string>
+    <string name="layout_help">Rangées : applis, entrées et chaînes en rangées de cartes. Index : la liste de tes applis, avec ce que celle choisie te propose et combien tu l’utilises.</string>
+    <string name="layout_rows">Rangées</string>
+    <string name="layout_index">Index</string>
     <string name="card_size">Taille des cartes</string>
     <string name="card_size_help">Petite pour voir plus d’applis à la fois, grande pour lire de loin.</string>
     <string name="size_small">Petite</string>

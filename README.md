@@ -33,7 +33,8 @@ launcher. Plain Android Views, no AndroidX, no Compose, no tracking: the APK is 
 
 ## Features
 
-- Hero area showing the focused show or film: backdrop, title, episode, time left, synopsis.
+- Two layouts: rows of cards with a hero area for the focused show or film, or **Index**, a list
+  of your apps beside what the selected one offers and your screen time with it.
 - Apps row, HDMI inputs row with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…),
   and the preview channels apps publish (YouTube, Jellyfin and others).
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
@@ -63,13 +64,14 @@ adb install couch.apk
 adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS
 adb shell cmd notification allow_listener cloud.samlo.couch/cloud.samlo.couch.MediaListener
 adb shell pm grant cloud.samlo.couch android.permission.WRITE_SECURE_SETTINGS
+adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow
 adb shell settings put secure enabled_accessibility_services \
   cloud.samlo.couch/cloud.samlo.couch.HomeAccessibilityService
 adb shell settings put secure accessibility_enabled 1
 ```
 
-The ADB permissions add the now-playing pill and let the HOME button repair itself. The
-[setup guide](https://samlo.cloud/couch/setup) explains each step.
+The ADB permissions add the now-playing pill and screen time, and let the HOME button repair
+itself. The [setup guide](https://samlo.cloud/couch/setup) explains each step.
 
 ## Documentation
 

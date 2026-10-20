@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Outline icon for the Index layout's top pills. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M 9 12 A 3 3 0 1 0 15 12 A 3 3 0 1 0 9 12 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M 19.4 15 a 1.7 1.7 0 0 0 .3 1.8 l .1 .1 a 2 2 0 1 1 -2.8 2.8 l -.1 -.1 a 1.7 1.7 0 0 0 -1.8 -.3 1.7 1.7 0 0 0 -1 1.5 V 21 a 2 2 0 1 1 -4 0 v -.1 a 1.7 1.7 0 0 0 -1.1 -1.5 1.7 1.7 0 0 0 -1.8 .3 l -.1 .1 a 2 2 0 1 1 -2.8 -2.8 l .1 -.1 a 1.7 1.7 0 0 0 .3 -1.8 1.7 1.7 0 0 0 -1.5 -1 H 3 a 2 2 0 1 1 0 -4 h .1 a 1.7 1.7 0 0 0 1.5 -1.1 1.7 1.7 0 0 0 -.3 -1.8 l -.1 -.1 a 2 2 0 1 1 2.8 -2.8 l .1 .1 a 1.7 1.7 0 0 0 1.8 .3 H 9 a 1.7 1.7 0 0 0 1 -1.5 V 3 a 2 2 0 1 1 4 0 v .1 a 1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8 -.3 l .1 -.1 a 2 2 0 1 1 2.8 2.8 l -.1 .1 a 1.7 1.7 0 0 0 -.3 1.8 V 9 a 1.7 1.7 0 0 0 1.5 1 H 21 a 2 2 0 1 1 0 4 h -.1 a 1.7 1.7 0 0 0 -1.5 1 z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+</vector>

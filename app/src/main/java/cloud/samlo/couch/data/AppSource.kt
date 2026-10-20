@@ -19,6 +19,7 @@ object AppSource {
         iconsDir: File?,
         w: Int = context.dp(Tokens.APP_W),
         h: Int = context.dp(Tokens.APP_H),
+        radius: Float = context.dpf(Tokens.CARD_RADIUS),
     ): List<Tile> {
         val pm = context.packageManager
         val collator = Collator.getInstance(Locale.getDefault())
@@ -30,7 +31,7 @@ object AppSource {
                 val bi = rank(config, b.activityInfo.packageName)
                 if (ai != bi) ai.compareTo(bi) else collator.compare(aLabel, bLabel)
             }
-            .map { (info, label) -> tile(context, info, label, iconsDir, w, h) }
+            .map { (info, label) -> tile(context, info, label, iconsDir, w, h, radius) }
     }
 
     /** Every app that shows up in a TV launcher, one entry per package. */
@@ -41,7 +42,7 @@ object AppSource {
     /** Position in the user's pinned list; unpinned apps sort after every pinned one. */
     private fun rank(config: Config, pkg: String) = config.pinnedApps.indexOf(pkg).let { if (it < 0) Int.MAX_VALUE else it }
 
-    private fun tile(context: Context, info: ResolveInfo, label: String, iconsDir: File?, w: Int, h: Int): Tile {
+    private fun tile(context: Context, info: ResolveInfo, label: String, iconsDir: File?, w: Int, h: Int, radius: Float): Tile {
         val pm = context.packageManager
         val pkg = info.activityInfo.packageName
         val updated = try {
@@ -49,10 +50,10 @@ object AppSource {
         } catch (e: PackageManager.NameNotFoundException) {
             0L
         }
-        val banner = Banners.memoized("app|$pkg|$w|$updated|${Banners.mtime(iconsDir, pkg)}") {
-            Banners.custom(iconsDir, pkg, w, h, context)
+        val banner = Banners.memoized("app|$pkg|$w|$radius|$updated|${Banners.mtime(iconsDir, pkg)}") {
+            Banners.custom(iconsDir, pkg, w, h, context, radius)
                 ?: (info.activityInfo.loadBanner(pm) ?: info.activityInfo.applicationInfo.loadBanner(pm))
-                    ?.let { Banners.render(it, w, h, context.dpf(Tokens.CARD_RADIUS)) }
+                    ?.let { Banners.render(it, w, h, radius) }
         }
         val intent = (pm.getLeanbackLaunchIntentForPackage(pkg)
             ?: Intent(Intent.ACTION_MAIN).setClassName(pkg, info.activityInfo.name))

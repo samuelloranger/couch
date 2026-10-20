@@ -24,7 +24,7 @@ class ConditionTest {
         val unknown = Condition.of(1234)
         assertEquals(Condition.UNKNOWN, unknown)
         assertEquals(0, unknown.label)
-        assertEquals(R.drawable.wx_cloud, unknown.icon(true))
+        assertEquals(R.drawable.wx_cloudy, unknown.icon(true))
     }
 
     @Test
@@ -35,17 +35,18 @@ class ConditionTest {
     }
 
     @Test
-    fun clearSkiesSwitchIconAtNight() {
-        assertEquals(R.drawable.wx_sun, Condition.of(0).icon(isDay = true))
-        assertEquals(R.drawable.wx_moon, Condition.of(0).icon(isDay = false))
-        assertEquals(R.drawable.wx_moon, Condition.of(1).icon(isDay = false))
-        assertEquals(R.drawable.wx_cloud, Condition.of(3).icon(isDay = false))
+    fun skiesWithASunSwitchIconAtNight() {
+        assertEquals(R.drawable.wx_clear_day, Condition.of(0).icon(isDay = true))
+        assertEquals(R.drawable.wx_clear_night, Condition.of(0).icon(isDay = false))
+        assertEquals(R.drawable.wx_partly_cloudy_night, Condition.of(1).icon(isDay = false))
+        assertEquals(R.drawable.wx_partly_cloudy_night_rain, Condition.of(63).icon(isDay = false))
+        assertEquals(R.drawable.wx_overcast, Condition.of(3).icon(isDay = false))
     }
 
     @Test
-    fun drizzleAndRainShareTheRainIcon() {
-        assertEquals(R.drawable.wx_rain, Condition.of(51).icon(true))
-        assertEquals(R.drawable.wx_rain, Condition.of(65).icon(true))
+    fun drizzleAndRainHaveTheirOwnIcons() {
+        assertEquals(R.drawable.wx_drizzle, Condition.of(51).icon(true))
+        assertEquals(R.drawable.wx_partly_cloudy_day_rain, Condition.of(65).icon(true))
         assertNotEquals(Condition.of(51).label, Condition.of(65).label)
     }
 }

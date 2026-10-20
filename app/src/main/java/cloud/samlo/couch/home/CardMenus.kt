@@ -22,8 +22,10 @@ class CardMenus(
     private val reload: () -> Unit,
     private val startMove: (Card) -> Unit,
 ) {
-    fun show(card: Card) {
-        val tile = card.tile
+    fun show(card: Card) = show(card.tile, card)
+
+    /** Without a [card] there is nothing to move, so the menu leaves Move out. */
+    fun show(tile: Tile, card: Card? = null) {
         val actions = actionsFor(tile, card) ?: return
         AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(tile.label)
@@ -31,9 +33,9 @@ class CardMenus(
             .show()
     }
 
-    private fun actionsFor(tile: Tile, card: Card): List<Pair<String, () -> Unit>>? = when (tile.kind) {
-        Tile.Kind.APP -> listOf(
-            activity.getString(R.string.menu_move) to { startMove(card) },
+    private fun actionsFor(tile: Tile, card: Card?): List<Pair<String, () -> Unit>>? = when (tile.kind) {
+        Tile.Kind.APP -> listOfNotNull(
+            card?.let { activity.getString(R.string.menu_move) to { startMove(it) } },
             activity.getString(R.string.menu_rename) to { rename(tile) },
             activity.getString(R.string.menu_hide) to { hide(tile) },
             activity.getString(R.string.menu_app_info) to { appInfo(tile.packageName) },

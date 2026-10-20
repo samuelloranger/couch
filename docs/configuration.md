@@ -7,7 +7,8 @@ Everything can be changed from the TV: press UP from the top row to reach ⚙ an
 
 | Section | Option | Values |
 |---|---|---|
-| Appearance | Card size | Small, Medium, Large |
+| Appearance | Layout | Rows, Index (see below) |
+| | Card size | Small, Medium, Large |
 | | Accent colour | Mint, Ember, Amber, Sky, Coral, White |
 | | Names under cards | On / Off |
 | | Descriptions | On / Off |
@@ -26,6 +27,21 @@ Everything can be changed from the TV: press UP from the top row to reach ⚙ an
 | | About | the installed version; OK installs a newer one when there is one |
 
 Couch follows the TV's language: English, or French on a TV set to French.
+
+## Index layout
+
+**Layout → Index** swaps the rows for a list of your apps on the left. The right side shows what
+the selected app offers (its first channel: the program's art, title and synopsis, then the
+channel as a row of cards), how much you used it over the last seven days, when you last opened
+it, and how often. The bottom line shows the TV's address, network traffic, memory, storage,
+uptime and whether ADB is on.
+
+- Up and down move through the apps, OK opens one. Right enters its channel; left (from the first
+  card), up or down comes back. Up from the first app reaches Inputs and Settings.
+- With usage access ([setup](setup.md#3-permissions)), apps are ordered by screen time over the
+  last seven days. Without it they keep your order and the figures are replaced by a hint.
+- Long-press an app for Rename, Hide and App info. Card size and names under cards only apply to
+  the rows layout.
 
 ## Long-press menus
 
@@ -69,6 +85,7 @@ setting changes, so edit it while the home screen is in the background.
 | `sectionOrder` | string[] | `[]` | Row order: `apps`, `inputs`, `ch:<channel id>`. |
 | `hiddenSections` | string[] | `[]` | Hidden rows. |
 | `channels` | object | `{}` | Channel id → shown or not, overriding the stock launcher's choice. |
+| `layout` | string | `rows` | `rows` or `index`. |
 | `cardSize` | string | `medium` | `small`, `medium`, `large`. |
 | `accent` | string | `#34D399` | Accent colour (hex). |
 | `wallpaper` | string | `daily` | `daily`, `reddit`, `gradient`, `custom`. |

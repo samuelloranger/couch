@@ -1,6 +1,6 @@
 # Architecture
 
-Couch is one Gradle module of plain Kotlin on framework Views. Six packages, each with one job;
+Couch is one Gradle module of plain Kotlin on framework Views. Seven packages, each with one job;
 no file is longer than about 160 lines.
 
 ```
@@ -10,7 +10,8 @@ cloud.samlo.couch
 ├── ui/        reusable views: Card, FocusRow, Rows, Hero, Ambient, NowPlaying, tokens
 ├── data/      config, apps, inputs, channels, weather, wallpapers, image pipeline
 ├── update/    daily release check, download, checksum, Android's package installer
-└── settings/  Customize: activity shell, option rows, one file per page, icon picker
+├── settings/  Customize: activity shell, option rows, one file per page, icon picker
+└── index/     the Index layout: app list, spotlight, channel row, usage figures, system line
 ```
 
 The four classes at the root are referenced by name from the TV's settings (the launcher entry,
@@ -56,6 +57,21 @@ Loads happen on every return to the home screen and when apps or inputs change
   the backdrop once focus has rested, crossfading between two stacked image views.
 - **`Tokens`** holds every colour, size and timing. Everything shares one expo-out curve.
 
+## Index layout
+
+`IndexScreen` is the second layout, shown instead of the hero and rows when `config.layout` is
+`index`; `HomeLoader` then builds `IndexData` (`IndexBuilder`) instead of rows. Everything sits at
+fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves never lay out.
+
+- **`AppList`** glides its column by translation, like `Rows`; `AppRow` only swaps colours when
+  selected. `IndexScreen.focusSearch` routes the D-pad between the list, the channel row (a
+  `FocusRow` of `Card`s with a thin ring) and the top pills.
+- **`Spotlight`** shows the focused program's art at its own shape with the text beside it, or the
+  app's banner; like `Hero`, art waits until focus rests. `Backdrop` crossfades a faint copy.
+- **`Usage`** reads usage events (with usage access) into seven days per app; `Usage.Tally` is the
+  pure part and is unit tested. **`SystemInfo`** gives `SystemLine` its readings every few seconds.
+- Text uses Hanken Grotesk (`Fonts`, a Latin subset of the variable font in `assets/fonts`, OFL).
+
 ## Data
 
 - **`Config`** is the user's setup; `ConfigJson` reads and writes it atomically. Unknown or broken
@@ -65,7 +81,7 @@ Loads happen on every return to the home screen and when apps or inputs change
   `InputIcon.resolve`.
 - **`Images`** is the image pipeline: `Fetcher` downloads, `DiskCache` keeps remote art on disk
   (60 MB budget), and decoded bitmaps sit in a memory cache sized from the heap.
-- **`Weather`** (Open-Meteo) and **`Wallpapers`** (Bing, a subreddit through Arctic Shift, a local
+- **`Weather`** (Open-Meteo, with Meteocons icons by Bas Milius, MIT) and **`Wallpapers`** (Bing, a subreddit through Arctic Shift, a local
   image) cache every answer in preferences, so a network hiccup keeps the last good result.
 
 ## Settings
@@ -85,4 +101,5 @@ force-stop removes it; `HomeScreen` and `BootReceiver` call it.
 ## Tests
 
 JVM unit tests (`app/src/test`) cover the pure logic: config defaults, round-trip and migrations,
-input icon guessing, row ordering, weather conditions, subreddit image filtering, input keys.
+input icon guessing, row ordering, weather conditions, subreddit image filtering, input keys,
+and how usage events add up to screen time.

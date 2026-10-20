@@ -10,28 +10,38 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.util.LruCache
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dpf
 import java.io.File
+import java.util.Collections
 
 /** Card banners, rendered once at the card's pixel size and reused across reloads. */
 object Banners {
-    /** Reused until the app updates or its custom image changes. */
-    private val memo = HashMap<String, Bitmap?>()
+    /**
+     * Reused until the app updates or its custom image changes. Bounded, so switching layouts
+     * (each renders its own size) or a long app list can't keep piling up bitmaps.
+     */
+    private val memo = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 8).toInt()) {
+        override fun sizeOf(key: String, value: Bitmap) = value.byteCount
+    }
+    /** Keys that rendered nothing (no banner), so they aren't tried again. */
+    private val none: MutableSet<String> = Collections.synchronizedSet(HashSet())
 
     fun memoized(key: String, make: () -> Bitmap?): Bitmap? {
-        if (memo.containsKey(key)) return memo[key]
-        return make().also { memo[key] = it }
+        memo.get(key)?.let { return it }
+        if (key in none) return null
+        return make().also { if (it == null) none.add(key) else memo.put(key, it) }
     }
 
     /** Part of a memo key, so replacing `icons/<key>.png` invalidates the cached render. */
     fun mtime(dir: File?, key: String) = dir?.let { File(it, "$key.png").lastModified() } ?: 0L
 
     /** The user's `icons/<key>.png`, if any. */
-    fun custom(dir: File?, key: String, w: Int, h: Int, context: Context): Bitmap? {
+    fun custom(dir: File?, key: String, w: Int, h: Int, context: Context, radius: Float = context.dpf(Tokens.CARD_RADIUS)): Bitmap? {
         val file = dir?.let { File(it, "$key.png") }?.takeIf { it.isFile } ?: return null
         val bitmap = BitmapFactory.decodeFile(file.path) ?: return null
-        return render(BitmapDrawable(context.resources, bitmap), w, h, context.dpf(Tokens.CARD_RADIUS))
+        return render(BitmapDrawable(context.resources, bitmap), w, h, radius)
     }
 
     /** Draws [drawable] center-cropped into a w x h bitmap with rounded corners of [radius] px. */

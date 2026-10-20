@@ -25,6 +25,8 @@ class Config {
     var channels: Map<String, Boolean> = emptyMap()
 
     // Look
+    /** "rows" (cards in rows) or "index" (a list of apps beside what the focused one offers). */
+    var layout: String = LAYOUT_ROWS
     var cardSize: String = "medium"
     var accent: String = Accents.default
     var wallpaper: String = "daily"
@@ -73,6 +75,8 @@ class Config {
     companion object {
         private const val FILE = "config.json"
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
+        const val LAYOUT_ROWS = "rows"
+        const val LAYOUT_INDEX = "index"
 
         /** Defaults stay generic: the user pins their own apps. */
         val DEFAULT_PINNED = emptyList<String>()

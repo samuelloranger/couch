@@ -14,6 +14,7 @@ internal object ConfigJson {
         .put("sectionOrder", JSONArray(c.sectionOrder))
         .put("hiddenSections", JSONArray(c.hiddenSections.sorted()))
         .put("channels", JSONObject(c.channels))
+        .put("layout", c.layout)
         .put("cardSize", c.cardSize)
         .put("accent", c.accent)
         .put("wallpaper", c.wallpaper)
@@ -41,6 +42,7 @@ internal object ConfigJson {
         json.strings("hiddenSections")?.let { hiddenSections = it.toSet() }
         channels = json.optJSONObject("channels")?.let { o -> o.keys().asSequence().associateWith { o.optBoolean(it) } }
             ?: emptyMap()
+        layout = json.optString("layout", layout)
         cardSize = json.optString("cardSize", cardSize)
         accent = Accents.migrate(json.optString("accent", accent))
         wallpaper = json.optString("wallpaper", wallpaper)

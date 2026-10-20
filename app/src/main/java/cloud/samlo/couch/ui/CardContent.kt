@@ -23,11 +23,12 @@ class CardContent(
     private val widthDp: Int,
     private val heightDp: Int,
     private val images: Images,
+    private val radiusDp: Float,
     private val isAlive: () -> Boolean,
 ) : FrameLayout(context) {
     init {
         background = GradientDrawable().apply {
-            cornerRadius = context.dpf(Tokens.CARD_RADIUS)
+            cornerRadius = context.dpf(radiusDp)
             setColor(tile.cardColor ?: Tokens.surface)
         }
         val banner = tile.banner
@@ -52,7 +53,7 @@ class CardContent(
             url,
             context.dp(widthDp),
             context.dp(heightDp),
-            context.dpf(Tokens.CARD_RADIUS),
+            context.dpf(radiusDp),
             isCurrent = isAlive,
         ) { view.setImageBitmap(it) }
     }

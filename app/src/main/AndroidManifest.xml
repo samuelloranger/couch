@@ -3,6 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- The Index layout's footer: the TV's address and connection type. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Granted over ADB or from Android's settings. Screen time in the Index layout. -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
     <!-- Lets the launcher read the preview channels (rows) other apps publish. -->
     <uses-permission android:name="android.permission.READ_TV_LISTINGS" />
     <!-- Granted over ADB. Lets Couch turn its HOME service back on after Android drops it

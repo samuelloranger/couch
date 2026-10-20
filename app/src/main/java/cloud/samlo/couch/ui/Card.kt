@@ -26,15 +26,17 @@ class Card(
     private val showLabel: Boolean,
     /** Size and style the card was drawn with; a change means it must be rebuilt. */
     val look: String,
+    radiusDp: Float = Tokens.CARD_RADIUS,
+    thinRing: Boolean = false,
     private val onFocused: (Card) -> Unit,
 ) : FrameLayout(context) {
     private val ring = FlatView(context)
-    private val ringDrawable: LayerDrawable = cardRing(context)
+    private val ringDrawable: LayerDrawable = cardRing(context, radiusDp, thinRing)
 
     /** Read from the image workers; flips when the card leaves the screen for good. */
     @Volatile
     private var alive = true
-    private val content = CardContent(context, tile, widthDp, heightDp, images) { alive }
+    private val content = CardContent(context, tile, widthDp, heightDp, images, radiusDp) { alive }
 
     var moving = false
         set(value) {

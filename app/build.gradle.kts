@@ -73,6 +73,10 @@ android {
     }
 
     buildTypes {
+        // Installs beside the release build, so a dev build never replaces the Couch in use.
+        debug {
+            applicationIdSuffix = ".dev"
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true

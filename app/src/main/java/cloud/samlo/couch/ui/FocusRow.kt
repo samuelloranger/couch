@@ -22,6 +22,9 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
     private var lastKey: String? = null
     private var lastIndex = 0
 
+    /** The visible gap between cards, in dp; call [fixMargins] after changing it. */
+    var gapDp = Tokens.CARD_GAP
+
     val strip: LinearLayout = object : LinearLayout(context) {
         init {
             isChildrenDrawingOrderEnabled = true
@@ -79,9 +82,14 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
         post { remembered()?.let { reveal(it) } }
     }
 
+    /** Space before the first card, where it rests when focused; the row clips anything left of its own edge. */
+    fun setStartPadding(px: Int) {
+        strip.setPadding(px, strip.paddingTop, strip.paddingRight, strip.paddingBottom)
+    }
+
     /** Gaps go between cards only; call after reordering. */
     fun fixMargins() {
-        val gap = context.dp(Tokens.CARD_GAP) - context.dp(Tokens.RING_INSET) * 2
+        val gap = context.dp(gapDp) - context.dp(Tokens.RING_INSET) * 2
         for (i in 0 until strip.childCount) {
             val params = strip.getChildAt(i).layoutParams as LinearLayout.LayoutParams
             val margin = if (i == 0) 0 else gap
@@ -93,6 +101,14 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
     }
 
     fun cards(): List<Card> = (0 until strip.childCount).map { strip.getChildAt(it) as Card }
+
+    /** Starts over at the first card, for a row about to be refilled with something else. */
+    fun forget() {
+        lastKey = null
+        lastIndex = 0
+        strip.animate().cancel()
+        strip.translationX = 0f
+    }
 
     fun focusFirst() {
         strip.animate().cancel()

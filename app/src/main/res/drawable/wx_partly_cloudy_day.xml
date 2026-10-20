@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Meteocons by Bas Milius (MIT), fill style. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:pathData="M 14 24 A 5 5 0 1 0 24 24 A 5 5 0 1 0 14 24 Z"
+        android:strokeColor="#FFF8AF18"
+        android:strokeWidth=".5"
+        android:strokeMiterLimit="10">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="16.5" android:startY="19.67" android:endX="21.5" android:endY="28.33">
+                <item android:offset="0" android:color="#FFFBBF24"/>
+                <item android:offset="0.45" android:color="#FFFBBF24"/>
+                <item android:offset="1" android:color="#FFF59E0B"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M 19 15.67 V 12.5 m 0 23 v -3.17 m 5.89 -14.22 l 2.24 -2.24 M 10.87 32.13 l 2.24 -2.24 m 0 -11.78 l -2.24 -2.24 m 16.26 16.26 l -2.24 -2.24 M 7.5 24 h 3.17 m 19.83 0 h -3.17"
+        android:strokeColor="#FFFBBF24"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeMiterLimit="10"/>
+    <path
+        android:pathData="M 46.5 31.5 h -.32 a 10.49 10.49 0 0 0 -19.11 -8 7 7 0 0 0 -10.57 6 7.21 7.21 0 0 0 .1 1.14 A 7.5 7.5 0 0 0 18 45.5 a 4.19 4.19 0 0 0 .5 0 v 0 h 28 a 7 7 0 0 0 0 -14 z"
+        android:strokeColor="#FFE6EFFC"
+        android:strokeWidth=".5"
+        android:strokeMiterLimit="10">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="22.56" android:startY="21.96" android:endX="39.2" android:endY="50.8">
+                <item android:offset="0" android:color="#FFF3F7FE"/>
+                <item android:offset="0.45" android:color="#FFF3F7FE"/>
+                <item android:offset="1" android:color="#FFDEEAFB"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

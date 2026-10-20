@@ -32,7 +32,7 @@ class TopBar(context: Context, onSettings: () -> Unit, onUpdate: () -> Unit) : L
     val nowPlaying = NowPlaying(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
     private val weatherBox = LinearLayout(context)
-    private val weatherIcon = ImageView(context).apply { setColorFilter(Tokens.textPrimary) }
+    private val weatherIcon = ImageView(context)
     private val weatherTemp = text(30f, Tokens.textPrimary, "sans-serif-light")
     private val weatherPlace = text(13f, Tokens.textMuted, null)
     private val clockTime = TextClock(context).apply {

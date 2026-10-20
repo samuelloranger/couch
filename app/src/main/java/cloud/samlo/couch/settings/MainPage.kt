@@ -32,6 +32,14 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private fun look() {
         o.header(ctx.str(R.string.group_look))
         o.choice(
+            ctx.str(R.string.layout), ctx.str(R.string.layout_help),
+            listOf(
+                Option(ctx.str(R.string.layout_rows), Config.LAYOUT_ROWS),
+                Option(ctx.str(R.string.layout_index), Config.LAYOUT_INDEX),
+            ),
+            { config.layout }, { config.layout = it },
+        )
+        o.choice(
             ctx.str(R.string.card_size), ctx.str(R.string.card_size_help),
             listOf(
                 Option(ctx.str(R.string.size_small), "small"),

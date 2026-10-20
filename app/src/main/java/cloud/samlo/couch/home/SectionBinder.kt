@@ -60,7 +60,7 @@ class SectionBinder(
     }
 
     private fun card(tile: Tile, w: Int, h: Int, look: String, config: Config) =
-        Card(activity, tile, w, h, images, config.showLabels, look, onFocused).apply {
+        Card(activity, tile, w, h, images, config.showLabels, look, onFocused = onFocused).apply {
             isLongClickable = true
             setOnLongClickListener {
                 onLongPress(this)

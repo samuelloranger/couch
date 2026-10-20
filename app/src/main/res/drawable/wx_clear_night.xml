@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Meteocons by Bas Milius (MIT), fill style. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="64dp"
+    android:height="64dp"
+    android:viewportWidth="64"
+    android:viewportHeight="64">
+    <path
+        android:pathData="M 46.66 36.2 a 16.66 16.66 0 0 1 -16.78 -16.55 16.29 16.29 0 0 1 .55 -4.15 A 16.56 16.56 0 1 0 48.5 36.1 c -.61 .06 -1.22 .1 -1.84 .1 z"
+        android:strokeColor="#FF72B9D5"
+        android:strokeWidth=".5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="21.92" android:startY="18.75" android:endX="38.52" android:endY="47.52">
+                <item android:offset="0" android:color="#FF86C3DB"/>
+                <item android:offset="0.45" android:color="#FF86C3DB"/>
+                <item android:offset="1" android:color="#FF5EAFCF"/>
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>
