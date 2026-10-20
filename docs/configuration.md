@@ -57,7 +57,8 @@ it in **Rows**. Move from a Recent card moves the app in the Apps row, whose ord
 When a device on an input turns on while the home screen shows (a console woken from its
 controller, say), a **Switch to …** chip appears in the top bar. OK switches to that input. The
 chip never moves focus to itself (Up reaches it like the other chips), and goes away after 30 seconds or when you leave the home screen. Hidden
-inputs never offer themselves.
+inputs never offer themselves, and nothing is offered in the first seconds after the home screen
+comes back (a TV waking up reports its inputs changing too).
 
 ## Fire TV recommendations
 

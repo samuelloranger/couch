@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.widget.Toast
 import cloud.samlo.couch.HomeAccessibilityService
@@ -45,6 +46,7 @@ class HomeScreen(private val activity: Activity) {
 
     private var config = Config.load(null)
     private var resumed = false
+    private var resumedAt = 0L
 
     private val ambientMode = AmbientMode(views.ambient, { resumed }, { organizer.active })
         .also { it.minutes = config.ambientMinutes }
@@ -70,6 +72,7 @@ class HomeScreen(private val activity: Activity) {
 
     fun onResume() {
         resumed = true
+        resumedAt = SystemClock.elapsedRealtime()
         MediaListener.onRecommendationsChanged = {
             // Apps often post a batch at once: one reload for all of them.
             main.removeCallbacks(reloadForRecommendations)
@@ -201,7 +204,8 @@ class HomeScreen(private val activity: Activity) {
 
     /** A device on an input just turned on: while home shows, offer to switch to it (unless hidden). */
     private fun offerInput(inputId: String) {
-        if (!resumed) return
+        // A TV waking up reports its inputs changing as it comes back; those are no news.
+        if (!resumed || SystemClock.elapsedRealtime() - resumedAt < WAKE_SETTLE_MS) return
         val tile = InputSource.tiles(activity, config, null).firstOrNull { it.inputId == inputId } ?: return
         if (views.indexShown) views.index.topBar.inputOffer.offer(tile) else views.topBar.inputOffer.offer(tile)
     }
@@ -213,5 +217,6 @@ class HomeScreen(private val activity: Activity) {
 
     private companion object {
         const val RECOMMENDATIONS_SETTLE_MS = 2_000L
+        const val WAKE_SETTLE_MS = 10_000L
     }
 }
