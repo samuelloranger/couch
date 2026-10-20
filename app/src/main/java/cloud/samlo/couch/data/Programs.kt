@@ -34,7 +34,8 @@ object Programs {
     fun allChannels(
         context: Context,
         config: Config,
-        recommendations: Map<String, List<Recommendations.Item>> = Recommendations.byPackage(),
+        // The home loader reads fresh ones; settings pages reuse its last read instead of a binder call.
+        recommendations: Map<String, List<Recommendations.Item>> = Recommendations.lastKnown,
     ): List<ChannelInfo> {
         val order = { pkg: String -> config.pinnedApps.indexOf(pkg).let { if (it < 0) Int.MAX_VALUE else it } }
         val preview = if (!canRead(context)) emptyList() else query(context, TvContract.Channels.CONTENT_URI) { c ->

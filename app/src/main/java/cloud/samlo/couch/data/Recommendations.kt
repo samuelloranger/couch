@@ -27,8 +27,15 @@ object Recommendations {
         val launch: PendingIntent,
     )
 
-    /** Every app's recommendations, best ranked first. Empty without notification access. */
-    fun byPackage(): Map<String, List<Item>> {
+    /** What [byPackage] last returned, for screens that shouldn't wait on Android (settings pages). */
+    @Volatile
+    var lastKnown: Map<String, List<Item>> = emptyMap()
+        private set
+
+    /** Every app's recommendations, best ranked first. Empty without notification access. Call off the main thread. */
+    fun byPackage(): Map<String, List<Item>> = read().also { lastKnown = it }
+
+    private fun read(): Map<String, List<Item>> {
         val listener = MediaListener.connected ?: return emptyMap()
         val active = try {
             listener.activeNotifications

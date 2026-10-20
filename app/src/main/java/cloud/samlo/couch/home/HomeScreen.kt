@@ -7,6 +7,7 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.widget.Toast
 import cloud.samlo.couch.HomeAccessibilityService
+import cloud.samlo.couch.MediaListener
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Fetcher
@@ -58,6 +59,7 @@ class HomeScreen(private val activity: Activity) {
         activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded,
     )
     private val watchers = SystemWatchers(activity, views.rows) { load() }
+    private val reloadForRecommendations = Runnable { if (resumed) load() }
 
     fun onCreate() {
         activity.setContentView(views.root)
@@ -67,6 +69,11 @@ class HomeScreen(private val activity: Activity) {
 
     fun onResume() {
         resumed = true
+        MediaListener.onRecommendationsChanged = {
+            // Apps often post a batch at once: one reload for all of them.
+            main.removeCallbacks(reloadForRecommendations)
+            main.postDelayed(reloadForRecommendations, RECOMMENDATIONS_SETTLE_MS)
+        }
         HomeAccessibilityService.restore(activity)
         // Watch progress moves while you're in an app; unchanged rows are not rebuilt.
         load()
@@ -76,6 +83,8 @@ class HomeScreen(private val activity: Activity) {
 
     fun onPause() {
         resumed = false
+        MediaListener.onRecommendationsChanged = null
+        main.removeCallbacks(reloadForRecommendations)
         if (organizer.active) organizer.stop()
         stopLive()
         ambientMode.cancel()
@@ -190,5 +199,9 @@ class HomeScreen(private val activity: Activity) {
     @Suppress("DEPRECATION")
     private fun openSettings() {
         activity.startActivityForResult(Intent(activity, SettingsActivity::class.java), 1)
+    }
+
+    private companion object {
+        const val RECOMMENDATIONS_SETTLE_MS = 2_000L
     }
 }
