@@ -11,6 +11,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.WeatherNow
+import cloud.samlo.couch.ui.GodBadge
 import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
@@ -29,6 +30,7 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
     val inputs = pill(R.drawable.ic_pill_inputs, R.string.section_inputs, onInputs)
     val settings = pill(R.drawable.ic_pill_settings, R.string.settings, onSettings)
+    val god = GodBadge(context, 9.5f)
     private val weather = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
@@ -54,6 +56,7 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
         weather.addView(temperature)
         weather.addView(place, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(7) })
         addView(weather, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(15) })
+        addView(god, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(10) })
         addView(inputs, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(6) })
         addView(settings, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)))
     }

@@ -89,7 +89,7 @@ The `Docs` workflow builds it on every push to `main` that touches `docs/` and p
 ## CI and releases
 
 - **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: build,
-  unit tests, lint, a 500 KB APK size budget, and the APK as an artifact.
+  unit tests, lint, a 600 KB APK size budget, and the APK as an artifact.
 - **Release** (`.github/workflows/release.yml`) runs on `v*` tags: it builds and signs the APK and
   publishes a GitHub release with the APK and its SHA-256.
 - **Docs** (`.github/workflows/docs.yml`) builds the documentation site and pushes it to the

@@ -1,0 +1,483 @@
+# Couch's debloat lists, read by debloat/Catalog.kt. Three sections:
+#   [protected]  never offered, never removed
+#   [keep]       removable, but shown greyed with a reason: package REASON
+#   [lists]      "@" starts a list and names its manufacturers (a bare "@" is Google's extras,
+#                offered on every brand); then one app per line: package LEVEL WHY
+# Sources: a Sony Google TV debloat guide, a Fire TV kit's ad and telemetry list, and per-model
+# reboot-tested Google TV lists for the other brands. SAFE needs at least two independent lists.
+[protected]
+android
+com.amazon.tv.launcher
+com.amazon.tv.settings.v2
+com.amazon.vizzini
+com.android.bluetooth
+com.android.externalstorage
+com.android.keychain
+com.android.location.fused
+com.android.mtp
+com.android.packageinstaller
+com.android.permissioncontroller
+com.android.providers.downloads
+com.android.providers.media
+com.android.providers.settings
+com.android.providers.tv
+com.android.se
+com.android.settings
+com.android.shell
+com.android.systemui
+com.android.tv.settings
+com.android.vending
+com.android.webview
+com.coocaa.aigc.home
+com.coocaa.os.control
+com.coocaa.safelauncher
+com.dolby.android.audio.service
+com.easy.oad
+com.google.android.apps.mediashell
+com.google.android.apps.tv.launcherx
+com.google.android.gms
+com.google.android.gsf
+com.google.android.inputmethod.latin
+com.google.android.katniss
+com.google.android.leanback.ime
+com.google.android.packageinstaller
+com.google.android.permissioncontroller
+com.google.android.providers.media.module
+com.google.android.tts
+com.google.android.tungsten.setupwraith
+com.google.android.tv.axel
+com.google.android.tv.dfuservice
+com.google.android.tv.remote.service
+com.google.android.tvlauncher
+com.google.android.tvrecommendations
+com.google.android.webview
+com.gretzky.GlobalKey
+com.gretzky.hwinfo
+com.heytap.optvfactory
+com.hisense.bluetoothpair
+com.hisense.favkey
+com.hisense.kpad
+com.hisense.tv.baseservice
+com.hisense.tv.customerlauncher
+com.hisense.tv.hitvinput
+com.hisense.tv.inputs
+com.hisense.tv.smartsense
+com.hisense.tv.smartservice
+com.hisense.tv.tiletransition
+com.homwee.factory
+com.homwee.synckey
+com.jamdeo.tv.livetv
+com.jamdeo.tv.service
+com.jamdeo.tv.vod
+com.mediatek.android.leanbacklauncher.partnercustomizer
+com.mediatek.autopair
+com.mediatek.extservice
+com.mediatek.network
+com.mediatek.tis
+com.mediatek.tv.agent
+com.mediatek.tv.service
+com.mediatek.tvinput
+com.mediatek.wwtv.tvcenter
+com.mi.bluetooth
+com.mitv.codec.update
+com.mitv.livetv
+com.mitv.overseaservice
+com.mitv.tvhome
+com.mstar.netflixobserver
+com.nvidia.ControllerMapper
+com.nvidia.KeyComboOta
+com.nvidia.NvCPLSvc
+com.nvidia.avsync
+com.nvidia.blakepairing
+com.nvidia.nvaudiosvc
+com.nvidia.packagemanagerservice
+com.nvidia.shieldservice
+com.nvidia.shieldtech.accessoryui
+com.onn.bluetoothconnect
+com.onn.updatenotification
+com.skyworth.setting
+com.skyworth.tv
+com.sohu.inputmethod.sogou.tv
+com.sony.dtv.tvx
+com.tcl.autopair
+com.tcl.cyberui
+com.tcl.factory.view
+com.tcl.initsetup
+com.tcl.inputmethod.international
+com.tcl.keycustomfunctionservice
+com.tcl.providers.config
+com.tcl.rc.ota
+com.tcl.settings
+com.tcl.sourcemananger
+com.tcl.suspension
+com.tcl.system.server
+com.tcl.systemserver
+com.tcl.tcl_bt_rcu_service
+com.tcl.tv
+com.tcl.tvinput
+com.tcl.tvpassthrough
+com.tianci.localmedia
+com.tianci.movieplatform
+com.tianci.system
+com.vestel.tv.backlight
+com.vestel.tv.keycontroller
+com.vestel.tv.rcupdater
+com.vestel.tv.service
+com.vestel.tv.servicepatch
+com.vt.eula
+com.vt.tv.aiot
+com.vt.tv.customerlauncher
+com.vt.tv.input
+com.vt.tv.smartsense
+com.vt.tv.smartsense.ui
+com.vt.tv.tvcenter
+com.vt.tvservice
+com.xiaomi.android.tvsetup.partnercustomizer
+com.xiaomi.mitv.remotecontroller.service
+com.xiaomi.mitv.res
+com.xiaomi.mitv.settings
+com.xiaomi.mitv.systemui
+com.xiaomi.mitv.tvplayer
+com.xiaomi.mitv.updateservice
+com.xiaomi.tvqs.overseas.y24
+mitv.service
+org.droidtv.GlobalKey
+org.droidtv.ambiair
+org.droidtv.channels
+org.droidtv.devicesetup
+org.droidtv.epgdata
+org.droidtv.eum
+org.droidtv.fastip
+org.droidtv.hdmiservice
+org.droidtv.homeintentresolver
+org.droidtv.icp
+org.droidtv.lkb
+org.droidtv.networkwizard
+org.droidtv.oad
+org.droidtv.playtv
+org.droidtv.settings
+org.droidtv.tv.tptvservice
+org.droidtv.tvpowermanagerservice
+org.droidtv.tvsystemui
+org.droidtv.xtv
+org.droidtv.xtvsystem
+[keep]
+com.airoha.ble.ota UPDATES
+com.android.dynsystem UPDATES
+com.android.providers.calendar DISPUTED
+com.coocaa.os.upgrade UPDATES
+com.coocaa.tvmanager DISPUTED
+com.google.android.leanbacklauncher.recommendations HOME
+com.google.android.marvin.talkback ACCESSIBILITY
+com.google.android.speech.pumpkin VOICE
+com.google.android.tv NEEDED
+com.google.android.videos NEEDED
+com.google.android.youtube.tv NEEDED
+com.heytap.ars.sink CASTING
+com.heytap.optvmiracastservice CASTING
+com.heytap.tv.filebrowser MEDIA
+com.heytap.tv.gallery3d MEDIA
+com.heytap.tv.musicplayer MEDIA
+com.heytap.tv.videoplayer MEDIA
+com.hisense.remoteupgrade UPDATES
+com.hisense.tv.ota UPDATES
+com.homwee.dmt.upgrade UPDATES
+com.homwee.multiscreenshare CASTING
+com.homwee.upgrade UPDATES
+com.jamdeo.tv.fte ACCOUNT
+com.jamdeo.tv.mediacenter MEDIA
+com.mediatek.wwtv.mediaplayer MEDIA
+com.mitv.gallery MEDIA
+com.mitv.milinkservice CASTING
+com.mitv.tvhome.atv HOME
+com.mitv.videoplayer CASTING
+com.nvidia.NvCPLUpdater UPDATES
+com.nvidia.irtuner DISPUTED
+com.nvidia.nvgamecast CASTING
+com.nvidia.ota UPDATES
+com.nvidia.remotelocator DISPUTED
+com.nvidia.shield.ask VOICE
+com.phorus.playfi.tv MEDIA
+com.smartdevice.dtv.icast CASTING
+com.sony.dtv.homenetwork MEDIA
+com.sony.dtv.osat.music MEDIA
+com.sony.dtv.smartmediaapp MEDIA
+com.tcl.MultiScreenInteraction_TV CASTING
+com.tcl.UpdatePeripheral UPDATES
+com.tcl.airplay2 CASTING
+com.tcl.assistant VOICE
+com.tcl.gallery DISPUTED
+com.tcl.guard DISPUTED
+com.tcl.magiconnectfree CASTING
+com.tcl.miracast CASTING
+com.tcl.partnercustomizer DISPUTED
+com.tcl.ttvs DISPUTED
+com.tcl.ui_mediaCenter MEDIA
+com.tcl.usercenter ACCOUNT
+com.tcl.versionUpdateApp UPDATES
+com.tcl.xian.StartandroidService DISPUTED
+com.tianci.user ACCOUNT
+com.tm.replica CASTING
+com.vt.tv.ai_sense DISPUTED
+com.vt.tv.protector DISPUTED
+com.xiaomi.mitv.mediaexplorer MEDIA
+com.xiaomi.mitv.smartshare CASTING
+com.xiaomi.mitv.tvmanager DISPUTED
+com.xiaomi.mitv.upgrade UPDATES
+com.xiaomi.voicecontrol VOICE
+com.xiaomi.wfdsinkhelperservice CASTING
+fusion.android.tv.demo DISPUTED
+org.droidtv.m7opapp NEEDED
+org.droidtv.nettvregistration DISPUTED
+[lists]
+@
+com.google.android.feedback SAFE SUPPORT
+com.google.android.tv.bugreportsender SAFE SUPPORT
+com.google.android.play.games ASK GOOGLE_EXTRAS
+com.android.printspooler EXPERT SYSTEM_EXTRAS
+com.android.wallpaperbackup EXPERT SYSTEM_EXTRAS
+com.android.tv.feedbackconsent SAFE SUPPORT
+android.autoinstalls.config.google.gtvpai SAFE SETUP
+com.google.android.partnersetup SAFE SETUP
+com.google.android.onetimeinitializer SAFE SETUP
+com.google.android.syncadapters.calendar SAFE SYSTEM_EXTRAS
+com.google.android.syncadapters.contacts SAFE SYSTEM_EXTRAS
+com.android.adservices.api SAFE TRACKING
+com.android.ondevicepersonalization.services SAFE ADS
+com.android.federatedcompute.services SAFE TRACKING
+com.google.android.music SAFE VENDOR_MEDIA
+com.google.android.youtube.tvmusic ASK VENDOR_MEDIA
+com.google.android.youtube.tvkids ASK VENDOR_MEDIA
+com.google.android.youtube.tvunplugged ASK VENDOR_MEDIA
+com.google.android.apps.tv.dreamx ASK SCREENSAVER
+com.google.android.backdrop ASK SCREENSAVER
+com.android.dreams.basic ASK SCREENSAVER
+com.google.android.tv.assistant ASK VOICE_EXTRAS
+com.google.android.apps.nbu.smartconnect.tv ASK SYSTEM_EXTRAS
+com.google.android.apps.tv.netoscope EXPERT TRACKING
+com.android.healthconnect.controller EXPERT SYSTEM_EXTRAS
+com.android.health.connect.backuprestore EXPERT SYSTEM_EXTRAS
+com.android.gallery3d ASK VENDOR_MEDIA
+@sony
+com.sony.dtv.promos ASK ADS
+tv.samba.ssm ASK TRACKING
+com.sony.dtv.demomode ASK DEMO
+com.sony.dtv.multiscreendemo ASK DEMO
+com.sony.dtv.demosupport ASK DEMO
+com.sony.dtv.b2b.hotelmode ASK COMMERCIAL
+com.sony.dtv.b2b.prosettings ASK COMMERCIAL
+com.sony.dtv.b2b.rs232csupport ASK COMMERCIAL
+com.sony.dtv.b2b.vendorprotocol ASK COMMERCIAL
+com.sony.dtv.customersupport ASK SUPPORT
+com.sony.dtv.smarthelp ASK SUPPORT
+com.sony.dtv.imanual ASK SUPPORT
+com.sony.dtv.sonybugreportsys ASK SUPPORT
+com.sony.dtv.sonyloglevelsettingsys ASK SUPPORT
+com.sony.dtv.sonyloglevelsettingvnd ASK SUPPORT
+com.sony.dtv.system.crashlog ASK SUPPORT
+com.sony.dtv.sonyselect ASK VENDOR_MEDIA
+com.sony.dtv.interactivetvutil ASK BROADCAST
+com.sony.dtv.hbbtvlauncher ASK BROADCAST
+com.sony.dtv.youview ASK BROADCAST
+com.sony.dtv.seconddispsetting EXPERT SYSTEM_EXTRAS
+@amazon
+com.amazon.tv.acr ASK TRACKING
+com.amazon.hybridadidservice ASK TRACKING
+com.amazon.neo.minerva ASK TRACKING
+com.amazon.neo.minerva.logcat ASK TRACKING
+com.amazon.wirelessmetrics.service ASK TRACKING
+com.amazon.perfcollection ASK TRACKING
+com.amazon.perfc ASK TRACKING
+com.amazon.dp.logger ASK TRACKING
+com.amazon.sneakpeek ASK ADS
+com.amazon.shoptv.client ASK ADS
+com.amazon.shoptv.firetv.client ASK ADS
+com.amazon.tv.democontent.provider ASK DEMO
+com.amazon.storm.lightning.tutorial ASK DEMO
+com.amazon.tmm.tutorial ASK DEMO
+com.amazon.tv.alexaalerts ASK VOICE_EXTRAS
+com.amazon.tv.alexanotifications ASK VOICE_EXTRAS
+com.amazon.audiohome ASK VOICE_EXTRAS
+com.amazon.tv.ftvambient ASK SCREENSAVER
+com.amazon.ftv.screensaver ASK SCREENSAVER
+@google
+com.google.android.tv.remotecontrol.logging ASK TRACKING
+com.google.android.federatedcompute SAFE CASTING
+com.google.android.ondevicepersonalization.services SAFE ADS
+com.google.android.adservices.api SAFE ADS
+com.google.android.ext.adservices.api SAFE ADS
+com.google.android.apps.tv.netoscope EXPERT TRACKING
+android.autoinstalls.config.google.gtvpai SAFE SETUP
+@tcl, ffalcon
+com.tcl.esticker SAFE DEMO
+com.tcl.exhibit SAFE DEMO
+com.tcl.hotelmenu SAFE COMMERCIAL
+com.tcl.messagebox SAFE ADS
+com.tcl.waterfall.overseas SAFE ADS
+com.tcl.tv.tclhome_passive SAFE ADS
+com.tcl.channelplus SAFE ADS
+com.tcl.dashboard SAFE ADS
+com.tcl.bootadservice SAFE ADS
+com.tcl.c2dm.client SAFE SYSTEM_EXTRAS
+com.tcl.bi SAFE TRACKING
+com.tcl.logkit SAFE SUPPORT
+com.tcl.tvweishi SAFE SYSTEM_EXTRAS
+com.tcl.usagestats ASK TRACKING
+com.tcl.tvhealthcheck SAFE SUPPORT
+com.tcl.profilemanager SAFE TRACKING
+com.tcl.recognize.service SAFE AUTOINSTALL
+com.tcl.overseasappshow SAFE ADS
+com.tcl.interactive SAFE BROADCAST
+tv.samba.ssm.ui SAFE TRACKING
+android.autoinstalls.config.tcl.device SAFE AUTOINSTALL
+com.tcl.useragreement SAFE SETUP
+com.tcl.ocean.instructions SAFE SETUP
+com.tcl.repairguide SAFE SETUP
+com.tcl.copydatatotv SAFE SETUP
+com.tcl.playskill SAFE ADS
+com.tcl.wholenetsearch SAFE ADS
+com.tcl.appreciate.art SAFE ADS
+com.tcl.tv.plus SAFE VENDOR_MEDIA
+com.tcl.appmarket2 ASK VENDOR_MEDIA
+com.tcl.smartalexa ASK VOICE_EXTRAS
+com.tcl.gamebar ASK VENDOR_MEDIA
+com.tcl.hearaid ASK ACCESSIBILITY
+com.tcl.t_solo ASK SYSTEM_EXTRAS
+com.tcl.browser ASK VENDOR_MEDIA
+com.tcl.keyhelp EXPERT SUPPORT
+@hisense
+com.hisense.storemode SAFE DEMO
+com.vt.storemode SAFE DEMO
+com.hisense.tv.b2b SAFE COMMERCIAL
+com.hisense.hotelmenu SAFE COMMERCIAL
+com.hisense.demonstrate SAFE DEMO
+com.hisense.evservice SAFE TRACKING
+com.vt.tv.evservice SAFE TRACKING
+com.hisense.platformreport SAFE TRACKING
+com.hisense.logupload SAFE SUPPORT
+com.hisense.app.logreport SAFE SUPPORT
+com.hisense.hitv.das ASK TRACKING
+com.hisense.business.ad SAFE ADS
+com.hisense.service.ad SAFE ADS
+com.hisense.service.message SAFE SYSTEM_EXTRAS
+com.hisense.service.hproxy ASK SYSTEM_EXTRAS
+com.hisense.widget.pro ASK ADS
+android.autoinstalls.config.hisense.xiaoyushan SAFE AUTOINSTALL
+net.vidaatv.hisense.android.tv SAFE ADS
+com.vidaa.oemtabcontentprovider SAFE ADS
+com.mstar.android.tv.disclaimercustomization SAFE SETUP
+com.hisense.electronictutorial SAFE SUPPORT
+com.hisense.tv.weather SAFE ADS
+com.vt.hishow ASK SCREENSAVER
+com.hisense.odinbrowser ASK VENDOR_MEDIA
+com.hisense.alexa ASK VOICE_EXTRAS
+com.vt.alexa ASK VOICE_EXTRAS
+com.hisense.tv.hisremotenow ASK CASTING
+com.vt.fte EXPERT SETUP
+com.hisense.fte EXPERT SETUP
+@xiaomi, redmi
+com.xiaomi.statistic SAFE TRACKING
+com.miui.analytics SAFE TRACKING
+com.xiaomi.tvqs SAFE SUPPORT
+com.xiaomi.tvqs.overseas SAFE TRACKING
+tv.alphonso.alphonso_eula SAFE TRACKING
+com.xm.webcontent SAFE ADS
+com.xiaomi.floatingframe SAFE ADS
+com.mitv.tvhome.oemtab SAFE ADS
+com.mitv.tvhome.michannel SAFE ADS
+com.mitv.tvhome.mitvplus SAFE ADS
+com.mitv.shoplugin SAFE ADS
+com.xiaomi.tv.gallery SAFE ADS
+com.duokan.videodaily SAFE ADS
+com.xiaomi.mitv.tvpush.tvpushservice SAFE ADS
+com.mitv.cloudcontrol SAFE AUTOINSTALL
+android.autoinstalls.config.xiaomi.amelie SAFE AUTOINSTALL
+android.autoinstalls.config.xiaomi.mibox3 SAFE AUTOINSTALL
+co.sensara.tv.mitv SAFE ADS
+com.xiaomi.mitv.handbook SAFE SETUP
+com.xiaomo.tv.milegal SAFE SETUP
+com.xiaomi.mitv.healthdiagnosis SAFE SUPPORT
+com.xiaomi.mitv.csi SAFE TRACKING
+com.xiaomi.mimusic2 ASK VENDOR_MEDIA
+com.xiaomi.amazon.alexa ASK VOICE_EXTRAS
+com.xiaomi.smarthome.tv ASK VOICE_EXTRAS
+com.mitv.dream ASK SCREENSAVER
+com.mitv.screensaver ASK SCREENSAVER
+com.xiaomi.gamecenter.sdk.service.mibox ASK VENDOR_MEDIA
+com.xiaomi.screenrecorder ASK SYSTEM_EXTRAS
+com.miui.tv.analytics ASK TRACKING
+@philips, tp vision, tpvision, tpv
+org.droidtv.candeebug SAFE TRACKING
+org.droidtv.gel SAFE TRACKING
+org.droidtv.usagelogger SAFE TRACKING
+org.droidtv.tv.frameworklogger SAFE SUPPORT
+com.tpv.xmic.ots.cms.client ASK SYSTEM_EXTRAS
+tv.samba.ssm ASK TRACKING
+tv.inscape.tvclient.inscapeacr ASK TRACKING
+org.droidtv.nettv.market SAFE ADS
+org.droidtv.nettvrecommender SAFE ADS
+org.droidtv.oemtabprovider ASK ADS
+org.droidtv.sticker SAFE ADS
+org.droidtv.demome SAFE DEMO
+org.droidtv.android.fitness SAFE ADS
+com.zeasn.whalelive SAFE ADS
+com.mstar.android.tv.disclaimercustomization SAFE SETUP
+com.google.android.tvtutorials SAFE SETUP
+com.google.android.sss.authbridge ASK SETUP
+com.boosteroidtv.streaming SAFE ADS
+com.tpv.nftgallery ASK SCREENSAVER
+org.droidtv.amazonalexa EXPERT VOICE_EXTRAS
+org.droidtv.recommendation EXPERT VENDOR_MEDIA
+org.droidtv.nettvapps EXPERT AUTOINSTALL
+org.droidtv.dlna ASK CASTING
+org.droidtv.astrahdplus ASK BROADCAST
+org.droidtv.ipcontrol ASK ADS
+org.droidtv.matter ASK SYSTEM_EXTRAS
+com.phorus.playfi.softap ASK SUPPORT
+com.mediatek.dialservice ASK CASTING
+org.droidtv.control4app ASK SYSTEM_EXTRAS
+io.mimi.tvapp ASK ACCESSIBILITY
+@nvidia
+com.nvidia.stats SAFE TRACKING
+com.nvidia.feedback SAFE SUPPORT
+com.nvidia.diagtools SAFE SUPPORT
+android.autoinstalls.config.nvidia SAFE AUTOINSTALL
+com.nvidia.tegrazone3 ASK VENDOR_MEDIA
+com.nvidia.shield.welcome SAFE SETUP
+com.nvidia.shield.registration SAFE SETUP
+com.nvidia.factorybundling SAFE ADS
+com.nvidia.factory SAFE SUPPORT
+com.nvidia.factorysyschecker SAFE SUPPORT
+com.nvidia.inputviewer ASK SUPPORT
+com.nvidia.developerwidget SAFE SYSTEM_EXTRAS
+com.nvidia.tegraprofiler.security SAFE SUPPORT
+com.nvidia.shield.beta ASK SUPPORT
+com.nvidia.shieldbeta SAFE SUPPORT
+com.nvidia.hotwordsetup ASK SETUP
+com.nvidia.shield.nas ASK SYSTEM_EXTRAS
+com.nvidia.shield.smbserver ASK SYSTEM_EXTRAS
+com.nvidia.shield.smbauth ASK SYSTEM_EXTRAS
+com.android.gallery3d ASK VENDOR_MEDIA
+@skyworth, coocaa, changhong skyworth, skyworth digital
+com.tianci.ad SAFE ADS
+com.tianci.push SAFE ADS
+com.tianci.autoinstaller SAFE AUTOINSTALL
+com.smartdevice.recommendation SAFE TRACKING
+com.smartdevice.acr.recommendation ASK TRACKING
+com.skyworth.aisense ASK TRACKING
+com.coocaa.sysreport SAFE TRACKING
+com.smartdevice.leanbacklauncher.customizer SAFE ADS
+com.smartdevice.aftersale SAFE AUTOINSTALL
+com.smartdevice.recordactivation SAFE SETUP
+com.smartdevice.dailymanage SAFE SYSTEM_EXTRAS
+com.smartdevice.myapp SAFE SYSTEM_EXTRAS
+com.smartdevice.common.demonow SAFE DEMO
+com.Smartdevice.emanual SAFE SUPPORT
+com.coocaa.demonow.lightining SAFE DEMO
+com.coocaa.guide SAFE SETUP
+com.coocaa.messageprovider SAFE ADS
+com.coocaa.screensaver SAFE ADS
+com.baidu.oases SAFE SYSTEM_EXTRAS
+com.coocaa.app_browser ASK VENDOR_MEDIA
+com.tianci.appstore ASK VENDOR_MEDIA
+android.autoinstalls.config.skyworth SAFE AUTOINSTALL

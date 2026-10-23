@@ -57,6 +57,17 @@ class UpdateTest {
         assertFalse(Config.fromJson(Config.fromJson("""{"checkUpdates":false}""").toJson()).checkUpdates)
     }
 
+    /** The pre-release channel takes the newest usable release in GitHub's list, pre-release or not. */
+    @Test
+    fun preReleaseChannelTakesTheNewestUsable() {
+        val pre = github("v0.6.0", listOf("couch.apk", "couch-v0.6.0.apk.sha256"), prerelease = true)
+        val broken = github("v0.7.0", listOf("couch.apk")) // no checksum: skipped
+        val stable = github("v0.5.0", listOf("couch.apk", "couch-v0.5.0.apk.sha256"))
+        assertEquals("0.6.0", Release.newestOf("[$broken,$pre,$stable]")?.version)
+        assertNull(Release.newestOf("not json"))
+        assertNull(Release.fromGitHub(pre)) // the stable channel still refuses it
+    }
+
     private fun github(tag: String, assets: List<String>, prerelease: Boolean = false, base: String = "https://example.test/"): String {
         val list = assets.joinToString(",") { """{"name":"$it","browser_download_url":"$base$it"}""" }
         return """{"tag_name":"$tag","draft":false,"prerelease":$prerelease,"assets":[$list]}"""

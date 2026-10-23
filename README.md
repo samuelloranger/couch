@@ -48,6 +48,10 @@ launcher. Plain Android Views, no AndroidX, no Compose, no tracking: the APK is 
 - HOME button takeover on TVs that hardwire HOME to the stock launcher, repairing itself if
   Android drops it.
 - Updates itself: an Update button appears when a new release is out, one confirmation installs it.
+- **Godmode**, hidden behind seven OK presses on About: tune the TV's animations, block ads for
+  every app through private DNS, remove the apps the TV came with (measured on your TV, reversible),
+  free cache space, a sleep timer, screenshots, and a frame HUD with a benchmark. See
+  [the docs](https://samlo.cloud/couch/godmode).
 
 The interface is in English, or French on a TV set to French.
 

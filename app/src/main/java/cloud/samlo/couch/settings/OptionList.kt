@@ -94,8 +94,9 @@ class OptionList(
         }
     }
 
-    fun link(title: String, help: String, valueOf: () -> String = { "" }, onClick: () -> Unit) {
+    fun link(title: String, help: String, valueOf: () -> String = { "" }, onClick: () -> Unit): OptionRow {
         val row = add(title, help) { valueOf().ifEmpty { "›" } }
         row.setOnClickListener { onClick() }
+        return row
     }
 }

@@ -30,6 +30,9 @@ internal object ConfigJson {
         .put("fahrenheit", c.fahrenheit)
         .put("ambientMinutes", c.ambientMinutes)
         .put("checkUpdates", c.checkUpdates)
+        .put("godmode", c.godmode)
+        .put("preReleases", c.preReleases)
+        .put("hud", c.hud)
 
     /** Every field is optional; a missing one keeps what [into] already holds. */
     fun decode(json: JSONObject, into: Config) = with(into) {
@@ -58,6 +61,14 @@ internal object ConfigJson {
         fahrenheit = json.optBoolean("fahrenheit", fahrenheit)
         ambientMinutes = json.optInt("ambientMinutes", ambientMinutes)
         checkUpdates = json.optBoolean("checkUpdates", checkUpdates)
+        godmode = json.optBoolean("godmode", godmode)
+        preReleases = json.optBoolean("preReleases", preReleases)
+        // Was a boolean before the HUD could show either unit.
+        hud = when (val value = json.opt("hud")) {
+            is Boolean -> if (value) Config.HUD_MS else Config.HUD_OFF
+            is String -> value
+            else -> hud
+        }
     }
 
     private fun JSONObject.strings(name: String): List<String>? {

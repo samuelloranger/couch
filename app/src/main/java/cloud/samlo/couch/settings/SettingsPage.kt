@@ -25,6 +25,9 @@ interface SettingsPage {
     /** Back from another screen. */
     fun onResume() = Unit
 
+    /** The screen is going away: let go of anything held open. */
+    fun onDestroy() = Unit
+
     /** True when the page handled the key itself. */
     fun consumesKey(event: KeyEvent): Boolean = false
 }
