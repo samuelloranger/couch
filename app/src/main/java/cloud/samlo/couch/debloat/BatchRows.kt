@@ -58,20 +58,24 @@ internal fun DebloatPage.runBatch() {
         }
         val done = ArrayList<String>()
         val refused = ArrayList<String>()
-        try {
-            for (pkg in batch) {
-                store.record(pkg, present = true)
-                try {
-                    engine.remove(pkg)
+        for (pkg in batch) {
+            store.record(pkg, present = true)
+            try {
+                engine.remove(pkg)
+                store.removed(pkg, viaShell = true)
+                done += pkg
+            } catch (e: Engine.Refused) {
+                refused += label(pkg)
+            } catch (e: AdbShell.Failed) {
+                // The shell dropped before its answer arrived: the app may be gone all the same,
+                // and a removal nobody wrote down could never be undone.
+                if (!Packages.installed(ctx.activity, pkg)) {
                     store.removed(pkg, viaShell = true)
                     done += pkg
-                } catch (e: Engine.Refused) {
-                    refused += label(pkg)
                 }
+                error = ctx.str(R.string.shell_no_ok)
+                break
             }
-        } catch (e: AdbShell.Failed) {
-            // The shell dropped mid-batch: what already went still gets its check, below.
-            error = ctx.str(R.string.shell_no_ok)
         }
         if (refused.isNotEmpty()) toast(ctx.activity.getString(R.string.refused_toast, refused.joinToString()))
         if (done.isNotEmpty()) {
@@ -120,6 +124,9 @@ private fun DebloatPage.removeAgain(pkgs: List<String>) {
                 store.removed(pkg, viaShell = true)
             } catch (e: Engine.Refused) {
                 toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
+            } catch (e: AdbShell.Failed) {
+                if (!Packages.installed(ctx.activity, pkg)) store.removed(pkg, viaShell = true)
+                error = ctx.str(R.string.shell_no_ok)
             }
         }
     }

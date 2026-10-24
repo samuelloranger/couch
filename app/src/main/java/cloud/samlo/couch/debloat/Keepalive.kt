@@ -34,7 +34,8 @@ object Keepalive {
         prefs.edit().putLong(TOUCHED, now).apply()
         val app = context.applicationContext
         thread(name = "adb-keepalive", isDaemon = true) {
-            if (Engine(app).touch() == false) forget(app)
+            // Nothing here may escape: this thread is the launcher's process.
+            runCatching { if (Engine(app).touch() == false) forget(app) }
         }
     }
 }

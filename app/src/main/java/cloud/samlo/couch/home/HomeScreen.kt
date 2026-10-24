@@ -106,6 +106,7 @@ class HomeScreen(private val activity: Activity) {
         if (organizer.active) organizer.stop()
         hud.enable(Config.HUD_OFF)
         benchmark.cancel()
+        closeCard()
         swallowUp = false
         stopLive()
         ambientMode.cancel()
@@ -200,7 +201,8 @@ class HomeScreen(private val activity: Activity) {
         config = data.config
         if (lookChanged) Tokens.applyAccent(config.accent)
         applyLook(config)
-        hud.enable(hudUnit())
+        // Not while the result card is up: the panel would sit under it.
+        if (card == null) hud.enable(hudUnit())
         // Godmode locked costs one boolean here; unlocked, a couple of cached settings reads.
         val god = config.godmode && (config.hud != Config.HUD_OFF || TvSettings.changed(activity) > 0 || RealHome.active(activity))
         views.topBar.god.show(god)

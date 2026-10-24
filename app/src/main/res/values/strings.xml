@@ -256,8 +256,9 @@
     <string name="godmode_pages_group">Tools</string>
     <string name="godmode_debloat">Remove built-in apps</string>
     <string name="godmode_debloat_help">Removes apps the TV came with, a few at a time, and keeps a list so you can put each one back. Only apps on Couch’s own list for this brand are offered.</string>
+    <string name="godmode_hide_first">puts your TV back first</string>
     <string name="godmode_hide">Hide godmode</string>
-    <string name="godmode_hide_help">Takes this page out of Customize. Apps you removed stay removed: put them back first if you want them.</string>
+    <string name="godmode_hide_help">Takes this page out of Customize, after putting back anything still running under it: TV settings, the home screen, the frame HUD and pre-releases. Removed apps are not: put them back from the list first if you want them.</string>
     <!-- Removing built-in apps -->
     <string name="debloat_title">Built-in apps</string>
     <string name="debloat_intro">Couch first asks the TV which apps are installed. Nothing is removed until you pick apps and confirm.</string>

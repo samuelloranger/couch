@@ -64,7 +64,11 @@ class AdbShell private constructor(
                         write(socket, AdbProtocol.CLSE, local, m.arg0)
                         return out.toString(Charsets.UTF_8.name())
                     }
-                    else -> throw Failed.Blocked(IllegalStateException("stream saw ${m.name()}"))
+                    else -> {
+                        // Out of step with adbd: this connection can't be trusted for the next command.
+                        close()
+                        throw Failed.Blocked(IllegalStateException("stream saw ${m.name()}"))
+                    }
                 }
             }
         } catch (e: IOException) {

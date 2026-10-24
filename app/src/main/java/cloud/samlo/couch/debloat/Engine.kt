@@ -20,17 +20,23 @@ class Engine(private val context: Context, private val list: DebloatList? = null
     /** A removal or restore the TV refused; [output] is what `pm` said. */
     class Refused(val pkg: String, val output: String) : Exception("$pkg: ${output.trim().take(120)}")
 
-    private var adb = AdbShell.create(context)
+    private var adb: AdbShell? = null
 
     /** Lets the connection go; the next [connect] opens a new one. */
-    fun close() = adb.close()
+    fun close() = synchronized(this) {
+        adb?.close()
+        adb = null
+    }
 
     /**
-     * Authorizes, reporting each turn to [onEach]. One retry after an unanswered question: Android
-     * drops a prompt on its own when the TV is just waking. Ends [State.GRANTED], [State.BLOCKED]
-     * (the TV refuses apps; a computer is the way), [State.DEBUG_OFF] or [State.NEEDS_OK].
+     * Authorizes, reporting each turn to [onEach]. A connection this engine already holds is used
+     * again, so one answer to Android's question covers every action of a visit; only when there
+     * is none, or it has died, does a new one go up. One retry after an unanswered question:
+     * Android drops a prompt on its own when the TV is just waking. Ends [State.GRANTED],
+     * [State.BLOCKED] (the TV refuses apps; a computer is the way), [State.DEBUG_OFF] or
+     * [State.NEEDS_OK].
      */
-    fun connect(onEach: (State) -> Unit = {}): State {
+    fun connect(onEach: (State) -> Unit = {}): State = synchronized(this) {
         var reported = State.OFF
         fun tell(state: State): State {
             if (state != reported) {
@@ -39,20 +45,27 @@ class Engine(private val context: Context, private val list: DebloatList? = null
             }
             return state
         }
-        repeat(ATTEMPTS) { attempt ->
-            adb.close()
-            adb = AdbShell.create(context) { phase ->
-                when (phase) {
-                    AdbShell.Phase.TRYING -> tell(State.TRYING)
-                    AdbShell.Phase.DIALOG -> tell(State.NEEDS_OK)
-                    AdbShell.Phase.READY -> Unit
-                }
-            }
+        // The connection from an earlier action, if it is still good.
+        adb?.let { live ->
             try {
-                // One connection for both: a second one would put the question on screen again
-                // whenever "Always allow" wasn't ticked.
-                val out = adb.run("id; pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS")
-                if (!out.contains("uid=2000(shell)")) return tell(State.BLOCKED)
+                if (granted(live)) return tell(State.GRANTED)
+            } catch (e: Exception) {
+                // Died while nobody was looking; a fresh one goes up below.
+            }
+            live.close()
+            adb = null
+        }
+        repeat(ATTEMPTS) { attempt ->
+            try {
+                val shell = AdbShell.create(context) { phase ->
+                    when (phase) {
+                        AdbShell.Phase.TRYING -> tell(State.TRYING)
+                        AdbShell.Phase.DIALOG -> tell(State.NEEDS_OK)
+                        AdbShell.Phase.READY -> Unit
+                    }
+                }
+                adb = shell
+                if (!granted(shell)) return tell(State.BLOCKED)
                 Keepalive.granted(context)
                 return tell(State.GRANTED)
             } catch (e: AdbShell.Failed.Blocked) {
@@ -75,7 +88,12 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      * key isn't allowed any more, null when the shell couldn't be reached at all.
      */
     fun touch(): Boolean? {
-        val shell = AdbShell.create(context, prompt = false)
+        val shell = try {
+            AdbShell.create(context, prompt = false)
+        } catch (e: Exception) {
+            // Generating or reading the key failed; this runs on a bare thread.
+            return null
+        }
         return try {
             shell.run("true")
             true
@@ -95,7 +113,11 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      * first and asks only about the running ones.
      */
     fun memory(pkgs: Collection<String>): Map<String, Int>? {
-        val shell = AdbShell.create(context, prompt = false)
+        val shell = try {
+            AdbShell.create(context, prompt = false)
+        } catch (e: Exception) {
+            return null
+        }
         return try {
             val names = shell.run("ps -A -o NAME").lines().map(String::trim)
             val running = pkgs.filter { pkg -> SAFE_NAME.matches(pkg) && names.any { it == pkg || it.startsWith("$pkg:") } }
@@ -108,17 +130,29 @@ class Engine(private val context: Context, private val list: DebloatList? = null
         }
     }
 
+    /**
+     * Asks who the shell runs as and grants Couch the settings right in one go: a second command
+     * would be a second stream, and on a TV that forgot the key, a second question on screen.
+     * Root adbd (common on cheap boxes) answers uid=0 and can grant just as well.
+     */
+    private fun granted(shell: AdbShell): Boolean {
+        val out = shell.run("id; pm grant ${context.packageName} android.permission.WRITE_SECURE_SETTINGS")
+        return out.contains("uid=2000(shell)") || out.contains("uid=0(root)")
+    }
+
     /** One shell command, output as text; call after [connect] granted the shell. */
-    fun run(command: String): String = adb.run(command)
+    fun run(command: String): String = synchronized(this) {
+        (adb ?: throw AdbShell.Failed.Off(null)).run(command)
+    }
 
     /** Closes background apps, as Android would under memory pressure; call after [connect]. */
     fun killBackground() {
-        adb.run("am kill-all")
+        run("am kill-all")
     }
 
     /** Clears every app's cache (apps rebuild them as they go); call after [connect]. */
     fun trimCaches() {
-        adb.run("pm trim-caches 999G")
+        run("pm trim-caches 999G")
     }
 
     /**
@@ -128,19 +162,19 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      */
     fun remove(pkg: String) {
         require(list?.entry(pkg) != null) { "$pkg is not on Couch's list" }
-        val out = adb.run("pm uninstall -k --user 0 $pkg")
+        val out = run("pm uninstall -k --user 0 $pkg")
         if (!out.contains("Success") || Packages.installed(context, pkg)) throw Refused(pkg, out)
     }
 
     /** Undoes one removal; done only once the package manager sees the app again. */
     fun restore(pkg: String) {
-        val out = adb.run("cmd package install-existing $pkg")
+        val out = run("cmd package install-existing $pkg")
         if (!Packages.installed(context, pkg)) throw Refused(pkg, out)
     }
 
     /** Restarts the TV, so the check after a batch also catches apps the firmware brings back. */
     fun reboot() {
-        adb.run("svc power reboot || reboot")
+        run("svc power reboot || reboot")
     }
 
     companion object {

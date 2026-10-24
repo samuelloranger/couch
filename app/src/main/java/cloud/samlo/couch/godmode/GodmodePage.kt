@@ -4,6 +4,7 @@ import android.graphics.Typeface
 import android.view.View
 import android.widget.Toast
 import cloud.samlo.couch.R
+import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.debloat.DebloatPage
 import cloud.samlo.couch.debloat.Engine
 import cloud.samlo.couch.debloat.Keepalive
@@ -29,7 +30,11 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
      * One connection for the whole visit: Android asks to allow debugging on the first action that
      * needs it, and the rest of the page reuses that answer. Closed when the page goes away.
      */
-    internal val engine by lazy { Engine(ctx.activity) }
+    internal val engine by lazy {
+        engineStarted = true
+        Engine(ctx.activity)
+    }
+    private var engineStarted = false
 
     /** The last known state: a key allowed before shows as connected until a try says otherwise. */
     @Volatile private var shellState = if (Keepalive.isGranted(ctx.activity)) Engine.State.GRANTED else Engine.State.OFF
@@ -59,12 +64,7 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
             ctx.config.preReleases = it
             UpdateCheck.forget(ctx.activity)
         }
-        o.link(ctx.str(R.string.godmode_hide), ctx.str(R.string.godmode_hide_help), { "›" }) {
-            ctx.config.godmode = false
-            ctx.config.save(ctx.files.dir)
-            Keepalive.forget(ctx.activity)
-            ctx.activity.finish()
-        }
+        o.link(ctx.str(R.string.godmode_hide), ctx.str(R.string.godmode_hide_help), { hideValue() }) { hide() }
         o.rows().forEach { it.value.typeface = Typeface.MONOSPACE }
         if (!readouts) {
             Readouts.attach(ctx)
@@ -78,6 +78,42 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
     /** The readings sit outside the list, so a rebuild of the rows mustn't add them twice. */
     private var readouts = false
 
+    /** What hiding would still have to undo: TV settings, the home, and the HUD. */
+    private fun pending() =
+        TvSettings.changed(ctx.activity) + (if (RealHome.active(ctx.activity)) 1 else 0) +
+            (if (ctx.config.hud != Config.HUD_OFF) 1 else 0)
+
+    private fun hideValue() = if (pending() == 0) "›" else ctx.str(R.string.godmode_hide_first)
+
+    /**
+     * Takes godmode out of Customize. Anything still running under it goes back first: a hidden
+     * page can't undo itself, and the badge that announced it goes with it.
+     */
+    private fun hide() {
+        val c = ctx.activity
+        if (RealHome.active(c)) {
+            withShell { shell ->
+                RealHome.give(c, shell)
+                TvSettings.restore(c)
+                c.runOnUiThread { finishHiding() }
+                ctx.str(R.string.putback_done)
+            }
+            return
+        }
+        TvSettings.restore(c)
+        finishHiding()
+    }
+
+    private fun finishHiding() {
+        ctx.config.godmode = false
+        ctx.config.hud = Config.HUD_OFF
+        ctx.config.preReleases = false
+        ctx.config.save(ctx.files.dir)
+        UpdateCheck.forget(ctx.activity)
+        Keepalive.forget(ctx.activity)
+        ctx.activity.finish()
+    }
+
     /** One OK per try; with "Always allow" ticked the rerun is silent and the row stops asking. */
     internal fun connect(then: (() -> Unit)? = null) {
         shellState = Engine.State.TRYING
@@ -89,7 +125,8 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
             }
             ctx.activity.runOnUiThread {
                 shellState = end
-                shellRow?.refresh()
+                // Every row, not just this one: the TV settings were waiting on this grant.
+                o.rows().forEach { it.refresh() }
                 if (end == Engine.State.GRANTED) then?.invoke()
                 // A refused shell brings up the computer route.
                 if (end == Engine.State.BLOCKED || end == Engine.State.DEBUG_OFF) rebuild()
@@ -104,7 +141,10 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
         ctx.layout.list.requestFocus(View.FOCUS_DOWN)
     }
 
-    override fun onDestroy() = engine.close()
+    override fun onDestroy() {
+        // Touching the lazy engine would make a key the page never needed.
+        if (engineStarted) engine.close()
+    }
 
     internal fun toast(text: String) = Toast.makeText(ctx.activity, text, Toast.LENGTH_LONG).show()
 

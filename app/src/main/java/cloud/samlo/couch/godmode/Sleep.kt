@@ -77,7 +77,12 @@ internal object Sleep {
 
     /** The command's output; null on any failure (no shell, a key that can't be read): these run on bare threads. */
     private fun output(context: Context, command: String): String? {
-        val shell = AdbShell.create(context, prompt = false)
+        val shell = try {
+            AdbShell.create(context, prompt = false)
+        } catch (e: Exception) {
+            // Reading or generating the key failed; the callers here run on bare threads.
+            return null
+        }
         return try {
             shell.run(command)
         } catch (e: Exception) {

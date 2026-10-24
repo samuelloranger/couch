@@ -257,8 +257,9 @@
     <string name="godmode_pages_group">Outils</string>
     <string name="godmode_debloat">Retirer des applis intégrées</string>
     <string name="godmode_debloat_help">Retire des applis livrées avec la télé, quelques-unes à la fois, et garde une liste pour que tu puisses remettre chacune. Seules les applis de la liste de Couch pour cette marque sont proposées.</string>
+    <string name="godmode_hide_first">remet d’abord ta télé</string>
     <string name="godmode_hide">Cacher le godmode</string>
-    <string name="godmode_hide_help">Retire cette page de Personnaliser. Les applis retirées le restent : remets-les d’abord si tu les veux.</string>
+    <string name="godmode_hide_help">Retire cette page de Personnaliser, après avoir remis ce qui tourne encore sous elle : les réglages de la télé, l’écran d’accueil, le HUD et les préversions. Pas les applis retirées : remets-les d’abord depuis la liste si tu les veux.</string>
     <!-- Retirer des applis intégrées -->
     <string name="debloat_title">Applis intégrées</string>
     <string name="debloat_intro">Couch demande d’abord à la télé quelles applis sont installées. Rien n’est retiré tant que tu n’as pas choisi et confirmé.</string>

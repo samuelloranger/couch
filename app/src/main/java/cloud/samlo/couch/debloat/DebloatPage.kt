@@ -27,7 +27,11 @@ class DebloatPage(internal val ctx: SettingsContext) : SettingsPage {
     internal val o = ctx.options
     /** Lazy, so the catalog is first read on the scan's worker rather than as the page opens. */
     internal val list by lazy { DebloatList.forManufacturer(Catalog.of(ctx.activity), Build.MANUFACTURER) }
-    internal val engine by lazy { Engine(ctx.activity, list) }
+    internal val engine by lazy {
+        engineStarted = true
+        Engine(ctx.activity, list)
+    }
+    private var engineStarted = false
     internal val store = DebloatStore.load(ctx.files.dir)
     internal val icons = AppIcons(ctx.activity)
 
@@ -52,7 +56,8 @@ class DebloatPage(internal val ctx: SettingsContext) : SettingsPage {
 
     override fun onDestroy() {
         // The shell stays open across the page's actions, so the TV asks at most once per visit.
-        engine.close()
+        // Untouched, it never opened, and forcing it here would make a key for nothing.
+        if (engineStarted) engine.close()
     }
 
     override fun consumesKey(event: KeyEvent) =
