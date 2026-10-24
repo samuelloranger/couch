@@ -7,6 +7,8 @@ import android.os.Bundle
 import android.view.KeyEvent
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.UserFiles
+import cloud.samlo.couch.debloat.DebloatPage
+import cloud.samlo.couch.godmode.GodmodePage
 import cloud.samlo.couch.ui.Tokens
 
 /**
@@ -28,11 +30,24 @@ class SettingsActivity : Activity() {
             PAGE_ROWS -> RowsPage(ctx)
             PAGE_CHANNELS -> ChannelsPage(ctx)
             PAGE_INPUTS -> InputsPage(ctx)
+            GodmodePage.page -> GodmodePage(ctx)
+            DebloatPage.page -> DebloatPage(ctx)
             else -> MainPage(ctx)
         }
         setContentView(layout.root)
         page.build()
         layout.list.post { layout.items().firstOrNull { it.isFocusable }?.requestFocus() }
+    }
+
+    /** The godmode pages paint phosphor green; put the user's accent back once they leave. */
+    override fun onDestroy() {
+        if (this::page.isInitialized) {
+            page.onDestroy()
+            if (page is GodmodePage || page is DebloatPage) {
+                Tokens.applyAccent(Config.load(UserFiles(this).dir).accent)
+            }
+        }
+        super.onDestroy()
     }
 
     override fun onResume() {

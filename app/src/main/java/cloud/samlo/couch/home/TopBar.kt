@@ -16,6 +16,7 @@ import android.widget.TextView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.WeatherNow
+import cloud.samlo.couch.ui.GodBadge
 import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
@@ -34,6 +35,7 @@ class TopBar(context: Context, onSettings: () -> Unit, onUpdate: () -> Unit) : L
     val nowPlaying = NowPlaying(context)
     val inputOffer = InputChip(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
+    val god = GodBadge(context, 11f)
     private val weatherBox = LinearLayout(context)
     private val weatherIcon = ImageView(context)
     private val weatherTemp = text(30f, Tokens.textPrimary, "sans-serif-light")
@@ -60,6 +62,7 @@ class TopBar(context: Context, onSettings: () -> Unit, onUpdate: () -> Unit) : L
         addView(update, LayoutParams(WRAP_CONTENT, context.dp(40)).apply { marginEnd = context.dp(24) })
         addView(buildWeather(), LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginEnd = context.dp(28) })
         addView(buildGear(onSettings), LayoutParams(context.dp(40), context.dp(40)).apply { marginEnd = context.dp(20) })
+        addView(god, LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginEnd = context.dp(16) })
         addView(LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.END

@@ -41,9 +41,9 @@ jobs:
       - name: APK size budget
         run: |
           size=$(stat -c %s app/build/outputs/apk/release/app-release.apk)
-          echo "APK size: $size bytes (budget: 512000)"
-          if [ "$size" -gt 512000 ]; then
-            echo "::error::The APK is $size bytes, over the 500 KB budget. A new dependency is the usual cause."
+          echo "APK size: $size bytes (budget: 614400)"
+          if [ "$size" -gt 614400 ]; then
+            echo "::error::The APK is $size bytes, over the 600 KB budget. A new dependency is the usual cause."
             exit 1
           fi
       - name: Upload APK

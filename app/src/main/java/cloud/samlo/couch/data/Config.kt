@@ -52,6 +52,15 @@ class Config {
     /** Once a day, look for a newer release on GitHub. */
     var checkUpdates = true
 
+    /** Seven OK presses on About unlocked it; the hidden Godmode page is then in Customize. */
+    var godmode = false
+
+    /** Godmode's update channel: pre-releases too, never older than what's installed. */
+    var preReleases = false
+
+    /** Godmode's frame HUD on the home screen: [HUD_OFF], [HUD_MS] or [HUD_FPS]. */
+    var hud = HUD_OFF
+
     val cardScale: Float
         get() = when (cardSize) {
             "small" -> 0.85f
@@ -75,6 +84,14 @@ class Config {
     companion object {
         private const val FILE = "config.json"
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
+        const val HUD_OFF = "off"
+
+        /** How long each frame took: slow frames stand out, and fast ones still show their headroom. */
+        const val HUD_MS = "ms"
+
+        /** The same frames as a rate, capped at what the screen can actually show. */
+        const val HUD_FPS = "fps"
+
         const val LAYOUT_ROWS = "rows"
         const val LAYOUT_INDEX = "index"
 

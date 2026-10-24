@@ -20,6 +20,13 @@ import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.data.Wallpapers
 import cloud.samlo.couch.data.Weather
 import cloud.samlo.couch.data.WeatherNow
+import cloud.samlo.couch.godmode.GodmodePage
+import cloud.samlo.couch.godmode.Konami
+import cloud.samlo.couch.godmode.RealHome
+import cloud.samlo.couch.godmode.TvSettings
+import cloud.samlo.couch.measure.Benchmark
+import cloud.samlo.couch.measure.BenchmarkCard
+import cloud.samlo.couch.measure.FrameHud
 import cloud.samlo.couch.settings.SettingsActivity
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.update.Installer
@@ -63,6 +70,12 @@ class HomeScreen(private val activity: Activity) {
     )
     private val watchers = SystemWatchers(activity, views.rows, { load() }) { offerInput(it) }
     private val reloadForRecommendations = Runnable { if (resumed) load() }
+    private val hud = FrameHud(activity)
+    private val benchmark = Benchmark(activity)
+    private var card: android.view.View? = null
+    private val konami = Konami()
+    /** The OK that completed the Konami code: its key-up is swallowed too, so no card opens. */
+    private var swallowUp = false
 
     fun onCreate() {
         activity.setContentView(views.root)
@@ -72,6 +85,7 @@ class HomeScreen(private val activity: Activity) {
 
     fun onResume() {
         resumed = true
+        swallowUp = false
         resumedAt = SystemClock.elapsedRealtime()
         MediaListener.onRecommendationsChanged = {
             // Apps often post a batch at once: one reload for all of them.
@@ -90,6 +104,10 @@ class HomeScreen(private val activity: Activity) {
         MediaListener.onRecommendationsChanged = null
         main.removeCallbacks(reloadForRecommendations)
         if (organizer.active) organizer.stop()
+        hud.enable(Config.HUD_OFF)
+        benchmark.cancel()
+        closeCard()
+        swallowUp = false
         stopLive()
         ambientMode.cancel()
         views.topBar.inputOffer.hide()
@@ -104,6 +122,7 @@ class HomeScreen(private val activity: Activity) {
     /** HOME while already home goes back to the start, like the stock launcher. */
     fun onHomePressed() {
         if (!resumed) return
+        benchmark.cancel()
         if (views.indexShown) {
             views.index.reset()
             return
@@ -118,15 +137,76 @@ class HomeScreen(private val activity: Activity) {
 
     fun load() = loader.load()
 
-    /** True when the key was consumed (waking from ambient, or reorder mode). */
-    fun consumesKey(event: KeyEvent) = ambientMode.consumesKey(event) || organizer.consumesKey(event) ||
-        (views.indexShown && views.index.consumesKey(event))
+    /**
+     * True when the key was consumed (waking from ambient, reorder mode, a benchmark or its card).
+     * The HUD sees every press first, before anything can swallow it.
+     */
+    fun consumesKey(event: KeyEvent): Boolean {
+        hud.onKey(event)
+        card?.let {
+            if (event.action == KeyEvent.ACTION_UP) closeCard()
+            return true
+        }
+        if (konamiConsumes(event)) return true
+        return benchmark.abortOn(event) || ambientMode.consumesKey(event) || organizer.consumesKey(event) ||
+            (views.indexShown && views.index.consumesKey(event))
+    }
+
+    private fun konamiConsumes(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_UP && swallowUp) {
+            swallowUp = false
+            return true
+        }
+        if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount > 0 || !konami.press(event.keyCode, event.eventTime)) return false
+        swallowUp = true
+        if (!config.godmode) {
+            config.godmode = true
+            config.save(files.dir)
+        }
+        activity.startActivity(SettingsActivity.intent(activity, GodmodePage.page))
+        return true
+    }
+
+    /** Godmode's benchmark: back to the first card, then the script; the result shows over home. */
+    fun runBenchmark() {
+        // Android delivers the intent before onResume, and the reset needs the screen resumed.
+        main.postDelayed({ startBenchmark() }, BENCHMARK_SETTLE_MS)
+    }
+
+    private fun startBenchmark() {
+        if (benchmark.running || !resumed) return
+        closeCard()
+        onHomePressed()
+        val layout = if (views.indexShown) Config.LAYOUT_INDEX else Config.LAYOUT_ROWS
+        benchmark.run(views.indexShown) { result ->
+            if (result == null) return@run
+            // The HUD's panel sits where the card's corner lands; it comes back with the card gone.
+            hud.enable(Config.HUD_OFF)
+            card = BenchmarkCard.show(activity, layout, result, Benchmark.last(activity, layout), config.hud == Config.HUD_FPS)
+            Benchmark.save(activity, layout, result)
+        }
+    }
+
+    /** The HUD only runs while the home screen is up and godmode is unlocked. */
+    private fun hudUnit() = if (resumed && config.godmode) config.hud else Config.HUD_OFF
+
+    private fun closeCard() {
+        card?.let { (it.parent as? android.view.ViewGroup)?.removeView(it) } ?: return
+        card = null
+        hud.enable(hudUnit())
+    }
 
     private fun onLoaded(data: HomeData) {
         val lookChanged = config.look != data.config.look
         config = data.config
         if (lookChanged) Tokens.applyAccent(config.accent)
         applyLook(config)
+        // Not while the result card is up: the panel would sit under it.
+        if (card == null) hud.enable(hudUnit())
+        // Godmode locked costs one boolean here; unlocked, a couple of cached settings reads.
+        val god = config.godmode && (config.hud != Config.HUD_OFF || TvSettings.changed(activity) > 0 || RealHome.active(activity))
+        views.topBar.god.show(god)
+        views.index.topBar.god.show(god)
         views.hero.wallpaperUrl = data.wallpaper
         ambientMode.minutes = config.ambientMinutes
         ambientMode.pictures = data.pictures
@@ -218,5 +298,6 @@ class HomeScreen(private val activity: Activity) {
     private companion object {
         const val RECOMMENDATIONS_SETTLE_MS = 2_000L
         const val WAKE_SETTLE_MS = 10_000L
+        const val BENCHMARK_SETTLE_MS = 700L
     }
 }

@@ -20,6 +20,10 @@ object Tokens {
     var accent = Color.parseColor(Accents.default)
     val glow: Int get() = (accent and 0x00FFFFFF) or 0x73000000
 
+    /** Phosphor green for the godmode pages, whatever accent the user picked. */
+    const val GODMODE_ACCENT = "#3DFF8A"
+    val GODMODE_COLOR = Color.parseColor(GODMODE_ACCENT)
+
     fun applyAccent(hex: String) {
         accent = try {
             Color.parseColor(hex)

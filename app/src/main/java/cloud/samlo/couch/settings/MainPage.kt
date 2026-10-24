@@ -7,6 +7,9 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Accents
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Fetcher
+import cloud.samlo.couch.godmode.GodmodePage
+import cloud.samlo.couch.godmode.PRESSES
+import cloud.samlo.couch.godmode.Unlock
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.update.Installer
 import cloud.samlo.couch.update.UpdateCheck
@@ -171,6 +174,12 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         }
         o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
         about()
+        if (config.godmode) godmodeRow()
+    }
+
+    /** The hidden page, once seven OKs on About found it. */
+    private fun godmodeRow() {
+        o.link(ctx.str(R.string.godmode), ctx.str(R.string.godmode_help), { "›" }) { open(GodmodePage.page) }
     }
 
     /** The installed version; OK installs a newer one when the last daily check found it. */
@@ -184,9 +193,33 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 Installer(ctx.activity, fetcher).install(update) { message ->
                     message?.let { Toast.makeText(ctx.activity, it, Toast.LENGTH_LONG).show() }
                 }
+                return@link
+            }
+            // The hidden second route in: seven OKs agree on a version that is current.
+            when (val result = if (config.godmode) Unlock.Outcome.Nothing else unlock.ok(update != null)) {
+                is Unlock.Outcome.Progress -> {
+                    // One toast at a time: queued toasts would lag behind fast presses.
+                    countdown?.cancel()
+                    countdown = Toast.makeText(
+                        ctx.activity,
+                        ctx.activity.resources.getQuantityString(R.plurals.unlock_countdown, result.pressesLeft, result.pressesLeft) + " " +
+                            "●".repeat(result.dots) + "○".repeat(PRESSES - result.dots),
+                        Toast.LENGTH_SHORT,
+                    ).apply { show() }
+                }
+                is Unlock.Outcome.Unlocked -> {
+                    countdown?.cancel()
+                    config.godmode = true
+                    config.save(ctx.files.dir)
+                    open(GodmodePage.page)
+                }
+                else -> {}
             }
         }
     }
+
+    private val unlock = Unlock()
+    private var countdown: Toast? = null
 
     private fun open(page: String) = ctx.activity.startActivity(SettingsActivity.intent(ctx.activity, page))
 

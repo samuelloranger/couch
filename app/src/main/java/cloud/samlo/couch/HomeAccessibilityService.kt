@@ -26,6 +26,7 @@ class HomeAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        running = this
         // Remember that HOME capture is wanted, so it can be restored after Android drops it.
         wanted(this, true)
         // A self-update restarts the app and leaves the stock launcher showing; come back to Couch.
@@ -33,6 +34,11 @@ class HomeAccessibilityService : AccessibilityService() {
         val since = System.currentTimeMillis() - prefs.getLong(REOPEN, 0L)
         prefs.edit().remove(REOPEN).apply()
         if (since in 0..REOPEN_WINDOW_MS) openCouch()
+    }
+
+    override fun onDestroy() {
+        if (running === this) running = null
+        super.onDestroy()
     }
 
     private fun openCouch() = startActivity(
@@ -47,6 +53,12 @@ class HomeAccessibilityService : AccessibilityService() {
         /** An update that hasn't landed by then was cancelled or failed: never reopen on a later connect. */
         private const val REOPEN_WINDOW_MS = 10 * 60_000L
         private const val WRITE_SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
+
+        /** The connected service, for godmode's global actions (sleep, screenshot); null when off. */
+        @Volatile private var running: HomeAccessibilityService? = null
+
+        /** Android's own global action (screen off, screenshot), through the service; false without it. */
+        fun globalAction(action: Int): Boolean = running?.performGlobalAction(action) == true
 
         fun wanted(context: Context, value: Boolean) =
             Prefs.of(context).edit().putBoolean(WANTED, value).apply()

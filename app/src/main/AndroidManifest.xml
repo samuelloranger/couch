@@ -16,6 +16,11 @@
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
+    <!-- Godmode's debloat scan checks a few hundred system packages by name (assets/debloat/lists.txt);
+         declaring each in <queries> would cost about 20 KB. Lookups stay on the TV. -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Self-update: Android still asks the user before installing. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
@@ -103,6 +108,11 @@
 
         <receiver
             android:name=".update.InstallResult"
+            android:exported="false" />
+
+        <!-- Godmode's sleep timer. -->
+        <receiver
+            android:name=".godmode.SleepReceiver"
             android:exported="false" />
 
         <service
