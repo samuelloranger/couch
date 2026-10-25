@@ -12,7 +12,8 @@ Either way works:
   normally; only the final OK is taken.
 
 Once open, Godmode is listed in Customize under About. **Hide godmode** takes it out again;
-seven presses bring it back.
+seven presses bring it back. Hiding first puts back everything Godmode changed, including HOME. If
+HOME can't be handed back, Godmode stays visible and says so, so there is still a way to undo it.
 
 ## The debugging shell
 
