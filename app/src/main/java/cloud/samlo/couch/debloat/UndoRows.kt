@@ -1,6 +1,7 @@
 package cloud.samlo.couch.debloat
 
 import cloud.samlo.couch.R
+import cloud.samlo.couch.adb.AdbShell
 
 /**
  * Everything Couch removed, each one OK away from coming back. An entry leaves the list only once
@@ -39,6 +40,9 @@ private fun DebloatPage.restore(pkgs: List<String>) {
                         back++
                     } catch (e: Engine.Refused) {
                         toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
+                    } catch (e: AdbShell.Failed) {
+                        error = ctx.str(R.string.shell_no_ok)
+                        return@work
                     }
                 }
                 if (back > 0) toast(ctx.str(R.string.undo_all_toast))

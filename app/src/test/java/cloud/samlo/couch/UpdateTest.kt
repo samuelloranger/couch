@@ -21,8 +21,14 @@ class UpdateTest {
     }
 
     @Test
-    fun preReleasesAndJunkAreNeverNewer() {
-        assertFalse(Versions.isNewer("0.3.0-beta", "0.2.0"))
+    fun preReleaseTagsCountAsTheirNumbers() {
+        assertTrue(Versions.isNewer("v0.3.0-beta.1", "0.2.0"))
+        assertFalse(Versions.isNewer("v0.3.0-rc.1", "0.3.0"))
+        assertEquals(listOf(0, 3, 0), Versions.parse("0.3.0-beta"))
+    }
+
+    @Test
+    fun junkIsNeverNewer() {
         assertFalse(Versions.isNewer("latest", "0.2.0"))
         assertFalse(Versions.isNewer("0.3.0", ""))
         assertNull(Versions.parse("1.2.3.4"))

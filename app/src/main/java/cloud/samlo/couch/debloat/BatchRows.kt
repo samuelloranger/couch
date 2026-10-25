@@ -66,6 +66,9 @@ internal fun DebloatPage.runBatch() {
                 done += pkg
             } catch (e: Engine.Refused) {
                 refused += label(pkg)
+            } catch (e: IllegalArgumentException) {
+                // No longer on the list (the catalog moved on since this flow was saved): leave it.
+                refused += label(pkg)
             } catch (e: AdbShell.Failed) {
                 // The shell dropped before its answer arrived: the app may be gone all the same,
                 // and a removal nobody wrote down could never be undone.
@@ -124,6 +127,8 @@ private fun DebloatPage.removeAgain(pkgs: List<String>) {
                 store.removed(pkg, viaShell = true)
             } catch (e: Engine.Refused) {
                 toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
+            } catch (e: IllegalArgumentException) {
+                toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
             } catch (e: AdbShell.Failed) {
                 if (!Packages.installed(ctx.activity, pkg)) store.removed(pkg, viaShell = true)
                 error = ctx.str(R.string.shell_no_ok)
@@ -146,6 +151,9 @@ private fun DebloatPage.undoBatch(pkgs: List<String>) {
                 store.undone(pkg)
             } catch (e: Engine.Refused) {
                 toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
+            } catch (e: AdbShell.Failed) {
+                error = ctx.str(R.string.shell_no_ok)
+                return@work
             }
         }
         store.stopFlow()

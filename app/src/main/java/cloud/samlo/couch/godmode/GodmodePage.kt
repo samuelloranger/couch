@@ -93,15 +93,21 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
         val c = ctx.activity
         if (RealHome.active(c)) {
             withShell { shell ->
-                RealHome.give(c, shell)
-                TvSettings.restore(c)
+                // Hiding on a failed hand-back would leave Couch the home with nothing to undo it.
+                if (!RealHome.give(c, shell)) return@withShell ctx.str(R.string.realhome_give_failed)
+                restoreSettings()
                 c.runOnUiThread { finishHiding() }
                 ctx.str(R.string.putback_done)
             }
             return
         }
-        TvSettings.restore(c)
+        restoreSettings()
         finishHiding()
+    }
+
+    /** Without the grant nothing could have been changed, and writing would throw. */
+    private fun restoreSettings() {
+        if (TvSettings.canWrite(ctx.activity)) TvSettings.restore(ctx.activity)
     }
 
     private fun finishHiding() {

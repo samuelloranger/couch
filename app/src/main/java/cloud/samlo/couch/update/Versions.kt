@@ -2,11 +2,14 @@ package cloud.samlo.couch.update
 
 import android.content.Context
 
-/** Plain `X.Y.Z` versions, as the release tags and `versionName` write them. */
+/** `X.Y.Z` versions, as the release tags and `versionName` write them. */
 object Versions {
-    /** `v1.2.3` or `1.2` as numbers; null for anything else, pre-releases like `1.3.0-beta` included. */
+    /**
+     * `v1.2.3` or `1.2` as numbers; null for anything else. A suffix like `-beta.1` is ignored, the
+     * way `versionName` drops it, so a pre-release tag counts as its `X.Y.Z`.
+     */
     fun parse(version: String): List<Int>? {
-        val core = version.trim().removePrefix("v")
+        val core = version.trim().removePrefix("v").substringBefore('-')
         val parts = core.split('.')
         if (core.isEmpty() || parts.size > 3) return null
         val numbers = parts.map { part ->

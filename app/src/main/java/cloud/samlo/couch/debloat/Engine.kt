@@ -3,6 +3,7 @@ package cloud.samlo.couch.debloat
 import android.content.Context
 import android.os.SystemClock
 import cloud.samlo.couch.adb.AdbShell
+import kotlin.concurrent.thread
 
 /**
  * The TV's debugging shell, flavoured for debloat: [AdbShell]'s handshake distilled into the states
@@ -20,12 +21,17 @@ class Engine(private val context: Context, private val list: DebloatList? = null
     /** A removal or restore the TV refused; [output] is what `pm` said. */
     class Refused(val pkg: String, val output: String) : Exception("$pkg: ${output.trim().take(120)}")
 
-    private var adb: AdbShell? = null
+    @Volatile private var adb: AdbShell? = null
 
-    /** Lets the connection go; the next [connect] opens a new one. */
-    fun close() = synchronized(this) {
-        adb?.close()
+    /**
+     * Lets the connection go; the next [connect] opens a new one. Takes no lock and closes off the
+     * calling thread, so a page can leave while a command is still running: that command fails
+     * as its socket goes.
+     */
+    fun close() {
+        val shell = adb ?: return
         adb = null
+        thread { shell.close() }
     }
 
     /**
@@ -161,13 +167,14 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      * manager agrees the app is gone.
      */
     fun remove(pkg: String) {
-        require(list?.entry(pkg) != null) { "$pkg is not on Couch's list" }
+        require(SAFE_NAME.matches(pkg) && list?.entry(pkg) != null) { "$pkg is not on Couch's list" }
         val out = run("pm uninstall -k --user 0 $pkg")
         if (!out.contains("Success") || Packages.installed(context, pkg)) throw Refused(pkg, out)
     }
 
     /** Undoes one removal; done only once the package manager sees the app again. */
     fun restore(pkg: String) {
+        require(SAFE_NAME.matches(pkg)) { "$pkg is not a package name" }
         val out = run("cmd package install-existing $pkg")
         if (!Packages.installed(context, pkg)) throw Refused(pkg, out)
     }
