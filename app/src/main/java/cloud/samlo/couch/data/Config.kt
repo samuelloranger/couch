@@ -25,8 +25,8 @@ class Config {
     var channels: Map<String, Boolean> = emptyMap()
 
     // Look
-    /** "rows" (cards in rows) or "index" (a list of apps beside what the focused one offers). */
-    var layout: String = LAYOUT_ROWS
+    /** "index" (a list of apps beside what the focused one offers, the default) or "rows" (cards in rows). */
+    var layout: String = LAYOUT_INDEX
     var cardSize: String = "medium"
     var accent: String = Accents.default
     var wallpaper: String = "daily"

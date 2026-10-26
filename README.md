@@ -33,8 +33,8 @@ launcher. Plain Android Views, no AndroidX, no Compose, no tracking: the APK is 
 
 ## Features
 
-- Two layouts: rows of cards with a hero area for the focused show or film, or **Index**, a list
-  of your apps beside what the selected one offers and your screen time with it.
+- Two layouts: **Index** (the default), a list of your apps beside what the selected one offers
+  and your screen time with it, or rows of cards with a hero area for the focused show or film.
 - Apps row, recently used apps, HDMI inputs row with brand logos (PlayStation, Xbox, Nintendo
   Switch, Apple TV…), and the preview channels apps publish (YouTube, Jellyfin and others).
 - When a console or player on an input turns on, a chip offers to switch to it.

@@ -31,8 +31,8 @@ Couch follows the TV's language: English, or French on a TV set to French.
 
 ## Index layout
 
-**Layout → Index** swaps the rows for a list of your apps on the left. The right side shows what
-the selected app offers (its first channel: the program's art, title and synopsis, then the
+Index is the default layout: a list of your apps on the left, in place of the rows
+(**Layout → Rows** brings the rows back). The right side shows what the selected app offers (its first channel: the program's art, title and synopsis, then the
 channel as a row of cards), how much you used it over the last seven days, when you last opened
 it, and how often. The bottom line shows the TV's address, network traffic, memory, storage,
 uptime and whether ADB is on.
@@ -109,7 +109,7 @@ setting changes, so edit it while the home screen is in the background.
 | `sectionOrder` | string[] | `[]` | Row order: `apps`, `inputs`, `ch:<channel id>`. |
 | `hiddenSections` | string[] | `[]` | Hidden rows. |
 | `channels` | object | `{}` | Channel id → shown or not, overriding the stock launcher's choice. |
-| `layout` | string | `rows` | `rows` or `index`. |
+| `layout` | string | `index` | `index` or `rows`. |
 | `cardSize` | string | `medium` | `small`, `medium`, `large`. |
 | `accent` | string | `#34D399` | Accent colour (hex). |
 | `wallpaper` | string | `daily` | `daily`, `reddit`, `gradient`, `custom`. |
