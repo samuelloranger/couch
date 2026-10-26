@@ -26,7 +26,11 @@ object Client {
     fun pull(host: String, port: Int, me: Peers, peer: Peer): Snapshot? = try {
         connect(host, port) { _, input, output ->
             val nonce = Crypto.random(Server.NONCE_BYTES)
-            Wire.write(output, JSONObject().put("op", "snapshot").put("id", me.id).put("nonce", Wire.b64(nonce)))
+            Wire.write(
+                output,
+                JSONObject().put("op", "snapshot").put("id", me.id).put("nonce", Wire.b64(nonce))
+                    .put("proof", Wire.b64(Crypto.requestProof(peer.key, nonce, me.id))),
+            )
             val sealed = Wire.unb64(Wire.read(input).getString("data"))
             Crypto.open(peer.key, sealed, nonce)?.let { Snapshot.fromJson(String(it)) }?.takeIf { it.deviceId == peer.id }
         }

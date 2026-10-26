@@ -183,10 +183,52 @@ class SyncProtocolTest {
     }
 
     @Test
-    fun aDamagedFileStartsAFreshIdentity() {
+    fun aDamagedFileStartsAFreshIdentityAndIsKeptAside() {
         val file = File.createTempFile("sync", ".json").apply { writeText("{ nope"); deleteOnExit() }
+        val aside = File(file.parentFile, file.name + ".bad").apply { deleteOnExit() }
         val peers = Peers.load(file, "Den")
         assertEquals("Den", peers.name)
         assertTrue(peers.id.isNotEmpty())
+        assertEquals("{ nope", aside.readText())
+    }
+
+    @Test
+    fun aRequestWithoutTheKeyGetsNoAnswer() {
+        val (_, b, port) = paired()
+        Socket("127.0.0.1", port).use { socket ->
+            val out = DataOutputStream(socket.getOutputStream())
+            Wire.write(
+                out,
+                org.json.JSONObject().put("op", "snapshot").put("id", b.all().first().id)
+                    .put("nonce", Wire.b64(Crypto.random(16))).put("proof", Wire.b64(Crypto.random(32))),
+            )
+            assertEquals(-1, DataInputStream(socket.getInputStream()).read())
+        }
+    }
+
+    @Test
+    fun aStalledHandshakeDoesNotBlockPairing() {
+        val (_, bServer) = tv("B")
+        val port = bServer.start()
+        bServer.onPair = { _, _ -> true }
+        // Knocks and says nothing more; the one pairing slot is only taken once a handshake is real.
+        val staller = Socket("127.0.0.1", port)
+        try {
+            val out = DataOutputStream(staller.getOutputStream())
+            Wire.write(out, org.json.JSONObject().put("op", "pair1").put("id", "x").put("name", "x").put("commit", Wire.b64(Crypto.random(32))))
+            assertTrue(Client.pair("127.0.0.1", port, tv("A").first) { _, _ -> true } is Client.Pairing.Paired)
+        } finally {
+            staller.close()
+        }
+    }
+
+    @Test
+    fun anOversizedFirstFrameIsRefusedBeforeItIsRead() {
+        val (_, bServer) = tv("B")
+        val port = bServer.start()
+        Socket("127.0.0.1", port).use { socket ->
+            DataOutputStream(socket.getOutputStream()).apply { writeInt(Wire.MAX_REQUEST + 1); flush() }
+            assertEquals(-1, DataInputStream(socket.getInputStream()).read())
+        }
     }
 }

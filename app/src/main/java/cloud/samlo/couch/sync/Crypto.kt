@@ -67,6 +67,10 @@ object Crypto {
     fun linkKey(secret: ByteArray, initiator: ByteArray, responder: ByteArray): ByteArray =
         mac(secret, "couch-key".toByteArray(), initiator, responder)
 
+    /** Shows the asker holds the key, so an id seen on the network can't make this TV do the work of an answer. */
+    fun requestProof(link: ByteArray, nonce: ByteArray, id: String): ByteArray =
+        mac(link, "couch-request".toByteArray(), nonce, id.toByteArray())
+
     private fun snapshotKey(link: ByteArray) = mac(link, "couch-snapshot".toByteArray())
 
     /** Encrypts [plain] for the peer holding [link]; [aad] ties the answer to the request it answers. */

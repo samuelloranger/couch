@@ -11,6 +11,9 @@ import java.util.Base64
 object Wire {
     const val MAX_FRAME = 3_000_000
 
+    /** Everything a TV sends before it has been heard from is a few hundred bytes. */
+    const val MAX_REQUEST = 4_096
+
     fun write(out: DataOutputStream, message: JSONObject) {
         val bytes = message.toString().toByteArray()
         out.writeInt(bytes.size)
@@ -19,9 +22,9 @@ object Wire {
     }
 
     /** Throws [IOException] for a closed stream, a size out of range, or text that isn't JSON. */
-    fun read(input: DataInputStream): JSONObject {
+    fun read(input: DataInputStream, max: Int = MAX_FRAME): JSONObject {
         val size = input.readInt()
-        if (size !in 1..MAX_FRAME) throw IOException("frame of $size bytes")
+        if (size !in 1..max) throw IOException("frame of $size bytes")
         val bytes = ByteArray(size).also(input::readFully)
         try {
             return JSONObject(String(bytes))

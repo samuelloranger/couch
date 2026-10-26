@@ -23,7 +23,10 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
     private val config get() = ctx.config
     private val peers get() = Sync.peers(ctx.activity)
-    private var mode = Mode.LIST
+    @Volatile private var mode = Mode.LIST
+    /** An outgoing pairing is under way: a TV that knocks meanwhile is turned away. */
+    @Volatile private var outgoing = false
+    private val asking = java.util.concurrent.atomic.AtomicBoolean()
     private var confirm: Confirm? = null
     private var forgetting: String? = null
 
@@ -35,7 +38,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
             Mode.ADD -> add()
             Mode.CONFIRM -> confirmRows()
         }
-        Sync.listen { ctx.activity.runOnUiThread { if (mode == Mode.ADD) rebuild() else if (mode == Mode.LIST) refresh() } }
+        Sync.listen { ctx.activity.runOnUiThread { if (mode != Mode.CONFIRM && !ctx.activity.isFinishing) rebuild() } }
     }
 
     private fun refresh() = o.rows().forEach { it.refresh() }
@@ -78,7 +81,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         }
         o.link(ctx.str(R.string.tvs_add), ctx.str(R.string.tvs_add_help)) {
             mode = Mode.ADD
-            Sync.openPairing(ctx.activity, ::ask)
+            Sync.openPairing(ctx.activity, ::askFromOutside)
             rebuild()
         }
     }
@@ -120,23 +123,35 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         c.answer.offer(matched)
         mode = Mode.LIST
         confirm = null
+        // Whichever side this was, the pairing is over: stop advertising and stop listening for it.
+        Sync.closePairing()
         rebuild()
     }
 
-    /** Runs on a worker, from either side of a pairing; returns once the user has answered. */
+    /** A TV that knocked: taken only while Add a TV is open and nothing else is being asked. */
+    private fun askFromOutside(name: String, code: String): Boolean = mode == Mode.ADD && !outgoing && ask(name, code)
+
+    /** Runs on a worker, from either side of a pairing; returns once the user has answered. One question at a time. */
     private fun ask(name: String, code: String): Boolean {
-        val answer = ArrayBlockingQueue<Boolean>(1)
-        ctx.activity.runOnUiThread {
-            confirm = Confirm(name, code, answer)
-            mode = Mode.CONFIRM
-            rebuild()
+        if (!asking.compareAndSet(false, true)) return false
+        try {
+            val answer = ArrayBlockingQueue<Boolean>(1)
+            ctx.activity.runOnUiThread {
+                confirm = Confirm(name, code, answer)
+                mode = Mode.CONFIRM
+                rebuild()
+            }
+            return answer.poll(ANSWER_SECONDS, TimeUnit.SECONDS) ?: false
+        } finally {
+            asking.set(false)
         }
-        return answer.poll(ANSWER_SECONDS, TimeUnit.SECONDS) ?: false
     }
 
     private fun pairWith(host: String, port: Int) {
         toast(R.string.tvs_connecting)
+        outgoing = true
         Sync.pair(ctx.activity, host, port, ::ask) { result ->
+            outgoing = false
             ctx.activity.runOnUiThread {
                 if (ctx.activity.isFinishing) return@runOnUiThread
                 when (result) {
@@ -177,10 +192,9 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
 
     override fun onDestroy() {
         Sync.listen(null)
-        if (mode != Mode.LIST) {
-            Sync.closePairing()
-            confirm?.answer?.offer(false)
-        }
+        // Always: a pairing left open would keep this TV announced as waiting, with no page to answer it.
+        Sync.closePairing()
+        confirm?.answer?.offer(false)
     }
 
     private companion object {

@@ -31,8 +31,12 @@ object Sync {
         listener = onChange
     }
 
-    @Synchronized fun peers(context: Context): Peers =
+    private val peersLock = Any()
+
+    /** Its own lock: the settings page asks on the main thread, and must never wait on network setup. */
+    fun peers(context: Context): Peers = synchronized(peersLock) {
         peers ?: Peers.load(File(context.applicationContext.filesDir, "sync.json"), Build.MODEL ?: "TV").also { peers = it }
+    }
 
     fun found(): List<Discovery.Found> = discovery?.found().orEmpty().filter { it.id != peers?.id }
 
@@ -49,7 +53,7 @@ object Sync {
     @Synchronized private fun up(context: Context) {
         app = context
         val me = peers(context)
-        val srv = server ?: Server(me) { local(context, me) }.also { server = it }
+        val srv = server ?: Server(me) { local(context, me) }.also { it.onPaired = { listener?.invoke() }; server = it }
         val port = srv.start()
         val disc = discovery ?: Discovery(context).also { discovery = it }
         disc.announce(me.id, me.name, port, srv.onPair != null)
@@ -94,13 +98,18 @@ object Sync {
         return Merge.all(own, Labels.all(context, own.keys), LocalDate.now(), snapshots)
     }
 
+    /** Opening and closing pairing happen in the order they were asked, however fast the user backs out. */
+    private val pairingOps = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "couch-sync-pairing").apply { isDaemon = true }
+    }
+
     /**
      * Opens this TV for pairing until [closePairing]; [ask] is called with the other TV's name and
      * the code to compare, and blocks until the user answers.
      */
     fun openPairing(context: Context, ask: (String, String) -> Boolean) {
         val context = context.applicationContext
-        thread(name = "couch-sync-open") {
+        pairingOps.execute {
             up(context)
             server?.onPair = ask
             announceAgain()
@@ -109,7 +118,10 @@ object Sync {
 
     fun closePairing() {
         server?.onPair = null
-        thread(name = "couch-sync-close") { announceAgain() }
+        pairingOps.execute {
+            server?.onPair = null
+            announceAgain()
+        }
     }
 
     @Synchronized private fun announceAgain() {

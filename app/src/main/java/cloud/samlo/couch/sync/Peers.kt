@@ -67,6 +67,8 @@ class Peers private constructor(private val file: File?, val id: String, name: S
         /** Reads [file], or starts a new identity under [defaultName]; a damaged file starts afresh rather than failing. */
         fun load(file: File?, defaultName: String): Peers {
             val json = runCatching { file?.takeIf { it.isFile }?.readText()?.let(::JSONObject) }.getOrNull()
+            // A file that is there but unreadable is kept aside, not written over: it holds every pairing.
+            if (json == null && file?.isFile == true) file.renameTo(File(file.parentFile, file.name + ".bad"))
             if (json == null) return Peers(file, Crypto.random(8).joinToString("") { "%02x".format(it) }, defaultName, emptyList())
                 .also { it.save() }
             val rows = json.optJSONArray("peers") ?: JSONArray()

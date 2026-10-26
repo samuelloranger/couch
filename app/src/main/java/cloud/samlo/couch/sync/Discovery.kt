@@ -58,26 +58,39 @@ class Discovery(context: Context) {
         unannounce()
         nsd ?: return
         announcedWhat = what
-        val info = NsdServiceInfo().apply {
-            serviceName = NAME_PREFIX + id
-            serviceType = TYPE
-            this.port = port
-            setAttribute("id", id)
-            setAttribute("name", name)
-            setAttribute("pair", if (pairing) "1" else "0")
-        }
         val listener = object : NsdManager.RegistrationListener {
             override fun onServiceRegistered(info: NsdServiceInfo) = Unit
             override fun onServiceUnregistered(info: NsdServiceInfo) = Unit
-            override fun onRegistrationFailed(info: NsdServiceInfo, code: Int) = Unit
+            // Forgotten, so the next announce tries again instead of thinking it is already out.
+            override fun onRegistrationFailed(info: NsdServiceInfo, code: Int) = failed(this)
             override fun onUnregistrationFailed(info: NsdServiceInfo, code: Int) = Unit
         }
         announced = listener
         try {
+            val info = NsdServiceInfo().apply {
+                serviceName = NAME_PREFIX + id
+                serviceType = TYPE
+                this.port = port
+                setAttribute("id", id)
+                // A DNS text record holds 255 bytes a pair, and a name can be all multi-byte characters.
+                setAttribute("name", fit(name, 100))
+                setAttribute("pair", if (pairing) "1" else "0")
+            }
             nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, listener)
         } catch (e: RuntimeException) {
             announced = null
         }
+    }
+
+    @Synchronized private fun failed(listener: NsdManager.RegistrationListener) {
+        if (announced === listener) announced = null
+    }
+
+    /** The longest start of [text] that fits [bytes] as UTF-8, never cutting a character in half. */
+    private fun fit(text: String, bytes: Int): String {
+        var end = text.length
+        while (end > 0 && text.substring(0, end).toByteArray().size > bytes) end = text.offsetByCodePoints(end, -1)
+        return text.substring(0, end)
     }
 
     @Synchronized private fun unannounce() {
