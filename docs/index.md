@@ -33,11 +33,11 @@ features:
 
 <div class="shots">
   <figure>
-    <img src="./screenshots/home.jpg" alt="Home screen with the apps row and the hero area" loading="lazy">
-    <figcaption>Home: the focused show fills the hero area.</figcaption>
+    <img src="./screenshots/home.jpg" alt="The Index home screen: a list of apps beside what the selected one offers" loading="lazy">
+    <figcaption>Home: your apps by screen time, and what the selected one offers.</figcaption>
   </figure>
   <figure>
-    <img src="./screenshots/channel.jpg" alt="An app channel row with its backdrop" loading="lazy">
+    <img src="./screenshots/channel.jpg" alt="Moving along an app's channel, with the program's art and details" loading="lazy">
     <figcaption>Preview channels from the apps you use.</figcaption>
   </figure>
   <figure>
@@ -45,8 +45,8 @@ features:
     <figcaption>Customize: every option, from the remote.</figcaption>
   </figure>
   <figure>
-    <img src="./screenshots/menu.jpg" alt="The long-press menu on an app card" loading="lazy">
-    <figcaption>Long-press any card to move, rename or hide it.</figcaption>
+    <img src="./screenshots/menu.jpg" alt="The long-press menu on an app" loading="lazy">
+    <figcaption>Long-press an app to rename or hide it.</figcaption>
   </figure>
 </div>
 
