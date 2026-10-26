@@ -125,6 +125,11 @@ setting changes, so edit it while the home screen is in the background.
 | `fahrenheit` | boolean | `false` | °F instead of °C. |
 | `ambientMinutes` | number | `5` | Idle minutes before ambient mode; `0` turns it off. |
 | `checkUpdates` | boolean | `true` | Look for a newer release once a day. |
+| `godmode` | boolean | `false` | Set by the seven OK presses on About; lists the hidden [Godmode](godmode.md) page in Customize. |
+| `preReleases` | boolean | `false` | Godmode's update channel: offer pre-releases too, never older than what is installed. |
+| `hud` | string | `off` | Godmode's frame readout on the home screen: `off`, `ms` or `fps`. |
+| `syncEnabled` | boolean | `false` | Share screen time with paired TVs on the home network ([Other TVs](sync.md)). |
+| `syncAllTvs` | boolean | `true` | With sync on, Index adds the paired TVs' screen time to this one's; `false` shows this TV alone. |
 
 Back up or restore the whole setup by copying the directory:
 
@@ -132,3 +137,6 @@ Back up or restore the whole setup by copying the directory:
 adb pull /sdcard/Android/data/cloud.samlo.couch/files couch-backup
 adb push couch-backup/. /sdcard/Android/data/cloud.samlo.couch/files/
 ```
+
+Pairing keys and the other TVs' figures are not in `config.json`: they live in a private file the
+app alone can read (see [Other TVs](sync.md#what-is-shared)).

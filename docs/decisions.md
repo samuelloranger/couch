@@ -56,3 +56,18 @@ Each network feature is opt-in or replaceable: the wallpaper can be a local imag
 weather can be turned off or given a city instead of IP location. Reddit's own API refuses
 anonymous clients, so subreddit wallpapers go through the public Arctic Shift archive. The update
 check asks GitHub for the latest release once a day and can be turned off.
+
+## Pairing TVs by comparing six digits
+
+Sharing screen time needs two TVs to trust each other, and a remote is a poor keyboard. A typed
+code would also let anyone who watched the exchange guess it offline. Instead the two TVs agree on
+a key, the first one committing to its half before it sees the other's, and both show six digits
+derived from that exchange; one OK on each says they match. A stranger in the middle ends up with
+different digits on each screen. The cost is that both TVs must be on the Add a TV screen at once.
+
+## No server for sharing screen time
+
+Totals travel straight between the TVs on the home network, so there is no account, no service to
+run, and nothing to trust outside the house. The cost is that a TV that is off can't answer: it
+keeps its last answer, and the row says how old that is.
+

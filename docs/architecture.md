@@ -1,6 +1,6 @@
 # Architecture
 
-Couch is one Gradle module of plain Kotlin on framework Views. Seven packages, each with one job;
+Couch is one Gradle module of plain Kotlin on framework Views. Twelve packages, each with one job;
 no file is longer than about 160 lines.
 
 ```
@@ -11,7 +11,12 @@ cloud.samlo.couch
 ├── data/      config, apps, inputs, channels, weather, wallpapers, image pipeline
 ├── update/    daily release check, download, checksum, Android's package installer
 ├── settings/  Customize: activity shell, option rows, one file per page, icon picker
-└── index/     the Index layout: app list, spotlight, channel row, usage figures, system line
+├── index/     the Index layout: app list, spotlight, channel row, usage figures, system line
+├── godmode/   the hidden page: TV settings, real-home takeover, tools, frame readouts
+├── debloat/   removing the apps a TV came with, measured and reversible, through the TV's own shell
+├── adb/       a small ADB client (key, protocol, shell) for the TV's own debugging port
+├── measure/   frame timing: the HUD, the meter and the benchmark
+└── sync/      screen time shared between TVs: snapshot and merge, pairing, a bounded socket server
 ```
 
 The four classes at the root are referenced by name from the TV's settings (the launcher entry,
@@ -92,6 +97,20 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
 extra. Pages build their list from `OptionList` helpers (choice, toggle, text, link), each producing
 an `OptionRow`. Every change is saved immediately; the home screen picks it up when it resumes.
 `IconPickerActivity` shows input icons as real `Card`s.
+
+## Godmode and Other TVs
+
+Both are off until the user turns them on, and neither costs the home screen anything while off.
+
+- **Godmode** reaches the TV's own `shell` right through `adb/`: a small client that talks to the
+  TV's debugging port from inside the app, so removing built-in apps (`debloat/`) and changing
+  TV-wide settings (`godmode/`) need no computer. One `Engine` holds one connection per visit, so
+  Android's "Allow debugging?" question appears at most once.
+- **Other TVs** (`sync/`) sends each TV's last week of per-app usage to the TVs it is paired with.
+  `Snapshot` and `Merge` are plain Kotlin with no Android in them: a snapshot pins its days to
+  dates, and the merge adds peers to this TV's live figures, matching apps by package and then by
+  name. `Server` and `Client` speak a small framed protocol over TCP; `Discovery` uses the
+  platform's own mDNS. See [Other TVs](sync.md) for what is shared and how pairing works.
 
 ## HOME takeover
 
