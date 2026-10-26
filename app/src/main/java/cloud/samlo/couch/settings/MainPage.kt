@@ -172,6 +172,9 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.link(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
             ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
+        o.link(ctx.str(R.string.settings_tvs), ctx.str(R.string.settings_tvs_help), { ctx.str(if (config.syncEnabled) R.string.yes else R.string.no) }) {
+            open(SettingsActivity.PAGE_TVS)
+        }
         o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
         about()
         if (config.godmode) godmodeRow()

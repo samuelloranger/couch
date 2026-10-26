@@ -55,6 +55,12 @@ class Config {
     /** Seven OK presses on About unlocked it; the hidden Godmode page is then in Customize. */
     var godmode = false
 
+    /** Share screen time with the TVs this one is paired with, over the home network only. */
+    var syncEnabled = false
+
+    /** With sync on: Index adds the other TVs' screen time to this one's. */
+    var syncAllTvs = true
+
     /** Godmode's update channel: pre-releases too, never older than what's installed. */
     var preReleases = false
 

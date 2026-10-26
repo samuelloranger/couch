@@ -7,6 +7,7 @@ import android.os.Bundle
 import android.view.KeyEvent
 import cloud.samlo.couch.debloat.Keepalive
 import cloud.samlo.couch.home.HomeScreen
+import cloud.samlo.couch.sync.Sync
 
 /**
  * The launcher entry point. Named in the TV's settings, so it keeps its name and package; the
@@ -25,6 +26,7 @@ class MainActivity : Activity() {
         super.onResume()
         home.onResume()
         Keepalive.maybe(this)
+        Sync.start(this)
     }
 
     override fun onPause() {

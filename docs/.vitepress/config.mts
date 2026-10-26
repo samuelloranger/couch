@@ -29,6 +29,7 @@ export default defineConfig({
         items: [
           { text: "Setup", link: "/setup" },
           { text: "Configuration", link: "/configuration" },
+          { text: "Other TVs", link: "/sync" },
           { text: "Godmode", link: "/godmode" },
         ],
       },

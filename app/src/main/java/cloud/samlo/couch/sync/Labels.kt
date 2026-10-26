@@ -36,6 +36,9 @@ object Labels {
         return (listOf(shown) + names).filter { it.isNotBlank() }.distinct()
     }
 
+    /** Names never change while the process lives, and reading them is slow: once per package. */
+    private val known = java.util.concurrent.ConcurrentHashMap<String, List<String>>()
+
     fun all(context: Context, pkgs: Collection<String>): Map<String, List<String>> =
-        pkgs.associateWith { of(context, it) }.filterValues { it.isNotEmpty() }
+        pkgs.associateWith { pkg -> known.getOrPut(pkg) { of(context, pkg) } }.filterValues { it.isNotEmpty() }
 }

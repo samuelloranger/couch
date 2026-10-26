@@ -32,6 +32,7 @@ class SettingsActivity : Activity() {
             PAGE_INPUTS -> InputsPage(ctx)
             GodmodePage.page -> GodmodePage(ctx)
             DebloatPage.page -> DebloatPage(ctx)
+            PAGE_TVS -> OtherTvsPage(ctx)
             else -> MainPage(ctx)
         }
         setContentView(layout.root)
@@ -67,6 +68,7 @@ class SettingsActivity : Activity() {
         const val PAGE_ROWS = "rows"
         const val PAGE_CHANNELS = "channels"
         const val PAGE_INPUTS = "inputs"
+        const val PAGE_TVS = "tvs"
         const val RESULT_ORGANIZE = RESULT_FIRST_USER
 
         fun intent(context: Context, page: String) =

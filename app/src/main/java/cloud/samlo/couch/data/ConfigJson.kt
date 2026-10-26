@@ -32,6 +32,8 @@ internal object ConfigJson {
         .put("checkUpdates", c.checkUpdates)
         .put("godmode", c.godmode)
         .put("preReleases", c.preReleases)
+        .put("syncEnabled", c.syncEnabled)
+        .put("syncAllTvs", c.syncAllTvs)
         .put("hud", c.hud)
 
     /** Every field is optional; a missing one keeps what [into] already holds. */
@@ -63,6 +65,8 @@ internal object ConfigJson {
         checkUpdates = json.optBoolean("checkUpdates", checkUpdates)
         godmode = json.optBoolean("godmode", godmode)
         preReleases = json.optBoolean("preReleases", preReleases)
+        syncEnabled = json.optBoolean("syncEnabled", syncEnabled)
+        syncAllTvs = json.optBoolean("syncAllTvs", syncAllTvs)
         // Was a boolean before the HUD could show either unit.
         hud = when (val value = json.opt("hud")) {
             is Boolean -> if (value) Config.HUD_MS else Config.HUD_OFF

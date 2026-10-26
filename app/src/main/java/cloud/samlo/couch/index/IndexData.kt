@@ -11,6 +11,7 @@ import cloud.samlo.couch.data.InputSource
 import cloud.samlo.couch.data.Programs
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.Usage
+import cloud.samlo.couch.sync.Sync
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 import java.io.File
@@ -48,7 +49,7 @@ object IndexBuilder {
             context, config, iconsDir,
             context.dp(Spotlight.BANNER_W), context.dp(Spotlight.BANNER_H), context.dpf(Spotlight.BANNER_RADIUS),
         )
-        val usage = Usage.lastWeek(context)
+        val usage = Usage.lastWeek(context)?.let { if (config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
         val channels = Programs.channels(context, config).groupBy { it.packageName }
         // Apps keep the user's order among equals (pinned first, then by name).
         val ordered = if (usage == null) apps else apps.sortedByDescending { usage[it.key]?.weekMs ?: 0L }

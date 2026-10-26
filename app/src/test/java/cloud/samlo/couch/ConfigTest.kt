@@ -63,6 +63,15 @@ class ConfigTest {
     }
 
     @Test
+    fun syncIsOffByDefaultAndKeepsItsChoices() {
+        assertFalse(Config().syncEnabled)
+        assertTrue(Config().syncAllTvs)
+        val back = Config.fromJson(Config().apply { syncEnabled = true; syncAllTvs = false }.toJson())
+        assertTrue(back.syncEnabled)
+        assertFalse(back.syncAllTvs)
+    }
+
+    @Test
     fun missingKeysKeepDefaults() {
         val config = Config.fromJson("""{"cardSize":"small","pinnedApps":["a.b"]}""")
         assertEquals("small", config.cardSize)
