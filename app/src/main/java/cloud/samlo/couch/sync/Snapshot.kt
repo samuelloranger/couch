@@ -49,29 +49,44 @@ class Snapshot(
     companion object {
         const val VERSION = 1
 
+        // A peer is trusted with its key, not with its numbers: nothing it sends can be unbounded.
+        const val MAX_CHARS = 2_000_000
+        const val MAX_APPS = 5_000
+        const val MAX_LABELS = 8
+        const val MAX_NAME = 80
+        const val DAY_MS = 86_400_000L
+        const val MAX_OPENS = 1_000_000
+        private val EARLIEST = LocalDate.of(2000, 1, 1)
+        private val LATEST = LocalDate.of(2200, 1, 1)
+
         /** Null for anything that isn't a snapshot this version understands, so a peer can't break a read. */
         fun fromJson(text: String): Snapshot? {
+            if (text.length > MAX_CHARS) return null
             try {
                 val json = JSONObject(text)
                 if (json.getInt("version") != VERSION) return null
                 val rows = json.getJSONObject("apps")
+                if (rows.length() > MAX_APPS) return null
                 val apps = HashMap<String, AppUsage>()
                 val labels = HashMap<String, List<String>>()
                 for (pkg in rows.keys()) {
                     val row = rows.getJSONObject(pkg)
                     val days = row.getJSONArray("perDayMs")
                     if (days.length() != Usage.DAYS) return null
-                    val perDay = LongArray(Usage.DAYS) { days.getLong(it).coerceAtLeast(0L) }
-                    apps[pkg] = AppUsage(perDay, row.getInt("opens").coerceAtLeast(0), row.getLong("lastUsed"))
+                    val perDay = LongArray(Usage.DAYS) { days.getLong(it).coerceIn(0L, DAY_MS) }
+                    apps[pkg] = AppUsage(perDay, row.getInt("opens").coerceIn(0, MAX_OPENS), row.getLong("lastUsed"))
                     row.optJSONArray("labels")?.let { names ->
-                        labels[pkg] = (0 until names.length()).map { names.getString(it) }
+                        if (names.length() > MAX_LABELS) return null
+                        labels[pkg] = (0 until names.length()).map { names.getString(it).take(MAX_NAME) }
                     }
                 }
+                val lastDay = LocalDate.parse(json.getString("lastDay"))
+                if (lastDay < EARLIEST || lastDay > LATEST) return null
                 return Snapshot(
-                    json.getString("deviceId"),
-                    json.getString("name"),
+                    json.getString("deviceId").take(MAX_NAME),
+                    json.getString("name").take(MAX_NAME),
                     json.getLong("generatedAt"),
-                    LocalDate.parse(json.getString("lastDay")),
+                    lastDay,
                     apps,
                     labels,
                 )

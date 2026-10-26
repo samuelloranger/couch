@@ -17,9 +17,11 @@ object Merge {
      * its labels (the same service often ships under different packages per TV brand, and a TV set to
      * another language shows another name, so any one name in common is a match), but never
      * merges into another app of its own TV. A merged app keeps the first package seen, this TV's
-     * before any peer's. [localLabels] names this TV's packages the way a snapshot names its own.
+     * before any peer's; package matches are placed before label matches, so a name always beats a
+     * label. [localLabels] names this TV's packages the way a snapshot names its own.
      * A snapshot with no day left in the window is dropped whole, its last use included. A peer's
      * opens aren't dated, so a snapshot that only partly overlaps the window brings all of them.
+     * Of several snapshots from one TV only the newest counts.
      */
     fun all(
         local: Map<String, AppUsage>,
@@ -46,19 +48,26 @@ object Merge {
             add(pkg, u.perDayMs, 0, u.opens, u.lastUsed)
             register(pkg, localLabels[pkg])
         }
-        for (peer in peers) {
-            val shift = ChronoUnit.DAYS.between(peer.lastDay, today).toInt()
-            if (shift >= Usage.DAYS || -shift >= Usage.DAYS) continue
+        // One snapshot per TV, the newest; and a fixed order, so the result never depends on who synced first.
+        val latest = peers.groupBy { it.deviceId }.values.map { it.maxBy(Snapshot::generatedAt) }.sortedBy { it.deviceId }
+        for (peer in latest) {
+            val between = ChronoUnit.DAYS.between(peer.lastDay, today)
+            if (between >= Usage.DAYS || between <= -Usage.DAYS) continue
+            val shift = between.toInt()
             // Groups this TV has already filled, so two of its apps never merge into each other.
             val filled = HashSet<String>()
-            peer.apps.toSortedMap().forEach { (pkg, u) ->
-                val byName = pkg.takeIf { it in days }
-                val byNames = peer.labels[pkg].orEmpty().asSequence().map(::normalize).mapNotNull(byLabel::get)
-                    .firstOrNull { it !in filled }
-                val group = byName ?: byNames ?: pkg
+            fun join(group: String, pkg: String, u: AppUsage) {
                 filled += group
                 add(group, u.perDayMs, shift, u.opens, u.lastUsed)
-                if (group == pkg) register(pkg, peer.labels[pkg])
+                register(group, peer.labels[pkg])
+            }
+            // A package nobody else here shares is held back until every package match is placed.
+            val (named, rest) = peer.apps.toSortedMap().entries.partition { it.key in days }
+            named.forEach { (pkg, u) -> join(pkg, pkg, u) }
+            rest.forEach { (pkg, u) ->
+                val group = peer.labels[pkg].orEmpty().asSequence().map(::normalize).mapNotNull(byLabel::get)
+                    .firstOrNull { it !in filled } ?: pkg
+                join(group, pkg, u)
             }
         }
         return days.mapValues { (pkg, perDay) -> AppUsage(perDay, opens[pkg] ?: 0, last[pkg] ?: 0L) }

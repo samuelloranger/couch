@@ -59,12 +59,12 @@ class SyncTest {
     }
 
     @Test
-    fun mergingTheSameSnapshotAgainGivesTheSameAnswer() {
-        val local = mapOf("tv.app" to AppUsage(week(10), 1, 5L))
-        val peer = snapshot(today, mapOf("tv.app" to AppUsage(week(4), 1, 6L)))
-        val once = Merge.all(local, emptyMap(), today, listOf(peer))
-        val again = Merge.all(local, emptyMap(), today, listOf(peer))
-        assertArrayEquals(once.getValue("tv.app").perDayMs, again.getValue("tv.app").perDayMs)
+    fun onlyTheNewestSnapshotOfATvCounts() {
+        val old = Snapshot("bedroom", "Bedroom", 1_000L, today, mapOf("tv.app" to AppUsage(week(4), 1, 1L)))
+        val new = Snapshot("bedroom", "Bedroom", 2_000L, today, mapOf("tv.app" to AppUsage(week(6), 1, 1L)))
+        val merged = Merge.all(emptyMap(), emptyMap(), today, listOf(old, new))
+        assertArrayEquals(week(6), merged.getValue("tv.app").perDayMs)
+        assertArrayEquals(week(6), Merge.all(emptyMap(), emptyMap(), today, listOf(new, old)).getValue("tv.app").perDayMs)
     }
 
     @Test
@@ -153,5 +153,60 @@ class SyncTest {
         val local = mapOf("a" to AppUsage(week(1), 1, 1L))
         val peer = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L)), labels = mapOf("x" to listOf("Télé Fibe")))
         assertEquals(setOf("a", "x"), Merge.all(local, mapOf("a" to listOf("Fibe TV")), today, listOf(peer)).keys)
+    }
+
+    @Test
+    fun aPackageMatchIsPlacedBeforeALabelMatchWhateverTheOrder() {
+        val local = mapOf("z" to AppUsage(week(1), 1, 1L))
+        val peer = snapshot(
+            today, mapOf("a" to AppUsage(week(10), 1, 1L), "z" to AppUsage(week(100), 1, 1L)),
+            labels = mapOf("a" to listOf("Alpha")),
+        )
+        val merged = Merge.all(local, mapOf("z" to listOf("Alpha")), today, listOf(peer))
+        assertArrayEquals(week(101), merged.getValue("z").perDayMs)
+        assertArrayEquals(week(10), merged.getValue("a").perDayMs)
+    }
+
+    @Test
+    fun aNameAnotherTvLinkedAppliesToEveryTvsApp() {
+        val local = mapOf("a" to AppUsage(week(1), 1, 1L))
+        val one = snapshot(today, mapOf("a" to AppUsage(week(2), 1, 1L)), id = "one", labels = mapOf("a" to listOf("X", "Y")))
+        val two = snapshot(today, mapOf("b" to AppUsage(week(4), 1, 1L)), id = "two", labels = mapOf("b" to listOf("Y")))
+        val merged = Merge.all(local, mapOf("a" to listOf("X")), today, listOf(two, one))
+        assertEquals(setOf("a"), merged.keys)
+        assertArrayEquals(week(7), merged.getValue("a").perDayMs)
+    }
+
+    @Test
+    fun aFarAwayDateIsNotMistakenForToday() {
+        // 2^32 + 3 days before today would wrap to 3 days if narrowed to an Int; the year is out of range anyway.
+        assertNull(Snapshot.fromJson("""{"version":1,"deviceId":"a","name":"b","generatedAt":1,"lastDay":"+9999999-01-01","apps":{}}"""))
+    }
+
+    @Test
+    fun numbersFromAPeerAreClamped() {
+        val text = """{"version":1,"deviceId":"a","name":"b","generatedAt":1,"lastDay":"2026-10-25","apps":{"x":{"perDayMs":[-5,9223372036854775807,9223372036854775807,0,0,0,0],"opens":2147483647,"lastUsed":1}}}"""
+        val app = Snapshot.fromJson(text)!!.apps.getValue("x")
+        assertEquals(0L, app.perDayMs[0])
+        assertEquals(Snapshot.DAY_MS, app.perDayMs[1])
+        assertEquals(2 * Snapshot.DAY_MS, app.weekMs)
+        assertEquals(Snapshot.MAX_OPENS, app.opens)
+    }
+
+    @Test
+    fun tooManyAppsOrLabelsIsNotASnapshot() {
+        val week = "[0,0,0,0,0,0,0]"
+        val apps = (0..Snapshot.MAX_APPS).joinToString(",") { "\"p$it\":{\"perDayMs\":$week,\"opens\":0,\"lastUsed\":0}" }
+        assertNull(Snapshot.fromJson("""{"version":1,"deviceId":"a","name":"b","generatedAt":1,"lastDay":"2026-10-25","apps":{$apps}}"""))
+        val labels = (0..Snapshot.MAX_LABELS).joinToString(",") { "\"l$it\"" }
+        assertNull(Snapshot.fromJson("""{"version":1,"deviceId":"a","name":"b","generatedAt":1,"lastDay":"2026-10-25","apps":{"x":{"perDayMs":$week,"opens":0,"lastUsed":0,"labels":[$labels]}}}"""))
+    }
+
+    @Test
+    fun aPeerAtTheEdgeOfTheWindowKeepsOneBar() {
+        val peer = snapshot(today.minusDays(6), mapOf("x" to AppUsage(LongArray(Usage.DAYS) { it + 1L }, 1, 1L)))
+        assertArrayEquals(longArrayOf(7, 0, 0, 0, 0, 0, 0), Merge.all(emptyMap(), emptyMap(), today, listOf(peer)).getValue("x").perDayMs)
+        val ahead = snapshot(today.plusDays(6), mapOf("x" to AppUsage(LongArray(Usage.DAYS) { it + 1L }, 1, 1L)))
+        assertArrayEquals(longArrayOf(0, 0, 0, 0, 0, 0, 1), Merge.all(emptyMap(), emptyMap(), today, listOf(ahead)).getValue("x").perDayMs)
     }
 }
