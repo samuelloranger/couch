@@ -104,7 +104,8 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         waiting.forEach { tv ->
             o.link(tv.name, ctx.str(R.string.tvs_pick_help), { "›" }) { pairWith(tv.host, tv.port) }
         }
-        o.text(ctx.str(R.string.tvs_address), ctx.str(R.string.tvs_address_help), ctx.str(R.string.tvs_address_hint), { "›" }) { host ->
+        // The row shows the example, and an untouched field opens empty (the field treats the placeholder as empty).
+        o.text(ctx.str(R.string.tvs_address), ctx.str(R.string.tvs_address_help), ctx.str(R.string.tvs_address_hint), { ctx.str(R.string.tvs_address_hint) }) { host ->
             if (host.isNotBlank()) pairWith(host.trim(), Server.PORT)
         }
         o.link(ctx.str(R.string.tvs_add_cancel), ctx.str(R.string.tvs_add_cancel_help)) { leavePairing() }
