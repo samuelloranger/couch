@@ -19,6 +19,8 @@ class Snapshot(
     val generatedAt: Long,
     val lastDay: LocalDate,
     val apps: Map<String, AppUsage>,
+    /** Display name per package, for matching apps whose package differs between TVs. */
+    val labels: Map<String, String> = emptyMap(),
 ) {
     fun toJson(): String {
         val out = JSONObject()
@@ -34,7 +36,8 @@ class Snapshot(
                 JSONObject()
                     .put("perDayMs", JSONArray(usage.perDayMs.toList()))
                     .put("opens", usage.opens)
-                    .put("lastUsed", usage.lastUsed),
+                    .put("lastUsed", usage.lastUsed)
+                    .apply { labels[pkg]?.let { put("label", it) } },
             )
         }
         return out.put("apps", rows).toString()
@@ -50,12 +53,14 @@ class Snapshot(
                 if (json.getInt("version") != VERSION) return null
                 val rows = json.getJSONObject("apps")
                 val apps = HashMap<String, AppUsage>()
+                val labels = HashMap<String, String>()
                 for (pkg in rows.keys()) {
                     val row = rows.getJSONObject(pkg)
                     val days = row.getJSONArray("perDayMs")
                     if (days.length() != Usage.DAYS) return null
                     val perDay = LongArray(Usage.DAYS) { days.getLong(it).coerceAtLeast(0L) }
                     apps[pkg] = AppUsage(perDay, row.getInt("opens").coerceAtLeast(0), row.getLong("lastUsed"))
+                    row.optString("label").takeIf { it.isNotEmpty() }?.let { labels[pkg] = it }
                 }
                 return Snapshot(
                     json.getString("deviceId"),
@@ -63,6 +68,7 @@ class Snapshot(
                     json.getLong("generatedAt"),
                     LocalDate.parse(json.getString("lastDay")),
                     apps,
+                    labels,
                 )
             } catch (e: JSONException) {
                 return null
