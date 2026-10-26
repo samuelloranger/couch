@@ -41,6 +41,16 @@ class OptionList(
         })
     }
 
+    /** A quiet line under a header, for what a list says when it is empty. */
+    fun note(text: String) {
+        screen.list.addView(TextView(activity).apply {
+            this.text = text
+            textSize = 15f
+            setTextColor(Tokens.textMuted)
+            setPadding(activity.dp(20), 0, 0, activity.dp(10))
+        })
+    }
+
     fun add(title: String, help: String, valueOf: () -> String): OptionRow {
         val row = OptionRow(activity, help, valueOf, screen.help)
         row.label.text = title

@@ -66,7 +66,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         )
         o.header(ctx.str(R.string.tvs_paired))
         val all = peers.all()
-        if (all.isEmpty()) o.header(ctx.str(R.string.tvs_none))
+        if (all.isEmpty()) o.note(ctx.str(R.string.tvs_none))
         all.forEach { peer ->
             o.link(peer.name, ctx.str(R.string.tvs_peer_help), { peerValue(peer.id, peer.lastSync) }) {
                 if (forgetting == peer.id) {
@@ -100,7 +100,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     private fun add() {
         o.header(ctx.str(R.string.tvs_add_group))
         val waiting = Sync.found().filter { it.pairing }
-        if (waiting.isEmpty()) o.header(ctx.str(R.string.tvs_add_none))
+        if (waiting.isEmpty()) o.note(ctx.str(R.string.tvs_add_none))
         waiting.forEach { tv ->
             o.link(tv.name, ctx.str(R.string.tvs_pick_help), { "›" }) { pairWith(tv.host, tv.port) }
         }
