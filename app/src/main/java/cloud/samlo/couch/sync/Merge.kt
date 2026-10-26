@@ -14,7 +14,8 @@ object Merge {
     /**
      * [local] and every snapshot are summed per app: days by date, opens added, last use the latest.
      * Apps match by package name first. A peer's app with a package nobody here has falls back to
-     * its label (the same service often ships under different packages per TV brand), but never
+     * its labels (the same service often ships under different packages per TV brand, and a TV set to
+     * another language shows another name, so any one name in common is a match), but never
      * merges into another app of its own TV. A merged app keeps the first package seen, this TV's
      * before any peer's. [localLabels] names this TV's packages the way a snapshot names its own.
      * A snapshot with no day left in the window is dropped whole, its last use included. A peer's
@@ -22,7 +23,7 @@ object Merge {
      */
     fun all(
         local: Map<String, AppUsage>,
-        localLabels: Map<String, String>,
+        localLabels: Map<String, List<String>>,
         today: LocalDate,
         peers: List<Snapshot>,
     ): Map<String, AppUsage> {
@@ -38,9 +39,8 @@ object Merge {
         }
         // Which package a normalized label belongs to; the first app to claim a label keeps it.
         val byLabel = HashMap<String, String>()
-        fun register(pkg: String, label: String?) {
-            val key = label?.let(::normalize)?.takeIf { it.isNotEmpty() } ?: return
-            byLabel.putIfAbsent(key, pkg)
+        fun register(pkg: String, labels: List<String>?) {
+            labels?.map(::normalize)?.filter { it.isNotEmpty() }?.forEach { byLabel.putIfAbsent(it, pkg) }
         }
         local.forEach { (pkg, u) ->
             add(pkg, u.perDayMs, 0, u.opens, u.lastUsed)
@@ -53,7 +53,9 @@ object Merge {
             val filled = HashSet<String>()
             peer.apps.toSortedMap().forEach { (pkg, u) ->
                 val byName = pkg.takeIf { it in days }
-                val group = byName ?: peer.labels[pkg]?.let(::normalize)?.let(byLabel::get)?.takeIf { it !in filled } ?: pkg
+                val byNames = peer.labels[pkg].orEmpty().asSequence().map(::normalize).mapNotNull(byLabel::get)
+                    .firstOrNull { it !in filled }
+                val group = byName ?: byNames ?: pkg
                 filled += group
                 add(group, u.perDayMs, shift, u.opens, u.lastUsed)
                 if (group == pkg) register(pkg, peer.labels[pkg])

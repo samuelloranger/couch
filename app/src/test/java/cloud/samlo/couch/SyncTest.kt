@@ -16,7 +16,7 @@ class SyncTest {
 
     private fun week(vararg ms: Long) = LongArray(Usage.DAYS).also { ms.forEachIndexed { i, v -> it[Usage.DAYS - ms.size + i] = v } }
 
-    private fun snapshot(lastDay: LocalDate, apps: Map<String, AppUsage>, id: String = "bedroom", labels: Map<String, String> = emptyMap()) =
+    private fun snapshot(lastDay: LocalDate, apps: Map<String, AppUsage>, id: String = "bedroom", labels: Map<String, List<String>> = emptyMap()) =
         Snapshot(id, "Bedroom", 1_000L, lastDay, apps, labels)
 
     @Test
@@ -89,8 +89,8 @@ class SyncTest {
     @Test
     fun sameServiceUnderAnotherPackageMergesByLabel() {
         val local = mapOf("ca.bell.android" to AppUsage(week(10), 1, 5L))
-        val peer = snapshot(today, mapOf("ca.bell.fire" to AppUsage(week(4), 2, 9L)), labels = mapOf("ca.bell.fire" to "Bell  Fibé TV"))
-        val merged = Merge.all(local, mapOf("ca.bell.android" to "bell fibe tv"), today, listOf(peer))
+        val peer = snapshot(today, mapOf("ca.bell.fire" to AppUsage(week(4), 2, 9L)), labels = mapOf("ca.bell.fire" to listOf("Bell  Fibé TV")))
+        val merged = Merge.all(local, mapOf("ca.bell.android" to listOf("bell fibe tv")), today, listOf(peer))
         assertEquals(setOf("ca.bell.android"), merged.keys)
         assertArrayEquals(week(14), merged.getValue("ca.bell.android").perDayMs)
         assertEquals(3, merged.getValue("ca.bell.android").opens)
@@ -99,8 +99,8 @@ class SyncTest {
     @Test
     fun aPackageMatchWinsOverALabelMatch() {
         val local = mapOf("a" to AppUsage(week(1), 1, 1L), "b" to AppUsage(week(100), 1, 1L))
-        val peer = snapshot(today, mapOf("a" to AppUsage(week(2), 1, 1L)), labels = mapOf("a" to "Beta"))
-        val merged = Merge.all(local, mapOf("a" to "Alpha", "b" to "Beta"), today, listOf(peer))
+        val peer = snapshot(today, mapOf("a" to AppUsage(week(2), 1, 1L)), labels = mapOf("a" to listOf("Beta")))
+        val merged = Merge.all(local, mapOf("a" to listOf("Alpha"), "b" to listOf("Beta")), today, listOf(peer))
         assertArrayEquals(week(3), merged.getValue("a").perDayMs)
         assertArrayEquals(week(100), merged.getValue("b").perDayMs)
     }
@@ -108,15 +108,15 @@ class SyncTest {
     @Test
     fun differentNamesStaySeparate() {
         val local = mapOf("a" to AppUsage(week(1), 1, 1L))
-        val peer = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L)), labels = mapOf("x" to "Other"))
-        assertEquals(setOf("a", "x"), Merge.all(local, mapOf("a" to "Alpha"), today, listOf(peer)).keys)
+        val peer = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L)), labels = mapOf("x" to listOf("Other")))
+        assertEquals(setOf("a", "x"), Merge.all(local, mapOf("a" to listOf("Alpha")), today, listOf(peer)).keys)
     }
 
     @Test
     fun twoAppsOnOnePeerNeverMergeIntoEachOther() {
         val local = mapOf("a" to AppUsage(week(1), 1, 1L))
-        val peer = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L), "y" to AppUsage(week(3), 1, 1L)), labels = mapOf("x" to "Alpha", "y" to "Alpha"))
-        val merged = Merge.all(local, mapOf("a" to "Alpha"), today, listOf(peer))
+        val peer = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L), "y" to AppUsage(week(3), 1, 1L)), labels = mapOf("x" to listOf("Alpha"), "y" to listOf("Alpha")))
+        val merged = Merge.all(local, mapOf("a" to listOf("Alpha")), today, listOf(peer))
         assertEquals(setOf("a", "y"), merged.keys)
         assertArrayEquals(week(3), merged.getValue("a").perDayMs)
         assertArrayEquals(week(3), merged.getValue("y").perDayMs)
@@ -124,8 +124,8 @@ class SyncTest {
 
     @Test
     fun peerOnlyAppsMatchEachOtherByLabel() {
-        val one = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L)), id = "one", labels = mapOf("x" to "Show"))
-        val two = snapshot(today, mapOf("y" to AppUsage(week(5), 1, 1L)), id = "two", labels = mapOf("y" to "SHOW"))
+        val one = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L)), id = "one", labels = mapOf("x" to listOf("Show")))
+        val two = snapshot(today, mapOf("y" to AppUsage(week(5), 1, 1L)), id = "two", labels = mapOf("y" to listOf("SHOW")))
         val merged = Merge.all(emptyMap(), emptyMap(), today, listOf(one, two))
         assertEquals(setOf("x"), merged.keys)
         assertArrayEquals(week(7), merged.getValue("x").perDayMs)
@@ -133,9 +133,25 @@ class SyncTest {
 
     @Test
     fun labelsSurviveJsonAndOldSnapshotsHaveNone() {
-        val back = Snapshot.fromJson(snapshot(today, mapOf("a" to AppUsage(week(1), 1, 1L)), labels = mapOf("a" to "Alpha")).toJson())
-        assertEquals("Alpha", back!!.labels["a"])
+        val back = Snapshot.fromJson(snapshot(today, mapOf("a" to AppUsage(week(1), 1, 1L)), labels = mapOf("a" to listOf("Alpha"))).toJson())
+        assertEquals(listOf("Alpha"), back!!.labels["a"])
         val old = Snapshot.fromJson("""{"version":1,"deviceId":"a","name":"b","generatedAt":1,"lastDay":"2026-10-25","apps":{"x":{"perDayMs":[0,0,0,0,0,0,1],"opens":1,"lastUsed":1}}}""")
-        assertEquals(emptyMap<String, String>(), old!!.labels)
+        assertEquals(emptyMap<String, List<String>>(), old!!.labels)
+    }
+
+    @Test
+    fun aTvInAnotherLanguageStillMatchesOnAnyNameInCommon() {
+        val local = mapOf("sony.fibe" to AppUsage(week(10), 1, 1L))
+        val peer = snapshot(today, mapOf("fire.fibe" to AppUsage(week(4), 1, 1L)), labels = mapOf("fire.fibe" to listOf("Télé Fibe", "Fibe TV")))
+        val merged = Merge.all(local, mapOf("sony.fibe" to listOf("Fibe TV")), today, listOf(peer))
+        assertEquals(setOf("sony.fibe"), merged.keys)
+        assertArrayEquals(week(14), merged.getValue("sony.fibe").perDayMs)
+    }
+
+    @Test
+    fun noNameInCommonStaysSeparate() {
+        val local = mapOf("a" to AppUsage(week(1), 1, 1L))
+        val peer = snapshot(today, mapOf("x" to AppUsage(week(2), 1, 1L)), labels = mapOf("x" to listOf("Télé Fibe")))
+        assertEquals(setOf("a", "x"), Merge.all(local, mapOf("a" to listOf("Fibe TV")), today, listOf(peer)).keys)
     }
 }
