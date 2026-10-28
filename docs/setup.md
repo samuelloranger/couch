@@ -57,8 +57,8 @@ Everything works without them, minus the feature in that row.
 
 **Customize → Couch → Permissions** shows which of them are on. OK on one that is off opens the TV's
 own settings screen for it, when the TV has one (many leave these screens out, Fire TV among
-them; the command above still works). The group sits at the top of Customize while something is
-missing, and near the bottom once everything is granted.
+them; the command above still works). While one is off, a line at the top of Customize says how
+many and opens that page.
 
 ### 4. Make HOME open Couch
 
