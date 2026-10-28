@@ -57,7 +57,7 @@ enum class Group(val title: Int, val icon: Int) {
 
         /** The group a page of settings belongs to; null for the pages that stand on their own. */
         fun of(page: String?): Group? = when (page) {
-            SettingsActivity.PAGE_ROWS, SettingsActivity.PAGE_CHANNELS, SettingsActivity.PAGE_INPUTS -> HOME
+            SettingsActivity.PAGE_ROWS, SettingsActivity.PAGE_APPS, SettingsActivity.PAGE_INPUTS -> HOME
             SettingsActivity.PAGE_ACCESS, SettingsActivity.PAGE_TVS, RemotePage.PAGE -> COUCH
             else -> null
         }

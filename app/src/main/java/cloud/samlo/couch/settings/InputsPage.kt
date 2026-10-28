@@ -6,7 +6,10 @@ import cloud.samlo.couch.data.InputIcon
 import cloud.samlo.couch.data.InputSource
 import cloud.samlo.couch.data.Tile
 
-/** Name and icon of each input: OK picks the icon, a long press renames. */
+/**
+ * Each input's name and icon (OK picks the icon, a long press renames), then whether the home
+ * screen shows it at all.
+ */
 class InputsPage(private val ctx: SettingsContext) : SettingsPage {
     override fun build() {
         ctx.layout.title.text = ctx.str(R.string.settings_inputs)
@@ -16,7 +19,15 @@ class InputsPage(private val ctx: SettingsContext) : SettingsPage {
             ctx.layout.hint.text = ctx.str(R.string.inputs_empty)
             return
         }
+        ctx.options.header(ctx.str(R.string.inputs_names))
         inputs.forEach(::addInput)
+        ctx.options.header(ctx.str(R.string.inputs_shown))
+        val config = { ctx.config }
+        inputs.forEach { input ->
+            ctx.options.toggle(input.label, ctx.str(R.string.input_shown_help), { input.key !in config().hiddenInputs }) {
+                config().hiddenInputs = if (it) config().hiddenInputs - input.key else config().hiddenInputs + input.key
+            }
+        }
     }
 
     /** Back from the icon picker: show what was picked. */

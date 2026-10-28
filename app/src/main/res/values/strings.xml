@@ -58,11 +58,9 @@
     <string name="menu_icon">Change icon</string>
     <string name="menu_app_info">App info</string>
     <string name="menu_open_app">Open %1$s</string>
-    <string name="visibility_title">Check what stays visible</string>
     <string name="organize_title">Rearrange apps</string>
     <string name="organize_idle">OK to pick up an app  ·  Back when done</string>
     <string name="organize_moving">Left or right to move it  ·  OK to drop it</string>
-    <string name="input_prefix">Input %1$s</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
 
@@ -165,14 +163,14 @@
 
     <!-- Settings: home -->
     <string name="group_home">Home screen</string>
-    <string name="settings_rows">Rows</string>
-    <string name="settings_rows_help">Choose which rows show and in what order.</string>
+    <string name="settings_rows">Rows and channels</string>
+    <string name="settings_rows_help">Which rows the home screen shows, app channels included, and in what order.</string>
     <string name="settings_inputs">Inputs</string>
-    <string name="settings_inputs_help">The name and icon of each HDMI input.</string>
+    <string name="settings_inputs_help">The name and icon of each HDMI input, and which ones the home screen shows.</string>
     <string name="settings_channels">App channels</string>
     <string name="settings_channels_help">The rows your apps publish (Jellyfin, YouTube…). Turn on the ones you want to see.</string>
     <string name="settings_visibility">Show or hide apps</string>
-    <string name="settings_visibility_help">Uncheck an app or input to hide it from the home screen.</string>
+    <string name="settings_visibility_help">Choose which apps the home screen shows.</string>
     <string name="settings_organize">Rearrange apps</string>
     <string name="settings_organize_help">Goes back home: OK to pick up an app, left or right to move it.</string>
 
@@ -214,7 +212,7 @@
     <string name="rows_hint">"OK: show or hide  ·  Long press: move"</string>
     <string name="rows_item_help">Long press to move it.</string>
     <string name="rows_moving_hint">"Up or down to move  ·  OK to drop"</string>
-    <string name="channels_hint">Check the rows to show on the home screen.</string>
+    <string name="channels_hint">Turn on the channels to show on the home screen.</string>
     <string name="channels_empty">No channels yet. Apps publish them once you open them.</string>
     <string name="inputs_hint">"OK: choose the icon  ·  Long press: rename"</string>
     <string name="inputs_empty">This TV has no inputs.</string>
@@ -657,4 +655,9 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="summary_weather_off">no weather</string>
     <string name="summary_version">Version %s</string>
     <string name="summary_update">Version %s is out</string>
+    <string name="apps_hint">OK: show or hide</string>
+    <string name="inputs_names">Name and icon</string>
+    <string name="inputs_shown">On the home screen</string>
+    <string name="input_shown_help">Off hides this input from the home screen.</string>
+    <string name="channel_item_help">Shows this channel’s programs beside its app.</string>
 </resources>

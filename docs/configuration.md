@@ -23,10 +23,9 @@ so and opens the permissions page.
 | | Change image *(Reddit)* | every 1, 3, 6 or 24 hours |
 | | Ambient mode | Never, 2, 5, 10 or 20 minutes |
 | | Dim *(Rows)* | Light, Medium, Strong |
-| Home screen | Inputs | rename inputs, pick their icon |
-| | App channels | show any preview channel an app publishes |
-| | Show or hide apps | one checklist for apps and inputs |
-| | Rows *(Rows)* | show, hide and reorder rows |
+| Home screen | Rows and channels | Rows: every row, app channels included, each with a switch; a long press moves one. Index: the app channels alone (*App channels*) |
+| | Show or hide apps | a switch for each app |
+| | Inputs | rename inputs, pick their icon, and a switch for each |
 | | Rearrange apps *(Rows)* | OK picks an app up, left/right moves it, OK puts it down |
 | Clock and weather | 24-hour clock, Weather | On / Off |
 | | City, Units *(weather on)* | |
@@ -75,7 +74,7 @@ comes back (a TV waking up reports its inputs changing too).
 
 On Fire TV most apps (Netflix, Amazon Kids…) post recommendations instead of publishing
 preview channels. Couch shows each app's recommendations as one channel, "Suggestions", in both
-layouts and in the App channels list. It reads them through notification access (see
+layouts and in the Rows and channels list. It reads them through notification access (see
 [setup](setup.md#3-permissions)); an app that also publishes preview channels keeps only those.
 
 ## Long-press menus

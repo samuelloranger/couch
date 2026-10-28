@@ -58,11 +58,9 @@
     <string name="menu_icon">Changer l’icône</string>
     <string name="menu_app_info">Infos sur l’appli</string>
     <string name="menu_open_app">Ouvrir %1$s</string>
-    <string name="visibility_title">Coche ce qui reste visible</string>
     <string name="organize_title">Réorganiser les applis</string>
     <string name="organize_idle">OK pour prendre une appli  ·  Retour pour terminer</string>
     <string name="organize_moving">Gauche ou droite pour la déplacer  ·  OK pour la poser</string>
-    <string name="input_prefix">Entrée %1$s</string>
     <string name="ok">OK</string>
     <string name="cancel">Annuler</string>
 
@@ -165,14 +163,14 @@
 
     <!-- Settings: home -->
     <string name="group_home">Écran d’accueil</string>
-    <string name="settings_rows">Rangées</string>
-    <string name="settings_rows_help">Choisis les rangées à afficher et leur ordre.</string>
+    <string name="settings_rows">Rangées et chaînes</string>
+    <string name="settings_rows_help">Les rangées que l’accueil affiche, chaînes des applis comprises, et leur ordre.</string>
     <string name="settings_inputs">Entrées</string>
-    <string name="settings_inputs_help">Le nom et l’icône de chaque entrée HDMI.</string>
+    <string name="settings_inputs_help">Le nom et l’icône de chaque entrée HDMI, et celles que l’accueil affiche.</string>
     <string name="settings_channels">Chaînes des applis</string>
     <string name="settings_channels_help">Les rangées que publient tes applis (Jellyfin, YouTube…). Active celles que tu veux voir.</string>
     <string name="settings_visibility">Afficher ou masquer des applis</string>
-    <string name="settings_visibility_help">Décoche une appli ou une entrée pour la cacher de l’accueil.</string>
+    <string name="settings_visibility_help">Choisis les applis que l’accueil affiche.</string>
     <string name="settings_organize">Réorganiser les applis</string>
     <string name="settings_organize_help">Retourne à l’accueil : OK pour prendre une appli, gauche ou droite pour la déplacer.</string>
 
@@ -214,7 +212,7 @@
     <string name="rows_hint">"OK : afficher ou masquer  ·  Appui long : déplacer"</string>
     <string name="rows_item_help">Appui long pour la déplacer.</string>
     <string name="rows_moving_hint">"Haut ou bas pour déplacer  ·  OK pour poser"</string>
-    <string name="channels_hint">Coche les rangées à afficher sur l’accueil.</string>
+    <string name="channels_hint">Active les chaînes à afficher sur l’accueil.</string>
     <string name="channels_empty">Aucune chaîne. Les applis en publient quand tu les ouvres.</string>
     <string name="inputs_hint">"OK : choisir l’icône  ·  Appui long : renommer"</string>
     <string name="inputs_empty">Cette télé n’a pas d’entrées.</string>
@@ -667,4 +665,9 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="summary_weather_off">sans météo</string>
     <string name="summary_version">Version %s</string>
     <string name="summary_update">Version %s disponible</string>
+    <string name="apps_hint">OK : afficher ou masquer</string>
+    <string name="inputs_names">Nom et icône</string>
+    <string name="inputs_shown">Sur l’écran d’accueil</string>
+    <string name="input_shown_help">Désactivée, cette entrée n’apparaît plus sur l’accueil.</string>
+    <string name="channel_item_help">Affiche les programmes de cette chaîne à côté de son appli.</string>
 </resources>
