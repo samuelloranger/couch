@@ -56,6 +56,8 @@ class RemotePage(private val ctx: SettingsContext) : SettingsPage {
     override fun onDestroy() {
         main.removeCallbacks(tick)
         learning?.dismiss()
+        // Leaving mid-setup: the relay must stop holding back every key.
+        HomeAccessibilityService.remote()?.cancelLearn()
     }
 
     private fun button(title: Int, help: Int, get: () -> Int, set: (Int) -> Unit) {

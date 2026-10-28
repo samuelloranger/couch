@@ -10,6 +10,7 @@ import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.UserFiles
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * The remote's Input and Settings buttons opening Couch's panels instead of the TV's menus. The
@@ -33,16 +34,21 @@ class RemoteButtons(private val context: Context) {
     @Volatile private var config = Config()
     @Volatile private var link: RelayLink? = null
     @Volatile private var stopped = false
+    /** One start at a time: a second one would kill the first's relay on its way up. */
+    private val connecting = AtomicBoolean()
+    private var pad: PinPad? = null
     private var learner: ((Int?) -> Unit)? = null
     private var failures = 0
     private val retry = Runnable { connect(prompt = false) }
 
     /** Reads the settings again and starts or stops the relay to match. [prompt] may ask to allow debugging. */
     fun reload(prompt: Boolean = false) {
+        if (stopped) return
         config = Config.load(UserFiles(context).dir)
         main.removeCallbacks(retry)
         if (!config.remoteButtons) {
             link?.close()
+            link = null
             state = State.OFF
             return
         }
@@ -54,20 +60,36 @@ class RemoteButtons(private val context: Context) {
         if (live != null) live.send(RelayProtocol.keys(wanted())) else connect(prompt)
     }
 
-    /** Waits for the next button pressed on the remote; [done] gets its code, or null on Back. */
+    /**
+     * Waits for the next button pressed on the remote; [done] gets its code, or null on Back. The
+     * relay holds back every key meanwhile, so it gives up on its own after a while too.
+     */
     fun learn(done: (Int?) -> Unit) {
         val live = link ?: return done(null)
         learner = done
         live.send(RelayProtocol.learn(true))
     }
 
+    /** Stops waiting for a button, when the screen that asked goes away. */
+    fun cancelLearn() {
+        if (learner == null) return
+        learner = null
+        link?.send(RelayProtocol.learn(false))
+    }
+
     /** Asks for the PIN the TV shows while pairing, above the TV's own PIN window. */
-    fun askPin(done: (String?) -> Unit) = PinPad.show(context, done)
+    fun askPin(done: (String?) -> Unit) {
+        pad = PinPad.show(context) {
+            pad = null
+            done(it)
+        }
+    }
 
     fun stop() {
         stopped = true
         main.removeCallbacks(retry)
         link?.close()
+        pad?.dismiss()
         inputs.release()
         quick.release()
         tv.release()
@@ -77,46 +99,63 @@ class RemoteButtons(private val context: Context) {
     }
 
     private fun connect(prompt: Boolean) {
-        if (stopped) return
+        if (stopped || link != null || !connecting.compareAndSet(false, true)) return
         state = State.STARTING
         worker.execute {
-            val created = RelayLink({ line -> RelayProtocol.parse(line)?.let { main.post { onEvent(it) } } }) { main.post(::onLost) }
-            val shell = AdbShell.create(context, prompt)
+            var created: RelayLink? = null
             val result = try {
-                val out = shell.runLasting(RelayProtocol.start(context.applicationInfo.nativeLibraryDir, created.port, created.token))
-                // Quick settings show the Bluetooth audio devices; Android 12 asks for this to list them.
-                if (context.checkSelfPermission(BluetoothAudio.CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                    runCatching { shell.run("pm grant ${context.packageName} ${BluetoothAudio.CONNECT}") }
-                }
-                if (RelayProtocol.STARTED !in out) {
-                    Log.w("Couch", "Remote relay didn't start: ${out.trim()}")
-                    State.FAILED
-                } else if (created.await(AWAIT_MS)) State.RUNNING else State.FAILED
-            } catch (e: AdbShell.Failed.Off) {
-                State.NO_DEBUGGING
-            } catch (e: AdbShell.Failed.NoOk) {
-                State.NOT_ALLOWED
-            } catch (e: AdbShell.Failed) {
-                Log.w("Couch", "Remote relay: ADB failed", e)
+                created = RelayLink({ line -> RelayProtocol.parse(line)?.let { main.post { onEvent(it) } } }) { closed -> main.post { onLost(closed) } }
+                start(created, prompt)
+            } catch (e: Exception) {
+                Log.w("Couch", "Remote relay couldn't start", e)
                 State.FAILED
-            } finally {
-                shell.close()
             }
             main.post {
-                if (result != State.RUNNING) created.close() else if (stopped) created.close() else {
+                connecting.set(false)
+                // Turned off, or the service went away, while it was starting: let it go.
+                val wanted = result == State.RUNNING && !stopped && config.remoteButtons
+                if (!wanted) created?.close() else {
                     bluetooth.start()
                     link = created
                     failures = 0
-                    created.send(RelayProtocol.keys(wanted()))
+                    created?.send(RelayProtocol.keys(wanted()))
                 }
-                state = result
-                if (result == State.FAILED) scheduleRetry()
+                if (stopped) return@post
+                state = if (result == State.RUNNING && !wanted) State.OFF else result
+                if (result == State.FAILED && config.remoteButtons) scheduleRetry()
             }
         }
     }
 
-    /** The relay ended (a crash, or killed): start it again, more slowly each time it keeps failing. */
-    private fun onLost() {
+    /** Starts the relay over ADB and waits for it to call back. Blocking. */
+    private fun start(created: RelayLink, prompt: Boolean): State {
+        val shell = AdbShell.create(context, prompt)
+        return try {
+            val out = shell.runLasting(RelayProtocol.start(context.applicationInfo.nativeLibraryDir, created.port, created.token))
+            // Quick settings show the Bluetooth audio devices; Android 12 asks for this to list them.
+            if (context.checkSelfPermission(BluetoothAudio.CONNECT) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                runCatching { shell.run("pm grant ${context.packageName} ${BluetoothAudio.CONNECT}") }
+            }
+            if (RelayProtocol.STARTED !in out) {
+                Log.w("Couch", "Remote relay didn't start: ${out.trim()}")
+                State.FAILED
+            } else if (created.await(AWAIT_MS)) State.RUNNING else State.FAILED
+        } catch (e: AdbShell.Failed.Off) {
+            State.NO_DEBUGGING
+        } catch (e: AdbShell.Failed.NoOk) {
+            State.NOT_ALLOWED
+        } catch (e: AdbShell.Failed) {
+            Log.w("Couch", "Remote relay: ADB failed", e)
+            State.FAILED
+        } finally {
+            shell.close()
+        }
+    }
+
+    /** A relay ended (a crash, or killed): start it again, more slowly each time it keeps failing. */
+    private fun onLost(closed: RelayLink) {
+        // An older link closing late (its relay replaced) says nothing about the current one.
+        if (link !== closed) return
         link = null
         learner?.invoke(null)
         learner = null
@@ -191,7 +230,9 @@ class RemoteButtons(private val context: Context) {
     /** Apps installed or hidden, inputs renamed: read the list again, for the next opening. */
     private fun loadInputs() {
         if (stopped) return
-        worker.execute { InputItems.load(context).let { main.post { inputs.prepare(it) } } }
+        runCatching {
+            worker.execute { InputItems.load(context).let { main.post { if (!stopped) inputs.prepare(it) } } }
+        }
     }
 
     init {

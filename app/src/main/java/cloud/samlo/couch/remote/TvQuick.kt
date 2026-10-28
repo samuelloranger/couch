@@ -23,7 +23,7 @@ class TvQuick(private val context: Context, private val bluetoothOutput: () -> S
 
     /** Reads the values again; [changed] runs on the main thread once they're in. */
     fun refresh() {
-        if (!bravia.paired) return
+        if (!bravia.paired || worker.isShutdown) return
         worker.execute {
             val read = tv.read()
             main.post {

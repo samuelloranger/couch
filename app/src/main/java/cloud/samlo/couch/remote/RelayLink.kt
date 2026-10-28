@@ -11,10 +11,10 @@ import java.util.concurrent.Executors
 /**
  * Couch's end of the line to the relay: a socket on 127.0.0.1 that only a client knowing [token]
  * may use, since any app on the TV can reach a local port. [await] blocks a worker until the
- * relay says hello, then a reader thread hands each line to [onLine]; [onClosed] runs once when
- * the line ends, which also ends the relay.
+ * relay says hello, then a reader thread hands each line to [onLine]; [onClosed] gets the link
+ * once when the line ends, which also ends the relay.
  */
-class RelayLink(private val onLine: (String) -> Unit, private val onClosed: () -> Unit) {
+class RelayLink(private val onLine: (String) -> Unit, private val onClosed: (RelayLink) -> Unit) {
     val token: String = ByteArray(12).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
     private val server = ServerSocket(0, 2, InetAddress.getByName("127.0.0.1"))
     val port: Int get() = server.localPort
@@ -71,7 +71,7 @@ class RelayLink(private val onLine: (String) -> Unit, private val onClosed: () -
         writer.shutdown()
         runCatching { server.close() }
         runCatching { socket?.close() }
-        if (socket != null) onClosed()
+        if (socket != null) onClosed(this)
     }
 
     private fun read(client: Socket) {

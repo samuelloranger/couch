@@ -90,6 +90,11 @@ class PinPad private constructor(context: Context, private val done: (String?) -
         }
     }
 
+    /** Closes the pad without an answer, when the service drawing it goes away. */
+    fun dismiss() {
+        if (isAttachedToWindow) windows.removeView(this)
+    }
+
     private fun finish(pin: String?): Boolean {
         if (!isAttachedToWindow) return true
         windows.removeView(this)
@@ -104,7 +109,7 @@ class PinPad private constructor(context: Context, private val done: (String?) -
         ) + (KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9)
 
         /** Shows the pad; [context] must be an accessibility service, which may draw above other apps. */
-        fun show(context: Context, done: (String?) -> Unit) {
+        fun show(context: Context, done: (String?) -> Unit): PinPad {
             val pad = PinPad(context, done)
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -115,6 +120,7 @@ class PinPad private constructor(context: Context, private val done: (String?) -
             )
             context.getSystemService(WindowManager::class.java).addView(pad, params)
             pad.requestFocus()
+            return pad
         }
     }
 }

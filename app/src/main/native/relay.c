@@ -23,6 +23,7 @@
 #include <sys/inotify.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <time.h>
 #include <unistd.h>
 
 #define MAX_DEVICES 16
@@ -39,6 +40,17 @@ struct device {
 
 static struct device devices[MAX_DEVICES];
 static int ndevices, link_fd = -1, learning, keys[MAX_KEYS], nkeys;
+// While learning every key is held back, so learning ends on its own after LEARN_MS.
+#define LEARN_MS 15000
+static long long learn_until;
+// Bumped whenever a device is taken or dropped, so a poll list built before is never trusted.
+static unsigned generation;
+
+static long long now_ms(void) {
+    struct timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec * 1000LL + t.tv_nsec / 1000000;
+}
 
 static void say(const char *fmt, int a, int b) {
     char line[64];
@@ -97,6 +109,7 @@ static void drop(int i) {
     close(devices[i].clone);
     close(devices[i].src);
     devices[i] = devices[--ndevices];
+    generation++;
 }
 
 static void scan(void);
@@ -134,15 +147,22 @@ static void take(const char *path) {
         close(src);
         return;
     }
+    // Grab first: a device someone else holds is left alone without ever getting a twin, whose
+    // own appearance would otherwise set off another scan, and another try.
+    if (ioctl(src, EVIOCGRAB, 1) < 0) {
+        close(src);
+        return;
+    }
     d->clone = make_clone(src);
-    if (d->clone < 0 || ioctl(src, EVIOCGRAB, 1) < 0) {
-        if (d->clone >= 0) ioctl(d->clone, UI_DEV_DESTROY), close(d->clone);
+    if (d->clone < 0) {
+        ioctl(src, EVIOCGRAB, 0);
         close(src);
         return;
     }
     d->src = src;
     snprintf(d->path, sizeof d->path, "%s", path);
     ndevices++;
+    generation++;
 }
 
 // Lets go of the devices no longer needed, then takes any that now are.
@@ -194,6 +214,7 @@ static void command(char *line) {
         regrab();
     } else if (!strncmp(line, "learn ", 6)) {
         learning = atoi(line + 6);
+        learn_until = learning ? now_ms() + LEARN_MS : 0;
         regrab();
     } else if (!strncmp(line, "emit ", 5)) {
         emit(atoi(line + 5));
@@ -284,15 +305,30 @@ int main(int argc, char **argv) {
         p[1] = (struct pollfd){.fd = watch, .events = POLLIN};
         for (int i = 0; i < ndevices; i++) p[i + 2] = (struct pollfd){.fd = devices[i].src, .events = POLLIN};
         int count = ndevices;
-        if (poll(p, count + 2, -1) < 0) continue;
-        if (p[0].revents) read_link();
+        unsigned seen = generation;
+        int wait = learning ? (int)(learn_until - now_ms()) : -1;
+        if (learning && wait <= 0) {
+            // Nobody pressed anything: give the keys back, and tell Couch as if Back was pressed.
+            learning = 0;
+            regrab();
+            say("seen %d\n", KEY_BACK, 0);
+            continue;
+        }
+        if (poll(p, count + 2, wait) <= 0) continue;
+        if (p[0].revents) {
+            read_link();
+            // A command may have taken or dropped devices: poll again with the new list.
+            if (generation != seen) continue;
+        }
         if (p[1].revents & POLLIN) {
             char events[512];
             while (read(watch, events, sizeof events) > 0) {}
             // A remote that reconnects (Bluetooth after standby) gets a new node; its permissions
             // can land a moment after the node, hence IN_ATTRIB too.
             scan();
+            if (generation != seen) continue;
         }
+        // Highest first: dropping a device moves the last one into its slot, already handled.
         for (int i = count - 1; i >= 0; i--) if (p[i + 2].revents) read_device(i);
     }
 }
