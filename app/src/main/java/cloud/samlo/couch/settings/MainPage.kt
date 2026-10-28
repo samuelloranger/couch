@@ -52,6 +52,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     /** Back from another screen: show what changed, and redo the warning once a grant changed it. */
     override fun onResume() {
+        // The page just closed saved its own copy; saving this one as it was would undo that.
+        ctx.config = Config.load(ctx.files.dir)
         if (off == offCount()) {
             o.rows().forEach { it.refresh() }
             rail.refresh()
