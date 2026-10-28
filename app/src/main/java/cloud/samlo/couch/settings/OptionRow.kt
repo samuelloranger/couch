@@ -4,7 +4,9 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
+import android.text.SpannableString
 import android.text.TextUtils
+import android.text.style.RelativeSizeSpan
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -90,13 +92,20 @@ class OptionRow(
     }
 
     fun refresh() {
-        value.text = valueOf()
+        value.text = valueOf().let { text ->
+            // Roboto draws the arrow small; it is the only thing saying the row leaves Couch.
+            if (!text.endsWith(LEAVES)) return@let text
+            SpannableString(text).apply { setSpan(RelativeSizeSpan(1.4f), text.length - 1, text.length, 0) }
+        }
         val control = control ?: return
         value.visibility = GONE
         control.visibility = VISIBLE
         showControl()
     }
 }
+
+/** Ends the value of a row that leaves settings. */
+const val LEAVES = "↗"
 
 /** Rounded highlight in the accent colour while focused; call again after the accent changes. */
 fun optionBackground(context: Context) = StateListDrawable().apply {

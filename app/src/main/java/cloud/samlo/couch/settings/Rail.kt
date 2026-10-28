@@ -25,6 +25,7 @@ import cloud.samlo.couch.ui.dpf
  */
 class Rail(private val ctx: SettingsContext, private val focusable: Boolean) {
     private val items = LinkedHashMap<Group, RailItem>()
+    private var warning: RailItem? = null
     var selected: Group = Group.LOOK
         private set
 
@@ -33,6 +34,7 @@ class Rail(private val ctx: SettingsContext, private val focusable: Boolean) {
         val rail = ctx.layout.rail
         rail.removeAllViews()
         items.clear()
+        this.warning = warning
         warning?.let { rail.addView(it, itemParams()) }
         for (group in Group.entries) {
             val item = RailItem(ctx.activity, group.icon, ctx.str(group.title))
@@ -61,10 +63,10 @@ class Rail(private val ctx: SettingsContext, private val focusable: Boolean) {
     }
 
     /** After the accent changed: the ring and the open group's icon take the new colour. */
-    fun restyle() = items.values.forEach { it.restyle() }
+    fun restyle() = (items.values + listOfNotNull(warning)).forEach { it.restyle() }
 
-    /** Each group's line again, after its options may have changed. */
-    fun refresh() = items.forEach { (group, item) -> item.summary.text = group.summary(ctx) }
+    /** The lines of [groups] again, after their options may have changed. */
+    fun refresh(vararg groups: Group = Group.entries.toTypedArray()) = groups.forEach { item(it).summary.text = it.summary(ctx) }
 
     /** Lets [onFocus] follow the focus down the rail, and [onEnter] step into the page on the right. */
     fun listen(onFocus: (Group) -> Unit, onEnter: () -> Unit) = items.forEach { (group, item) ->
@@ -119,10 +121,13 @@ class RailItem(context: Context, icon: Int, title: String) : LinearLayout(contex
         tint()
     }
 
+    private var warning = false
+
     /** The warning line: its name and icon in the warning colour. */
     fun warn() {
+        warning = true
         name.setTextColor(Tokens.warning)
-        image.imageTintList = ColorStateList.valueOf(Tokens.warning)
+        tint()
     }
 
     fun restyle() {
@@ -137,7 +142,13 @@ class RailItem(context: Context, icon: Int, title: String) : LinearLayout(contex
 
     /** The open group's icon takes the accent; the others stay quiet. */
     private fun tint() {
-        image.imageTintList = ColorStateList.valueOf(if (isSelected) Tokens.accent else Tokens.textMuted)
+        image.imageTintList = ColorStateList.valueOf(
+            when {
+                warning -> Tokens.warning
+                isSelected -> Tokens.accent
+                else -> Tokens.textMuted
+            },
+        )
     }
 }
 

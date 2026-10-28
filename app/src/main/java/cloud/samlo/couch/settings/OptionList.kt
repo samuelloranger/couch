@@ -161,7 +161,7 @@ class OptionList(
 
     /** Leaves settings: for Android's own screens, or back to the home screen. */
     fun leaves(title: String, help: String, valueOf: () -> String = { "" }, onClick: () -> Unit) =
-        link(title, help, { withMark(valueOf(), "↗") }, onClick)
+        link(title, help, { withMark(valueOf(), LEAVES) }, onClick)
 
     private fun withMark(value: String, mark: String) = if (value.isEmpty()) mark else "$value  $mark"
 

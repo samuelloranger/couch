@@ -43,8 +43,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         off = offCount()
         rail.build(current, if (off > 0) missingWarning() else null)
         rail.listen(onFocus = { if (it != current) show(it) }, onEnter = ::enter)
-        // A saved change shows at once in its group's line.
-        o.onSave = { rail.refresh() }
+        // A saved change shows at once in its group's line; the other lines can't have changed.
+        o.onSave = { rail.refresh(current) }
         show(current)
     }
 
@@ -63,10 +63,20 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         if (inPage) refocus(focus) else focusStart()
     }
 
-    /** Back from the options returns to their group in the rail, instead of leaving Customize. */
+    /** A Back press that started in the options; its repeats and release are swallowed too. */
+    private var backToRail = false
+
+    /**
+     * Back from the options returns to their group in the rail, instead of leaving Customize.
+     * The whole press is kept, so holding Back doesn't go on to close the page from the rail.
+     */
     override fun consumesKey(event: KeyEvent): Boolean {
-        if (event.keyCode != KeyEvent.KEYCODE_BACK || !inPage()) return false
-        if (event.action == KeyEvent.ACTION_DOWN) rail.item(current).requestFocus()
+        if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
+        val first = event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0
+        if (first) backToRail = inPage()
+        if (!backToRail) return false
+        if (first) rail.item(current).requestFocus()
+        if (event.action == KeyEvent.ACTION_UP) backToRail = false
         return true
     }
 
@@ -244,7 +254,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
         o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
         o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
-            Dialogs.visibility(ctx.activity, config, ctx.files.dir) { rail.refresh() }
+            Dialogs.visibility(ctx.activity, config, ctx.files.dir) { rail.refresh(Group.HOME) }
         }
         rowsOnly { o.page(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) } }
         rowsOnly {

@@ -19,6 +19,6 @@ class AccessPage(private val ctx: SettingsContext) : SettingsPage {
     private fun value(item: SetupItem): String {
         if (item.isOn(ctx.activity)) return ctx.str(R.string.yes)
         val turnOn = ctx.str(R.string.setup_turn_on)
-        return if (item.inPlace) turnOn else "$turnOn  ↗"
+        return if (item.inPlace) turnOn else "$turnOn  $LEAVES"
     }
 }
