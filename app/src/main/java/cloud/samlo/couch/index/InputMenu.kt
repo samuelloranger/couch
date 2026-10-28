@@ -24,7 +24,8 @@ import cloud.samlo.couch.ui.dpf
  * The Inputs pill's menu: the TV's inputs in a panel hanging under the pill, set like the app
  * list. Up and down glide the selection, OK switches, Back closes. A dialog window, so it takes
  * the remote while open and hands focus back to the pill when it closes. It opens on the input
- * chosen last, the best guess at what the TV is showing.
+ * chosen last, the best guess at what the TV is showing. It doesn't scroll: about eight inputs fit
+ * under the pill, more than a TV usually has.
  */
 class InputMenu(private val activity: Activity, private val inputs: List<Tile>, anchor: View) : Dialog(activity) {
     private val rows = inputs.map { InputMenuRow(activity, it) }
@@ -59,7 +60,7 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
         val list = FrameLayout(activity)
         list.addView(selection, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, activity.dp(IndexTokens.ROW_H)))
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        rows.forEach { column.addView(it, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(IndexTokens.ROW_H)).apply { bottomMargin = activity.dp(ROW_GAP) }) }
+        rows.forEach { column.addView(it, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(IndexTokens.ROW_H)).apply { bottomMargin = activity.dp(IndexTokens.ROW_PITCH - IndexTokens.ROW_H) }) }
         list.addView(column)
         panel.addView(list, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
         val hint = IndexText(activity, 11f, 500, IndexTokens.hours).apply { setText(R.string.input_menu_hint) }
@@ -67,21 +68,22 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
             marginStart = activity.dp(15)
         }, top = activity.dp(8)))
         // The panel's own size, plus room for its shadow.
-        val frame = FrameLayout(activity).apply { setPadding(activity.dp(SHADOW), 0, activity.dp(SHADOW), activity.dp(SHADOW)) }
-        // END: some dialog themes impose a minimum width, and the panel must still sit under the pill.
-        frame.addView(panel, FrameLayout.LayoutParams(activity.dp(PANEL_W), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END))
+        val frame = FrameLayout(activity).apply { setPadding(activity.dp(SHADOW), activity.dp(SHADOW), activity.dp(SHADOW), activity.dp(SHADOW)) }
+        // Some dialog themes impose a minimum width; the panel must still sit under the pill.
+        frame.addView(panel, FrameLayout.LayoutParams(activity.dp(PANEL_W), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.RIGHT))
         setContentView(frame)
         window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             setLayout(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT)
             setDimAmount(DIM)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            // Right edges lined up with the pill's, just under it.
+            // Right edges lined up with the pill's, just under it. RIGHT, not END: the Index canvas
+            // places the pill at a fixed spot, so the panel must not mirror in a right-to-left language.
             val at = IntArray(2).also { anchor.getLocationInWindow(it) }
-            setGravity(Gravity.TOP or Gravity.END)
+            setGravity(Gravity.TOP or Gravity.RIGHT)
             attributes = attributes.apply {
                 x = activity.window.decorView.width - (at[0] + anchor.width) - activity.dp(SHADOW)
-                y = at[1] + anchor.height + activity.dp(GAP)
+                y = at[1] + anchor.height + activity.dp(GAP) - activity.dp(SHADOW)
                 windowAnimations = 0
             }
         }
@@ -117,7 +119,7 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
 
     private fun paint(animate: Boolean) {
         rows.forEachIndexed { i, row -> row.chosen = i == selected }
-        val y = (selected * activity.dp(IndexTokens.ROW_H + ROW_GAP)).toFloat()
+        val y = (selected * activity.dp(IndexTokens.ROW_PITCH)).toFloat()
         if (animate) {
             selection.animate().translationY(y).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
         } else {
@@ -136,7 +138,6 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
         const val LAST = "inputs:last"
         const val PANEL_W = 330
         const val PANEL_RADIUS = 12f
-        const val ROW_GAP = 3
         /** Between the pill and the panel. */
         const val GAP = 9
         /** Transparent margin left for the panel's shadow. */

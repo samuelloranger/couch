@@ -52,6 +52,8 @@ class IndexScreen(
     private var selectedKey: String? = null
     /** The app whose programs the channel row holds. */
     private var stripKey: String? = null
+    /** The Inputs pill's menu while it is open. */
+    private var inputMenu: InputMenu? = null
     /** Placed once, on the first bind; later binds keep focus where it is. */
     private var placedFocus = false
     /** Set while [bind] moves focus itself, so the focus listener doesn't fill the column twice. */
@@ -123,6 +125,7 @@ class IndexScreen(
 
     /** HOME while home: back to the first app. */
     fun reset() {
+        inputMenu?.dismiss()
         val first = list.rows().firstOrNull() ?: return
         // Focus first: its listener selects the row, then the jump lands the selection with the list.
         first.requestFocus()
@@ -282,7 +285,16 @@ class IndexScreen(
     private fun pickInput() {
         val inputs = data?.inputs.orEmpty()
         if (inputs.isEmpty()) return
-        InputMenu(activity, inputs, topBar.inputs).show()
+        inputMenu = InputMenu(activity, inputs, topBar.inputs).apply {
+            setOnDismissListener { if (inputMenu === this) inputMenu = null }
+            show()
+        }
+    }
+
+    // The activity is going away: a dialog left open would leak its window.
+    override fun onDetachedFromWindow() {
+        inputMenu?.dismiss()
+        super.onDetachedFromWindow()
     }
 
     private fun place(view: View, x: Int, y: Int, w: Int, h: Int) {
