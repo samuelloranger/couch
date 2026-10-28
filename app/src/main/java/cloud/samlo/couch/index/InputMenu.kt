@@ -1,5 +1,6 @@
 package cloud.samlo.couch.index
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Dialog
 import android.graphics.Color
@@ -27,6 +28,7 @@ import cloud.samlo.couch.ui.dpf
  * chosen last, the best guess at what the TV is showing. It doesn't scroll: about eight inputs fit
  * under the pill, more than a TV usually has.
  */
+@SuppressLint("RtlHardcoded")
 class InputMenu(private val activity: Activity, private val inputs: List<Tile>, anchor: View) : Dialog(activity) {
     private val rows = inputs.map { InputMenuRow(activity, it) }
     private val marker = GradientDrawable().apply {

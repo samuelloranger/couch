@@ -284,7 +284,7 @@ class IndexScreen(
 
     private fun pickInput() {
         val inputs = data?.inputs.orEmpty()
-        if (inputs.isEmpty()) return
+        if (inputs.isEmpty() || inputMenu != null) return
         inputMenu = InputMenu(activity, inputs, topBar.inputs).apply {
             setOnDismissListener { if (inputMenu === this) inputMenu = null }
             show()
