@@ -26,7 +26,7 @@ internal fun GodmodePage.toolRows() {
             SystemClock.elapsedRealtime() - armedAt < CONFIRM_MS -> ctx.str(R.string.realhome_confirm)
             RealHome.active(c) -> ctx.str(R.string.realhome_on)
             RealHome.isCouch(c) -> ctx.str(R.string.realhome_already)
-            else -> "›"
+            else -> ""
         }
     }) {
         when {

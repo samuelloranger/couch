@@ -79,7 +79,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
                 }
             }
         }
-        o.link(ctx.str(R.string.tvs_add), ctx.str(R.string.tvs_add_help)) {
+        o.page(ctx.str(R.string.tvs_add), ctx.str(R.string.tvs_add_help)) {
             mode = Mode.ADD
             Sync.openPairing(ctx.activity, ::askFromOutside)
             rebuild()
@@ -102,7 +102,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         val waiting = Sync.found().filter { it.pairing }
         if (waiting.isEmpty()) o.note(ctx.str(R.string.tvs_add_none))
         waiting.forEach { tv ->
-            o.link(tv.name, ctx.str(R.string.tvs_pick_help), { "›" }) { pairWith(tv.host, tv.port) }
+            o.link(tv.name, ctx.str(R.string.tvs_pick_help)) { pairWith(tv.host, tv.port) }
         }
         // The row shows the example, and an untouched field opens empty (the field treats the placeholder as empty).
         o.text(ctx.str(R.string.tvs_address), ctx.str(R.string.tvs_address_help), ctx.str(R.string.tvs_address_hint), { ctx.str(R.string.tvs_address_hint) }) { host ->

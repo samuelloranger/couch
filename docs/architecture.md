@@ -99,8 +99,13 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
 ## Settings
 
 `SettingsActivity` hosts one page at a time (main, rows, channels, inputs), chosen by an intent
-extra. Pages build their list from `OptionList` helpers (choice, toggle, text, link), each producing
-an `OptionRow`. Every change is saved immediately; the home screen picks it up when it resumes.
+extra. Pages build their list from `OptionList` helpers, each producing an `OptionRow` whose right
+side shows what kind of row it is: `choice` (every option side by side when two or three short ones
+fit, else `‹ value ›`), `swatches` (the accent colours), `toggle` (a switch), `text` (an underlined
+value that opens the keyboard), `page` (`›`, opens another page), `leaves` (`↗`, opens one of
+Android's screens or goes back home) and `link` (an action done in place, no arrow). The focused
+row opens its help under its title. Every change is saved immediately; the home screen picks it up
+when it resumes.
 `IconPickerActivity` shows input icons as real `Card`s.
 
 ## Godmode and Other TVs

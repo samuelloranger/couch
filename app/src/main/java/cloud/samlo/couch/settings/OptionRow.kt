@@ -6,6 +6,8 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.text.TextUtils
 import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -14,15 +16,16 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
 /**
- * One focusable option line: title on the left, current value on the right. Focusing it shows
- * [helpText] in the [help] panel.
+ * One focusable option: title on the left, and on the right either its current value or a
+ * [control] that shows it. Focusing the row opens [helpText] under the title; the side [panel]
+ * only explains grid tiles now, so a focused row empties it.
  */
 @SuppressLint("ViewConstructor")
 class OptionRow(
     context: Context,
     private val helpText: String,
     private val valueOf: () -> String,
-    help: TextView,
+    panel: TextView,
 ) : LinearLayout(context) {
     val label = TextView(context).apply {
         textSize = 17f
@@ -36,25 +39,62 @@ class OptionRow(
         maxLines = 1
         gravity = Gravity.END
     }
+    private val help = TextView(context).apply {
+        textSize = 14f
+        setTextColor(Tokens.textMuted)
+        setLineSpacing(0f, 1.2f)
+        visibility = GONE
+    }
+    private val line = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        minimumHeight = context.dp(24)
+    }
+    private var control: View? = null
+    private var showControl: () -> Unit = {}
 
     init {
-        orientation = HORIZONTAL
+        orientation = VERTICAL
         gravity = Gravity.CENTER_VERTICAL
         isFocusable = true
         isClickable = true
-        setPadding(context.dp(20), 0, context.dp(20), 0)
+        minimumHeight = context.dp(52)
+        setPadding(context.dp(20), context.dp(13), context.dp(20), context.dp(13))
         background = optionBackground(context)
-        addView(label, LayoutParams(0, WRAP_CONTENT, 1f))
-        addView(value, LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = context.dp(16) })
+        line.addView(label, LayoutParams(0, WRAP_CONTENT, 1f))
+        line.addView(value, LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = context.dp(16) })
+        addView(line, LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        addView(help, LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = context.dp(5) })
+        help.text = helpText
         setOnFocusChangeListener { _, focused ->
-            if (focused) help.text = helpText
+            if (focused) panel.text = ""
+            help.visibility = if (focused && helpText.isNotEmpty()) VISIBLE else GONE
             value.setTextColor(if (focused) Tokens.textPrimary else Tokens.textMuted)
         }
         refresh()
     }
 
+    /** Shows the row's state with [view] instead of the value text; [show] brings it up to date. */
+    fun <T : View> use(view: T, show: (T) -> Unit) {
+        control = view
+        showControl = { show(view) }
+        line.addView(view, LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginStart = context.dp(16) })
+        refresh()
+    }
+
+    /** Puts [text] where the value or control is, until the next [refresh]. */
+    fun mark(text: String) {
+        value.text = text
+        value.visibility = VISIBLE
+        control?.visibility = GONE
+    }
+
     fun refresh() {
         value.text = valueOf()
+        val control = control ?: return
+        value.visibility = GONE
+        control.visibility = VISIBLE
+        showControl()
     }
 }
 

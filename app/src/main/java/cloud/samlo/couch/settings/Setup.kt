@@ -16,8 +16,11 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Programs
 import cloud.samlo.couch.data.Usage
 
-/** One access Couch needs for a feature: whether Android has granted it, and where it is granted. */
-class SetupItem(val title: Int, val help: Int, val isOn: (Context) -> Boolean, val open: (Activity) -> Unit)
+/**
+ * One access Couch needs for a feature: whether Android has granted it, and where it is granted.
+ * [inPlace] when Couch asks for it itself rather than opening one of Android's screens.
+ */
+class SetupItem(val title: Int, val help: Int, val isOn: (Context) -> Boolean, val inPlace: Boolean = false, val open: (Activity) -> Unit)
 
 /**
  * The accesses that turn features on. Without them those features stay hidden rather than
@@ -34,7 +37,7 @@ object Setup {
         SetupItem(R.string.setup_usage, R.string.setup_usage_help, { Usage.canRead(it) }) {
             openSettings(it, Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
         },
-        SetupItem(R.string.setup_channels, R.string.setup_channels_help, { Programs.canRead(it) }) { channels(it) },
+        SetupItem(R.string.setup_channels, R.string.setup_channels_help, { Programs.canRead(it) }, inPlace = true) { channels(it) },
     )
 
     fun allOn(context: Context) = items.all { it.isOn(context) }

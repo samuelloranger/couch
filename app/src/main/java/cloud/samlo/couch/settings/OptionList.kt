@@ -1,9 +1,11 @@
 package cloud.samlo.couch.settings
 
 import android.app.Activity
+import android.graphics.Color
 import android.graphics.Typeface
 import android.view.KeyEvent
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
 import android.widget.TextView
 import cloud.samlo.couch.R
@@ -27,8 +29,11 @@ class OptionList(
 ) {
     fun rows(): List<OptionRow> = screen.items().filterIsInstance<OptionRow>()
 
-    /** Re-applies the focus highlight, e.g. after the accent changed. */
-    fun restyle() = rows().forEach { it.background = optionBackground(activity) }
+    /** Re-applies the focus highlight and redraws the switches, e.g. after the accent changed. */
+    fun restyle() = rows().forEach {
+        it.background = optionBackground(activity)
+        it.refresh()
+    }
 
     fun header(text: String) {
         screen.list.addView(TextView(activity).apply {
@@ -54,7 +59,7 @@ class OptionList(
     fun add(title: String, help: String, valueOf: () -> String): OptionRow {
         val row = OptionRow(activity, help, valueOf, screen.help)
         row.label.text = title
-        screen.list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, activity.dp(52)).apply { bottomMargin = activity.dp(4) })
+        screen.list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = activity.dp(4) })
         return row
     }
 
@@ -63,13 +68,28 @@ class OptionList(
         row.refresh()
     }
 
-    /** Left/right step through [options]; OK steps forward. */
+    /** Left/right step through [options]; OK steps forward. Short lists show every option at once. */
     fun choice(title: String, help: String, options: List<Option>, get: () -> String, set: (String) -> Unit) {
         val labelOf = { options.firstOrNull { it.value == get() }?.label ?: options.first().label }
         val row = add(title, help) { "‹  ${labelOf()}  ›" }
+        val index = { options.indexOfFirst { it.value == get() }.coerceAtLeast(0) }
+        val labels = options.map { it.label }
+        if (Segments.fit(labels)) row.use(Segments(activity, labels)) { it.select(index()) }
+        stepper(row, options.size, index) { set(options[it].value) }
+    }
+
+    /** The accent colours as swatches; left/right and OK step through them like a choice. */
+    fun swatches(title: String, help: String, colors: List<String>, get: () -> String, set: (String) -> Unit) {
+        val row = add(title, help) { "" }
+        val index = { colors.indexOf(get()).coerceAtLeast(0) }
+        row.use(Swatches(activity, colors.map { Color.parseColor(it) })) { it.select(index()) }
+        stepper(row, colors.size, index) { set(colors[it]) }
+    }
+
+    /** OK and right move to the next of [count] values, left to the one before, wrapping round. */
+    private fun stepper(row: OptionRow, count: Int, index: () -> Int, set: (Int) -> Unit) {
         val step = { by: Int ->
-            val i = options.indexOfFirst { it.value == get() }.coerceAtLeast(0)
-            set(options[(i + by + options.size) % options.size].value)
+            set((index() + by + count) % count)
             save(row)
         }
         row.setOnClickListener { step(1) }
@@ -85,6 +105,7 @@ class OptionList(
 
     fun toggle(title: String, help: String, get: () -> Boolean, set: (Boolean) -> Unit): OptionRow {
         val row = add(title, help) { activity.getString(if (get()) R.string.yes else R.string.no) }
+        row.use(SwitchView(activity)) { it.on = get() }
         row.setOnClickListener {
             set(!get())
             save(row)
@@ -95,6 +116,8 @@ class OptionList(
     /** OK opens a text field; [placeholder] is what an empty value shows and what the field hints. */
     fun text(title: String, help: String, placeholder: String, valueOf: () -> String, set: (String) -> Unit) {
         val row = add(title, help, valueOf)
+        row.value.background = underline(activity)
+        row.value.setPadding(0, 0, 0, activity.dp(3))
         row.setOnClickListener {
             val current = valueOf().let { if (it == placeholder) "" else it.removePrefix("r/") }
             Dialogs.text(activity, title, current, placeholder) {
@@ -104,9 +127,20 @@ class OptionList(
         }
     }
 
+    /** Does something here, on this screen; shows [valueOf] and no arrow. */
     fun link(title: String, help: String, valueOf: () -> String = { "" }, onClick: () -> Unit): OptionRow {
-        val row = add(title, help) { valueOf().ifEmpty { "›" } }
+        val row = add(title, help, valueOf)
         row.setOnClickListener { onClick() }
         return row
     }
+
+    /** Opens another page of settings. */
+    fun page(title: String, help: String, valueOf: () -> String = { "" }, onClick: () -> Unit) =
+        link(title, help, { withMark(valueOf(), "›") }, onClick)
+
+    /** Leaves settings: for Android's own screens, or back to the home screen. */
+    fun leaves(title: String, help: String, valueOf: () -> String = { "" }, onClick: () -> Unit) =
+        link(title, help, { withMark(valueOf(), "↗") }, onClick)
+
+    private fun withMark(value: String, mark: String) = if (value.isEmpty()) mark else "$value  $mark"
 }

@@ -44,10 +44,15 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private fun setup() {
         o.header(ctx.str(R.string.group_setup))
         for (item in Setup.items) {
-            o.link(ctx.str(item.title), ctx.str(item.help), { ctx.str(if (item.isOn(ctx.activity)) R.string.yes else R.string.setup_turn_on) }) {
-                item.open(ctx.activity)
-            }
+            o.link(ctx.str(item.title), ctx.str(item.help), { setupValue(item) }) { item.open(ctx.activity) }
         }
+    }
+
+    /** Granted, or how to turn it on: most of these open one of Android's screens. */
+    private fun setupValue(item: SetupItem): String {
+        if (item.isOn(ctx.activity)) return ctx.str(R.string.yes)
+        val turnOn = ctx.str(R.string.setup_turn_on)
+        return if (item.inPlace) turnOn else "$turnOn  ↗"
     }
 
     private fun look() {
@@ -73,9 +78,9 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             ),
             { config.cardSize }, { config.cardSize = it },
         )
-        o.choice(
+        o.swatches(
             ctx.str(R.string.accent), ctx.str(R.string.accent_help),
-            Accents.all.map { Option(ctx.str(it.label), it.hex) },
+            Accents.all.map { it.hex },
             { config.accent },
             {
                 config.accent = it
@@ -129,13 +134,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun home() {
         o.header(ctx.str(R.string.group_home))
-        if (rows) o.link(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) }
-        o.link(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
-        o.link(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
-        o.link(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
+        if (rows) o.page(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) }
+        o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
+        o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
+        o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
             Dialogs.visibility(ctx.activity, config, ctx.files.dir) {}
         }
-        if (rows) o.link(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
+        if (rows) o.leaves(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
             ctx.activity.setResult(SettingsActivity.RESULT_ORGANIZE)
             ctx.activity.finish()
         }
@@ -169,13 +174,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun system() {
         o.header(ctx.str(R.string.group_system))
-        o.link(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
+        o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
             ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
-        o.link(ctx.str(R.string.settings_tvs), ctx.str(R.string.settings_tvs_help), { ctx.str(if (config.syncEnabled) R.string.yes else R.string.no) }) {
+        o.page(ctx.str(R.string.settings_tvs), ctx.str(R.string.settings_tvs_help), { ctx.str(if (config.syncEnabled) R.string.yes else R.string.no) }) {
             open(SettingsActivity.PAGE_TVS)
         }
-        o.link(ctx.str(R.string.remote_title), ctx.str(R.string.remote_link_help), { ctx.str(if (config.remoteButtons) R.string.yes else R.string.no) }) {
+        o.page(ctx.str(R.string.remote_title), ctx.str(R.string.remote_link_help), { ctx.str(if (config.remoteButtons) R.string.yes else R.string.no) }) {
             open(RemotePage.PAGE)
         }
         o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
@@ -185,7 +190,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     /** The hidden page, once seven OKs on About found it. */
     private fun godmodeRow() {
-        o.link(ctx.str(R.string.godmode), ctx.str(R.string.godmode_help), { "›" }) { open(GodmodePage.page) }
+        o.page(ctx.str(R.string.godmode), ctx.str(R.string.godmode_help)) { open(GodmodePage.page) }
     }
 
     /** The installed version; OK installs a newer one when the last daily check found it. */

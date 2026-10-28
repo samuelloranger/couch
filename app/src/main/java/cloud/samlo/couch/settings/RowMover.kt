@@ -17,7 +17,7 @@ class RowMover(private val ctx: SettingsContext) {
     fun start(row: OptionRow) {
         moving = row
         swallowNextRelease = true
-        row.value.text = "↕"
+        row.mark("↕")
         ctx.layout.hint.text = ctx.str(R.string.rows_moving_hint)
     }
 

@@ -44,7 +44,7 @@ internal fun DebloatPage.scanRows() {
     o.header(ctx.str(R.string.group_act))
     o.link(actionTitle(), ctx.str(R.string.debloat_act_help)) { startRemoving() }.tag = ACTION_ROW
     val removed = store.entries().size
-    o.link(ctx.str(R.string.undo_open), ctx.str(R.string.undo_open_help), { if (removed == 0) "" else "$removed" }) { go(DebloatPage.Step.UNDO) }
+    o.page(ctx.str(R.string.undo_open), ctx.str(R.string.undo_open_help), { if (removed == 0) "" else "$removed" }) { go(DebloatPage.Step.UNDO) }
 }
 
 private const val ACTION_ROW = "debloat-action"

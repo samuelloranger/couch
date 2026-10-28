@@ -48,7 +48,7 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
         adbCard(shellState)
         tvRows()
         o.header(ctx.str(R.string.godmode_pages_group))
-        o.link(ctx.str(R.string.godmode_debloat), ctx.str(R.string.godmode_debloat_help), { debloatLine() }) {
+        o.page(ctx.str(R.string.godmode_debloat), ctx.str(R.string.godmode_debloat_help), { debloatLine() }) {
             ctx.activity.startActivity(SettingsActivity.intent(ctx.activity, DebloatPage.page))
         }
         lateinit var cache: OptionRow
@@ -83,7 +83,7 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
         TvSettings.changed(ctx.activity) + (if (RealHome.active(ctx.activity)) 1 else 0) +
             (if (ctx.config.hud != Config.HUD_OFF) 1 else 0)
 
-    private fun hideValue() = if (pending() == 0) "›" else ctx.str(R.string.godmode_hide_first)
+    private fun hideValue() = if (pending() == 0) "" else ctx.str(R.string.godmode_hide_first)
 
     /**
      * Takes godmode out of Customize. Anything still running under it goes back first: a hidden
@@ -155,7 +155,7 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
     internal fun toast(text: String) = Toast.makeText(ctx.activity, text, Toast.LENGTH_LONG).show()
 
     // The debloat page picks its own entry per TV brand, so the row only points there.
-    private fun debloatLine() = if (shellState == Engine.State.BLOCKED) ctx.str(R.string.shell_blocked_short) else "›"
+    private fun debloatLine() = if (shellState == Engine.State.BLOCKED) ctx.str(R.string.shell_blocked_short) else ""
 
     private fun label() = ctx.str(
         when (shellState) {
