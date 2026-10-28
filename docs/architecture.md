@@ -75,6 +75,9 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
   app's name. The pictures are the channel's cards, so moving along them decodes no larger copy of
   their art; an app without a channel shows its banner, rendered at card size, in the row's place.
 - **`StatsBar`** shows the week's total, when the app was last opened, and a bar per day.
+- **`InputMenu`** is the Inputs pill's panel: a dialog window hanging under the pill, its
+  `InputMenuRow`s set like the app list, with the same gliding selection. Being a window, it takes
+  the remote while open and gives focus back to the pill when Back closes it.
 - **`Recommendations`** turns Fire TV's recommendation notifications (read through `MediaListener`)
   into one channel per app that has no preview channel; `Programs` lists them with the others.
 - **`Usage`** reads usage events (with usage access) into seven days per app; `Usage.Tally` is the

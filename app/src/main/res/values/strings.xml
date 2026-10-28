@@ -12,6 +12,7 @@
     <string name="section_recent">Recent</string>
     <string name="input_offer">Switch to %1$s</string>
     <string name="input_disconnected">Disconnected</string>
+    <string name="input_menu_hint">"OK: switch  ·  Back: close"</string>
     <string name="launch_failed">Couldn’t open %1$s</string>
     <string name="settings">Settings</string>
     <string name="now_playing_paused">Paused</string>

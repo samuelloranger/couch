@@ -2,7 +2,6 @@ package cloud.samlo.couch.index
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -283,10 +282,7 @@ class IndexScreen(
     private fun pickInput() {
         val inputs = data?.inputs.orEmpty()
         if (inputs.isEmpty()) return
-        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.section_inputs)
-            .setItems(inputs.map { it.label }.toTypedArray()) { _, which -> inputs[which].launch(activity) }
-            .show()
+        InputMenu(activity, inputs, topBar.inputs).show()
     }
 
     private fun place(view: View, x: Int, y: Int, w: Int, h: Int) {

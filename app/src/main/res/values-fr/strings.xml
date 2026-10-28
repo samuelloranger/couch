@@ -12,6 +12,7 @@
     <string name="section_recent">Récentes</string>
     <string name="input_offer">Passer à %1$s</string>
     <string name="input_disconnected">Débranché</string>
+    <string name="input_menu_hint">"OK : changer  ·  Retour : fermer"</string>
     <string name="launch_failed">Impossible d’ouvrir %1$s</string>
     <string name="settings">Paramètres</string>
     <string name="now_playing_paused">En pause</string>
