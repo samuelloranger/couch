@@ -13,7 +13,7 @@ import java.io.File
 
 /** Dialogs used from both the home screen and settings. */
 object Dialogs {
-    private const val THEME = android.R.style.Theme_DeviceDefault_Dialog_Alert
+    const val THEME = android.R.style.Theme_DeviceDefault_Dialog_Alert
 
     /** Every app and input in one list; unchecking hides it. */
     fun visibility(activity: Activity, config: Config, userDir: File?, onDone: () -> Unit) {

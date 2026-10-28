@@ -71,3 +71,20 @@ Totals travel straight between the TVs on the home network, so there is no accou
 run, and nothing to trust outside the house. The cost is that a TV that is off can't answer: it
 keeps its last answer, and the row says how old that is.
 
+## Remote buttons through a relay
+
+The TV routes Input and Settings straight to its own menus, so an app never sees them. Two app-level
+ways around that were tried and rejected. Filtering keys in an accessibility service catches them,
+but on the tested TV it stopped held keys from repeating, so volume no longer ramped. Letting the
+TV's menu open and replacing it as soon as it appears works, but the TV's menu shows for a moment on
+every press.
+
+The relay works below Android's key handling instead. It runs as the debugging shell, which may
+grab an input device and create virtual ones, and replays the remote through a virtual twin with the
+same name, so Android loads the same key layout and treats every key as before. It is C rather than
+a Java process started with `app_process` because grabbing a device and creating a virtual one are
+ioctls a Java process can't make. It needs debugging on, which is why the feature is off by default.
+
+Picture and sound settings go through Sony's IP control API rather than the TV's own settings
+service, which only Sony's system apps may use.
+

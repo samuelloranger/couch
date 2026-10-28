@@ -175,6 +175,9 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.link(ctx.str(R.string.settings_tvs), ctx.str(R.string.settings_tvs_help), { ctx.str(if (config.syncEnabled) R.string.yes else R.string.no) }) {
             open(SettingsActivity.PAGE_TVS)
         }
+        o.link(ctx.str(R.string.remote_title), ctx.str(R.string.remote_link_help), { ctx.str(if (config.remoteButtons) R.string.yes else R.string.no) }) {
+            open(RemotePage.PAGE)
+        }
         o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
         about()
         if (config.godmode) godmodeRow()

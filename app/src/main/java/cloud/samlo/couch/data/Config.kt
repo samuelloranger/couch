@@ -64,6 +64,19 @@ class Config {
     /** Godmode's update channel: pre-releases too, never older than what's installed. */
     var preReleases = false
 
+    /**
+     * The remote's Input and Settings buttons open Couch's panels instead of the TV's menus, through
+     * a relay started over the TV's own ADB. Off by default: it needs debugging and changes how the
+     * remote's keys reach Android.
+     */
+    var remoteButtons = false
+
+    /** Linux key code of the remote's Input button, as the relay sees it; 0 when not set up. */
+    var remoteInputKey = 0
+
+    /** Linux key code of the remote's Settings button; 0 when not set up. */
+    var remoteSettingsKey = 0
+
     /** Godmode's frame HUD on the home screen: [HUD_OFF], [HUD_MS] or [HUD_FPS]. */
     var hud = HUD_OFF
 

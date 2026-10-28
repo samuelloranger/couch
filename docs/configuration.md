@@ -130,6 +130,9 @@ setting changes, so edit it while the home screen is in the background.
 | `preReleases` | boolean | `false` | Godmode's update channel: offer pre-releases too, never older than what is installed. |
 | `hud` | string | `off` | Godmode's frame readout on the home screen: `off`, `ms` or `fps`. |
 | `syncEnabled` | boolean | `false` | Share screen time with paired TVs on the home network ([Other TVs](sync.md)). |
+| `remoteButtons` | boolean | `false` | The remote's Input and Settings buttons open Couch's lists ([Remote buttons](remote-buttons.md)). |
+| `remoteInputKey` | number | `0` | The Input button's key code, as learned in Customize; `0` when not set up. |
+| `remoteSettingsKey` | number | `0` | The Settings button's key code; `0` when not set up. |
 | `syncAllTvs` | boolean | `true` | With sync on, Index adds the paired TVs' screen time to this one's; `false` shows this TV alone. |
 
 Back up or restore the whole setup by copying the directory:

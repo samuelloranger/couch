@@ -30,6 +30,7 @@ export default defineConfig({
           { text: "Setup", link: "/setup" },
           { text: "Configuration", link: "/configuration" },
           { text: "Other TVs", link: "/sync" },
+          { text: "Remote buttons", link: "/remote-buttons" },
           { text: "Godmode", link: "/godmode" },
         ],
       },

@@ -8,13 +8,17 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import cloud.samlo.couch.data.Prefs
+import cloud.samlo.couch.remote.RemoteButtons
 
 /**
  * Some TVs hardwire HOME to the stock launcher. This service only receives window changes from
  * that launcher (see `res/xml/home_accessibility.xml`) and replaces it with Couch. It never
- * filters key events, so holding volume keeps ramping.
+ * filters key events, so holding volume keeps ramping. It also draws the panels the remote's
+ * buttons open when [RemoteButtons] is turned on.
  */
 class HomeAccessibilityService : AccessibilityService() {
+    private var remote: RemoteButtons? = null
+
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         if (!isStockHome(event.packageName?.toString(), event.className?.toString())) return
@@ -26,6 +30,7 @@ class HomeAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         running = this
+        remote = RemoteButtons(this).also { it.reload() }
         // Remember that HOME capture is wanted, so it can be restored after Android drops it.
         wanted(this, true)
         // A self-update restarts the app and leaves the stock launcher showing; come back to Couch.
@@ -36,6 +41,8 @@ class HomeAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        remote?.stop()
+        remote = null
         if (running === this) running = null
         super.onDestroy()
     }
@@ -68,6 +75,9 @@ class HomeAccessibilityService : AccessibilityService() {
 
         /** The connected service, for godmode's global actions (sleep, screenshot); null when off. */
         @Volatile private var running: HomeAccessibilityService? = null
+
+        /** The remote buttons of the connected service; null while the service is off. */
+        fun remote(): RemoteButtons? = running?.remote
 
         /** Android's own global action (screen off, screenshot), through the service; false without it. */
         fun globalAction(action: Int): Boolean = running?.performGlobalAction(action) == true

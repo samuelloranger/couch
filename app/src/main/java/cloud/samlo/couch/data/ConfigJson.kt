@@ -35,6 +35,9 @@ internal object ConfigJson {
         .put("syncEnabled", c.syncEnabled)
         .put("syncAllTvs", c.syncAllTvs)
         .put("hud", c.hud)
+        .put("remoteButtons", c.remoteButtons)
+        .put("remoteInputKey", c.remoteInputKey)
+        .put("remoteSettingsKey", c.remoteSettingsKey)
 
     /** Every field is optional; a missing one keeps what [into] already holds. */
     fun decode(json: JSONObject, into: Config) = with(into) {
@@ -68,6 +71,9 @@ internal object ConfigJson {
         syncEnabled = json.optBoolean("syncEnabled", syncEnabled)
         syncAllTvs = json.optBoolean("syncAllTvs", syncAllTvs)
         // Was a boolean before the HUD could show either unit.
+        remoteButtons = json.optBoolean("remoteButtons", remoteButtons)
+        remoteInputKey = json.optInt("remoteInputKey", remoteInputKey).coerceAtLeast(0)
+        remoteSettingsKey = json.optInt("remoteSettingsKey", remoteSettingsKey).coerceAtLeast(0)
         hud = when (val value = json.opt("hud")) {
             is Boolean -> if (value) Config.HUD_MS else Config.HUD_OFF
             is String -> value

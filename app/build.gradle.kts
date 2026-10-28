@@ -21,6 +21,8 @@ val gitTag: String = providers.exec {
     isIgnoreExitValue = true
 }.standardOutput.asText.get().trim().ifEmpty { "v0.1.0" }
 
+val relayDir = layout.buildDirectory.dir("generated/relay")
+
 val semver = gitTag.removePrefix("v").split('.', '-').take(3).map { it.toIntOrNull() ?: 0 }
 
 /**
@@ -51,6 +53,8 @@ val signing: Map<String, String> = run {
 android {
     namespace = "cloud.samlo.couch"
     compileSdk = 36
+    // Builds the remote relay (src/main/native); see the relay tasks below.
+    ndkVersion = "30.0.16248370"
 
     defaultConfig {
         applicationId = "cloud.samlo.couch"
@@ -99,8 +103,37 @@ android {
         resources {
             excludes += "kotlin/**"
         }
+        // The relay is a program, not a library: Android only runs it from the unpacked copy.
+        jniLibs {
+            useLegacyPackaging = true
+        }
+    }
+
+    sourceSets["main"].jniLibs.directories.add(relayDir.get().asFile.path)
+}
+
+/**
+ * The remote relay is one C file run as the ADB shell user, so it is compiled straight with the
+ * NDK's clang, once per ABI, and packaged as `librelay.so` for Android to unpack beside the app.
+ */
+val relayAbis = mapOf(
+    "armeabi-v7a" to "armv7a-linux-androideabi28",
+    "arm64-v8a" to "aarch64-linux-android28",
+)
+val relayTasks = relayAbis.map { (abi, target) ->
+    tasks.register<Exec>("relay-$abi") {
+        val source = file("src/main/native/relay.c")
+        val out = relayDir.map { it.file("$abi/librelay.so") }
+        inputs.file(source)
+        outputs.file(out)
+        doFirst { out.get().asFile.parentFile.mkdirs() }
+        val host = if (System.getProperty("os.name").startsWith("Mac")) "darwin-x86_64" else "linux-x86_64"
+        val ndk = androidComponents.sdkComponents.ndkDirectory
+        doFirst { executable = ndk.get().file("toolchains/llvm/prebuilt/$host/bin/clang").asFile.path }
+        args("--target=$target", "-Os", "-Wall", "-pie", "-fPIE", "-s", "-o", out.get().asFile.path, source.path)
     }
 }
+tasks.named("preBuild") { dependsOn(relayTasks) }
 
 dependencies {
     testImplementation("junit:junit:4.13.2")

@@ -33,6 +33,7 @@ class SettingsActivity : Activity() {
             GodmodePage.page -> GodmodePage(ctx)
             DebloatPage.page -> DebloatPage(ctx)
             PAGE_TVS -> OtherTvsPage(ctx)
+            RemotePage.PAGE -> RemotePage(ctx)
             else -> MainPage(ctx)
         }
         setContentView(layout.root)

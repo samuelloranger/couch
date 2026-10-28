@@ -43,11 +43,31 @@ class AdbShell private constructor(
      * Android may ask to allow debugging; later calls reuse that connection as a new stream, so
      * one piece of work asks at most once however many commands it takes. [close] when done.
      */
-    fun run(command: String): String {
+    fun run(command: String): String = stream("shell:$command").toString(Charsets.UTF_8.name())
+
+    /**
+     * Like [run], over adbd's newer shell protocol. Anything the command leaves running in the
+     * background then outlives the stream; the old protocol takes it down when the stream ends.
+     */
+    fun runLasting(command: String): String {
+        val raw = stream("shell,v2,raw:$command").toByteArray()
+        // Each v2 packet is an id byte, a little-endian length, and that many bytes; id 1 is stdout.
+        val out = ByteArrayOutputStream()
+        var at = 0
+        while (at + 5 <= raw.size) {
+            val length = ByteBuffer.wrap(raw, at + 1, 4).order(ByteOrder.LITTLE_ENDIAN).int
+            if (length < 0 || at + 5 + length > raw.size) break
+            if (raw[at].toInt() == STDOUT) out.write(raw, at + 5, length)
+            at += 5 + length
+        }
+        return out.toString(Charsets.UTF_8.name())
+    }
+
+    private fun stream(service: String): ByteArrayOutputStream {
         val socket = open()
         val local = ++stream
         try {
-            write(socket, AdbProtocol.OPEN, local, 0, "shell:$command\u0000".toByteArray())
+            write(socket, AdbProtocol.OPEN, local, 0, "$service\u0000".toByteArray())
             val out = ByteArrayOutputStream()
             while (true) {
                 val m = read(socket)
@@ -62,7 +82,7 @@ class AdbShell private constructor(
                     // Decoded once at the end, so a character split across two packets stays whole.
                     AdbProtocol.CLSE -> {
                         write(socket, AdbProtocol.CLSE, local, m.arg0)
-                        return out.toString(Charsets.UTF_8.name())
+                        return out
                     }
                     else -> {
                         // Out of step with adbd: this connection can't be trusted for the next command.
@@ -182,6 +202,7 @@ class AdbShell private constructor(
         private const val TOKEN = 1
         private const val SIGN = 2
         private const val PUBKEY = 3
+        private const val STDOUT = 1
         private val HOST_BANNER = "host::\u0000".toByteArray()
 
         /**

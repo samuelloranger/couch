@@ -97,6 +97,6 @@ The full documentation is at **[samlo.cloud/couch](https://samlo.cloud/couch)**.
 ## Credits
 
 Brand marks from [Simple Icons](https://simpleicons.org) (CC0) and Wikimedia Commons (public
-domain). All trademarks belong to their owners. Weather by [Open-Meteo](https://open-meteo.com),
+domain); quick settings icons from [Material Icons](https://fonts.google.com/icons) (Apache 2.0). All trademarks belong to their owners. Weather by [Open-Meteo](https://open-meteo.com),
 IP location by [ipwho.is](https://ipwho.is), subreddit images through the
 [Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift) archive.
