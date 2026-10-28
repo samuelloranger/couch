@@ -16,47 +16,85 @@ import cloud.samlo.couch.update.UpdateCheck
 import cloud.samlo.couch.update.Versions
 
 /**
- * "Customize": every option on one TV-friendly list. Left/right changes a value in place,
- * OK cycles or opens it, and the panel on the right explains the focused option. Options that do
- * nothing in the chosen layout are left out, and the list rebuilds when the layout changes.
+ * "Customize": five groups of options on one TV-friendly list. Left/right changes a value in place,
+ * OK cycles or opens it, and the focused row explains itself. Rows that only matter for another
+ * setting sit indented under it and show only when they apply; options for the Rows layout stay
+ * folded at the end of their group while Index is in use, so a layout change doesn't reshuffle
+ * the list.
  */
 class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
     private val config get() = ctx.config
     private val rows get() = config.layout != Config.LAYOUT_INDEX
 
+    /** Groups whose Rows-layout options were unfolded on this visit. */
+    private val unfolded = mutableSetOf<Int>()
+
+    /** Whether something was missing at the last build, so a grant on return can drop the warning. */
+    private var missing = false
+
     override fun build() {
-        // Something missing goes first, where it's seen; once all is granted it moves out of the way.
-        val missing = !Setup.allOn(ctx.activity)
-        if (missing) setup()
-        look()
-        wallpaper()
-        home()
-        clock()
-        standby()
-        if (!missing) setup()
-        system()
+        missing = !Setup.allOn(ctx.activity)
+        if (missing) missingWarning()
+        group(R.string.group_look, ::look)
+        group(R.string.group_wallpaper, ::wallpaper)
+        group(R.string.group_home, ::home)
+        group(R.string.group_clock, ::clock)
+        group(R.string.group_system) { system() }
     }
 
-    /** Back from Android's settings: show what was just granted. */
-    override fun onResume() = o.rows().forEach { it.refresh() }
+    /** Back from another screen: show what changed, and drop the warning once all is granted. */
+    override fun onResume() {
+        if (missing != !Setup.allOn(ctx.activity)) rebuild((ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString())
+        else o.rows().forEach { it.refresh() }
+    }
 
-    private fun setup() {
-        o.header(ctx.str(R.string.group_setup))
-        for (item in Setup.items) {
-            o.link(ctx.str(item.title), ctx.str(item.help), { setupValue(item) }) { item.open(ctx.activity) }
+    /**
+     * A group: its own rows, then the ones only the Rows layout uses. In Index those wait behind
+     * one row that unfolds them, so they are still found without filling the list.
+     */
+    private fun group(title: Int, rows: (RowsOnly) -> Unit) {
+        o.header(ctx.str(title))
+        val only = RowsOnly()
+        rows(only)
+        if (only.builders.isEmpty()) return
+        when {
+            this.rows -> only.builders.forEach { it() }
+            title in unfolded -> {
+                o.note(ctx.str(R.string.rows_only_note))
+                only.builders.forEach { it() }
+            }
+            else -> o.link(
+                ctx.str(R.string.rows_only_more), ctx.str(R.string.rows_only_help),
+                { ctx.activity.resources.getQuantityString(R.plurals.rows_only_count, only.builders.size, only.builders.size) },
+            ) {
+                unfolded += title
+                rebuild(focusAfter = ctx.str(R.string.rows_only_more))
+            }
         }
     }
 
-    /** Granted, or how to turn it on: most of these open one of Android's screens. */
-    private fun setupValue(item: SetupItem): String {
-        if (item.isOn(ctx.activity)) return ctx.str(R.string.yes)
-        val turnOn = ctx.str(R.string.setup_turn_on)
-        return if (item.inPlace) turnOn else "$turnOn  ↗"
+    /** Collects the rows that only change the Rows layout, for [group] to place. */
+    private class RowsOnly {
+        val builders = mutableListOf<() -> Unit>()
+
+        operator fun invoke(build: () -> Unit) {
+            builders += build
+        }
     }
 
-    private fun look() {
-        o.header(ctx.str(R.string.group_look))
+    /** One row above everything while an access is missing; it opens the permissions page. */
+    private fun missingWarning() {
+        val off = Setup.items.filterNot { it.isOn(ctx.activity) }
+        val names = off.joinToString(", ") { ctx.str(it.title) }
+        val row = o.page(
+            ctx.activity.resources.getQuantityString(R.plurals.setup_missing, off.size, off.size),
+            ctx.activity.getString(R.string.setup_missing_help, names),
+        ) { open(SettingsActivity.PAGE_ACCESS) }
+        row.label.setTextColor(Tokens.warning)
+    }
+
+    private fun look(rowsOnly: RowsOnly) {
         o.choice(
             ctx.str(R.string.layout), ctx.str(R.string.layout_help),
             listOf(
@@ -66,17 +104,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             { config.layout },
             {
                 config.layout = it
-                rebuild()
+                rebuild(ctx.str(R.string.layout))
             },
-        )
-        if (rows) o.choice(
-            ctx.str(R.string.card_size), ctx.str(R.string.card_size_help),
-            listOf(
-                Option(ctx.str(R.string.size_small), "small"),
-                Option(ctx.str(R.string.size_medium), "medium"),
-                Option(ctx.str(R.string.size_large), "large"),
-            ),
-            { config.cardSize }, { config.cardSize = it },
         )
         o.swatches(
             ctx.str(R.string.accent), ctx.str(R.string.accent_help),
@@ -89,94 +118,112 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 o.restyle()
             },
         )
-        if (!rows) return
-        o.toggle(ctx.str(R.string.show_labels), ctx.str(R.string.show_labels_help), { config.showLabels }, { config.showLabels = it })
-        o.toggle(ctx.str(R.string.show_descriptions), ctx.str(R.string.show_descriptions_help), { config.showDescriptions }, { config.showDescriptions = it })
+        rowsOnly {
+            o.choice(
+                ctx.str(R.string.card_size), ctx.str(R.string.card_size_help),
+                listOf(
+                    Option(ctx.str(R.string.size_small), "small"),
+                    Option(ctx.str(R.string.size_medium), "medium"),
+                    Option(ctx.str(R.string.size_large), "large"),
+                ),
+                { config.cardSize }, { config.cardSize = it },
+            )
+        }
+        rowsOnly { o.toggle(ctx.str(R.string.show_labels), ctx.str(R.string.show_labels_help), { config.showLabels }, { config.showLabels = it }) }
+        rowsOnly { o.toggle(ctx.str(R.string.show_descriptions), ctx.str(R.string.show_descriptions_help), { config.showDescriptions }, { config.showDescriptions = it }) }
     }
 
-    private fun wallpaper() {
-        o.header(ctx.str(R.string.group_wallpaper))
+    private fun wallpaper(rowsOnly: RowsOnly) {
         o.choice(
             ctx.str(R.string.wallpaper_source), ctx.str(R.string.wallpaper_source_help),
             listOf(
                 Option(ctx.str(R.string.wallpaper_daily), "daily"),
-                Option(ctx.str(R.string.wallpaper_reddit), "reddit"),
+                Option(ctx.str(R.string.wallpaper_reddit), REDDIT),
                 Option(ctx.str(R.string.wallpaper_gradient), "gradient"),
                 Option(ctx.str(R.string.wallpaper_custom), "custom"),
             ),
-            { config.wallpaper }, { config.wallpaper = it },
+            { config.wallpaper },
+            {
+                val was = config.wallpaper == REDDIT
+                config.wallpaper = it
+                // The subreddit rows come and go with Reddit; other steps keep the list as it is.
+                if (was != (it == REDDIT)) rebuild(ctx.str(R.string.wallpaper_source))
+            },
         )
-        o.text(
-            ctx.str(R.string.subreddit), ctx.str(R.string.subreddit_help), Config.DEFAULT_SUBREDDIT,
-            { "r/" + config.subreddit }, { config.subreddit = it.removePrefix("r/").ifEmpty { Config.DEFAULT_SUBREDDIT } },
-        )
-        o.choice(
-            ctx.str(R.string.wallpaper_hours), ctx.str(R.string.wallpaper_hours_help),
-            listOf(
-                Option(ctx.str(R.string.hours_1), "1"),
-                Option(ctx.str(R.string.hours_3), "3"),
-                Option(ctx.str(R.string.hours_6), "6"),
-                Option(ctx.str(R.string.hours_24), "24"),
-            ),
-            { config.wallpaperHours.toString() }, { config.wallpaperHours = it.toInt() },
-        )
-        // Index has no hero to darken; its wallpaper only shows in ambient mode.
-        if (rows) o.choice(
-            ctx.str(R.string.dim), ctx.str(R.string.dim_help),
-            listOf(
-                Option(ctx.str(R.string.dim_light), "light"),
-                Option(ctx.str(R.string.dim_medium), "medium"),
-                Option(ctx.str(R.string.dim_strong), "strong"),
-            ),
-            { config.dim }, { config.dim = it },
-        )
-    }
-
-    private fun home() {
-        o.header(ctx.str(R.string.group_home))
-        if (rows) o.page(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) }
-        o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
-        o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
-        o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
-            Dialogs.visibility(ctx.activity, config, ctx.files.dir) {}
+        if (config.wallpaper == REDDIT) o.nested {
+            o.text(
+                ctx.str(R.string.subreddit), ctx.str(R.string.subreddit_help), Config.DEFAULT_SUBREDDIT,
+                { "r/" + config.subreddit }, { config.subreddit = it.removePrefix("r/").ifEmpty { Config.DEFAULT_SUBREDDIT } },
+            )
+            o.choice(
+                ctx.str(R.string.wallpaper_hours), ctx.str(R.string.wallpaper_hours_help),
+                listOf(
+                    Option(ctx.str(R.string.hours_1), "1"),
+                    Option(ctx.str(R.string.hours_3), "3"),
+                    Option(ctx.str(R.string.hours_6), "6"),
+                    Option(ctx.str(R.string.hours_24), "24"),
+                ),
+                { config.wallpaperHours.toString() }, { config.wallpaperHours = it.toInt() },
+            )
         }
-        if (rows) o.leaves(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
-            ctx.activity.setResult(SettingsActivity.RESULT_ORGANIZE)
-            ctx.activity.finish()
-        }
-    }
-
-    private fun clock() {
-        o.header(ctx.str(R.string.group_clock))
-        o.toggle(ctx.str(R.string.clock24h), ctx.str(R.string.clock24h_help), { config.clock24h }, { config.clock24h = it })
-        if (rows) o.toggle(ctx.str(R.string.show_date), ctx.str(R.string.show_date_help), { config.showDate }, { config.showDate = it })
-        o.toggle(ctx.str(R.string.weather), ctx.str(R.string.weather_help), { config.weather }, { config.weather = it })
-        val auto = ctx.str(R.string.city_auto)
-        o.text(
-            ctx.str(R.string.city), ctx.str(R.string.city_help), auto,
-            { config.weatherCity.ifEmpty { auto } }, { config.weatherCity = it },
-        )
-        o.choice(
-            ctx.str(R.string.units), "", listOf(Option("°C", "c"), Option("°F", "f")),
-            { if (config.fahrenheit) "f" else "c" }, { config.fahrenheit = it == "f" },
-        )
-    }
-
-    private fun standby() {
-        o.header(ctx.str(R.string.group_standby))
+        // Ambient mode is the wallpaper at full screen, with the clock and the weather over it.
         val minutes = listOf(2, 5, 10, 20).map { Option(ctx.activity.getString(R.string.minutes_short, it), it.toString()) }
         o.choice(
             ctx.str(R.string.ambient), ctx.str(R.string.ambient_help),
             listOf(Option(ctx.str(R.string.ambient_never), "0")) + minutes,
             { config.ambientMinutes.toString() }, { config.ambientMinutes = it.toInt() },
         )
+        // Index has no hero to darken; its wallpaper only shows in ambient mode.
+        rowsOnly {
+            o.choice(
+                ctx.str(R.string.dim), ctx.str(R.string.dim_help),
+                listOf(
+                    Option(ctx.str(R.string.dim_light), "light"),
+                    Option(ctx.str(R.string.dim_medium), "medium"),
+                    Option(ctx.str(R.string.dim_strong), "strong"),
+                ),
+                { config.dim }, { config.dim = it },
+            )
+        }
+    }
+
+    private fun home(rowsOnly: RowsOnly) {
+        o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
+        o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
+        o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
+            Dialogs.visibility(ctx.activity, config, ctx.files.dir) {}
+        }
+        rowsOnly { o.page(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) } }
+        rowsOnly {
+            o.leaves(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
+                ctx.activity.setResult(SettingsActivity.RESULT_ORGANIZE)
+                ctx.activity.finish()
+            }
+        }
+    }
+
+    private fun clock(rowsOnly: RowsOnly) {
+        o.toggle(ctx.str(R.string.clock24h), ctx.str(R.string.clock24h_help), { config.clock24h }, { config.clock24h = it })
+        o.toggle(ctx.str(R.string.weather), ctx.str(R.string.weather_help), { config.weather }) {
+            config.weather = it
+            rebuild(ctx.str(R.string.weather))
+        }
+        if (config.weather) o.nested {
+            val auto = ctx.str(R.string.city_auto)
+            o.text(
+                ctx.str(R.string.city), ctx.str(R.string.city_help), auto,
+                { config.weatherCity.ifEmpty { auto } }, { config.weatherCity = it },
+            )
+            o.choice(
+                ctx.str(R.string.units), ctx.str(R.string.units_help), listOf(Option("°C", "c"), Option("°F", "f")),
+                { if (config.fahrenheit) "f" else "c" }, { config.fahrenheit = it == "f" },
+            )
+        }
+        rowsOnly { o.toggle(ctx.str(R.string.show_date), ctx.str(R.string.show_date_help), { config.showDate }, { config.showDate = it }) }
     }
 
     private fun system() {
-        o.header(ctx.str(R.string.group_system))
-        o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
-            ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
+        o.page(ctx.str(R.string.group_setup), ctx.str(R.string.setup_page_help), { accessValue() }) { open(SettingsActivity.PAGE_ACCESS) }
         o.page(ctx.str(R.string.settings_tvs), ctx.str(R.string.settings_tvs_help), { ctx.str(if (config.syncEnabled) R.string.yes else R.string.no) }) {
             open(SettingsActivity.PAGE_TVS)
         }
@@ -186,6 +233,14 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
         about()
         if (config.godmode) godmodeRow()
+        o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
+            ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
+    private fun accessValue(): String {
+        val off = Setup.items.count { !it.isOn(ctx.activity) }
+        return if (off == 0) ctx.str(R.string.setup_all_on) else ctx.activity.resources.getQuantityString(R.plurals.setup_off, off, off)
     }
 
     /** The hidden page, once seven OKs on About found it. */
@@ -234,10 +289,23 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun open(page: String) = ctx.activity.startActivity(SettingsActivity.intent(ctx.activity, page))
 
-    /** After a layout change: the same list for the other layout, focus back on the Layout row. */
-    private fun rebuild() = ctx.layout.list.post {
-        ctx.layout.list.removeAllViews()
+    /**
+     * The list again, after a change that adds or removes rows. Focus goes back to the row titled
+     * [focus], or to the row now standing after the one titled [focusAfter].
+     */
+    private fun rebuild(focus: String? = null, focusAfter: String? = null) = ctx.layout.list.post {
+        val list = ctx.layout.list
+        val before = focusAfter?.let { title -> list.indexOfChild(o.rows().firstOrNull { it.label.text == title }) } ?: -1
+        list.removeAllViews()
         build()
-        o.rows().firstOrNull { it.label.text == ctx.str(R.string.layout) }?.requestFocus()
+        val target = when {
+            before >= 0 -> ctx.layout.items().drop(before).firstOrNull { it.isFocusable }
+            else -> o.rows().firstOrNull { it.label.text == focus }
+        }
+        (target ?: ctx.layout.items().firstOrNull { it.isFocusable })?.requestFocus()
+    }
+
+    private companion object {
+        const val REDDIT = "reddit"
     }
 }

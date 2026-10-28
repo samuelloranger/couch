@@ -16,6 +16,9 @@ object Tokens {
     val ring = Color.parseColor("#FFFFFF")
     val background = Color.parseColor("#0A0D0C")
 
+    /** Something the user should act on, such as a permission still off. */
+    val warning = Color.parseColor("#FBBF24")
+
     /** Set from the user's choice before cards are built. */
     var accent = Color.parseColor(Accents.default)
     val glow: Int get() = (accent and 0x00FFFFFF) or 0x73000000

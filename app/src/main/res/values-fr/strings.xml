@@ -142,7 +142,7 @@
     <string name="show_descriptions_help">Le résumé du film ou de l’épisode sélectionné, en haut de l’écran.</string>
 
     <!-- Settings: wallpaper -->
-    <string name="group_wallpaper">Fond d’écran</string>
+    <string name="group_wallpaper">Fond d’écran et mode ambiant</string>
     <string name="wallpaper_source">Source</string>
     <string name="wallpaper_source_help">Photo du jour : une nouvelle photo de Bing chaque jour.\nReddit : les meilleures images d’un subreddit, qui changent au fil de la journée.\nMon image : wallpaper.jpg, envoyée par ADB.</string>
     <string name="wallpaper_daily">Photo du jour</string>
@@ -164,7 +164,7 @@
     <string name="dim_strong">Fort</string>
 
     <!-- Settings: home -->
-    <string name="group_home">Accueil</string>
+    <string name="group_home">Écran d’accueil</string>
     <string name="settings_rows">Rangées</string>
     <string name="settings_rows_help">Choisis les rangées à afficher et leur ordre.</string>
     <string name="settings_inputs">Entrées</string>
@@ -190,7 +190,6 @@
     <string name="units">Unités</string>
 
     <!-- Settings: standby and system -->
-    <string name="group_standby">Veille</string>
     <string name="ambient">Mode ambiant</string>
     <string name="ambient_help">Après ce délai sans toucher la télécommande sur l’accueil : grande horloge, météo et fond d’écran. N’importe quelle touche le ferme.</string>
     <string name="ambient_never">Jamais</string>
@@ -205,7 +204,7 @@
     <string name="setup_usage_help">Le temps d’écran de la disposition Index et la rangée Récentes. Si la télé n’a pas d’écran pour ça : adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow</string>
     <string name="setup_channels">Programmes télé</string>
     <string name="setup_channels_help">Les chaînes d’aperçu que publient les applis (YouTube, Jellyfin et autres). Si la télé n’a pas d’écran pour ça : adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS</string>
-    <string name="group_system">Système</string>
+    <string name="group_system">Couch</string>
     <string name="android_settings">Paramètres Android</string>
     <string name="android_settings_help">Les réglages de la télé.</string>
     <string name="about">À propos</string>
@@ -632,4 +631,27 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="quick_section_bluetooth">Audio Bluetooth</string>
     <string name="bt_connected">Connecté</string>
     <string name="bt_not_connected">Non connecté</string>
+    <string name="rows_only_more">Plus pour la disposition Rangées</string>
+    <string name="rows_only_help">Ces options ne changent que la disposition Rangées. Choisis Rangées sous Disposition pour les voir à l’œuvre.</string>
+    <string name="rows_only_note">Pour la disposition Rangées</string>
+    <plurals name="rows_only_count">
+        <item quantity="one">%d option</item>
+        <item quantity="many">%d options</item>
+        <item quantity="other">%d options</item>
+    </plurals>
+    <plurals name="setup_missing">
+        <item quantity="one">%d autorisation est désactivée</item>
+        <item quantity="many">%d autorisations sont désactivées</item>
+        <item quantity="other">%d autorisations sont désactivées</item>
+    </plurals>
+    <string name="setup_missing_help">Désactivées : %s. Les fonctions qui en ont besoin restent cachées d’ici là.</string>
+    <string name="setup_page_help">Ce que Couch peut utiliser sur cette télé : le bouton HOME, ce qui joue, le temps d’écran et les chaînes des applis.</string>
+    <string name="setup_hint">Chacune active une fonction. OK ouvre l’endroit où l’accorder.</string>
+    <string name="setup_all_on">Toutes activées</string>
+    <plurals name="setup_off">
+        <item quantity="one">%d désactivée</item>
+        <item quantity="many">%d désactivées</item>
+        <item quantity="other">%d désactivées</item>
+    </plurals>
+    <string name="units_help">Celsius ou Fahrenheit.</string>
 </resources>

@@ -5,27 +5,36 @@ Everything can be changed from the TV: press UP from the top row to reach ⚙ an
 
 ## Customize
 
-| Section | Option | Values |
+Five groups. Rows that only matter for another option sit indented under it and show only when
+they apply. In the Index layout, the options that only change the Rows layout wait at the end of
+their group behind *More for the Rows layout*. While a permission is off, a line at the top says
+so and opens the permissions page.
+
+| Group | Option | Values |
 |---|---|---|
-| Permissions | HOME button, Notification access, Usage access, TV listings | On, or OK to turn it on ([setup](setup.md#3-permissions)) |
 | Appearance | Layout | Rows, Index (see below) |
-| | Card size | Small, Medium, Large |
 | | Accent colour | Mint, Ember, Amber, Sky, Coral, White |
-| | Names under cards | On / Off |
-| | Descriptions | On / Off |
-| Wallpaper | Source | Photo of the day (Bing), Reddit, Gradient, My image |
-| | Subreddit | any subreddit; only TV-shaped images (16:9 to 21:9) are kept |
-| | Change image | every 1, 3, 6 or 24 hours |
-| | Dim | Light, Medium, Strong |
-| Home | Rows | show, hide and reorder rows |
-| | Inputs | rename inputs, pick their icon |
+| | Card size *(Rows)* | Small, Medium, Large |
+| | Names under cards *(Rows)* | On / Off |
+| | Descriptions *(Rows)* | On / Off |
+| Wallpaper and ambient | Source | Photo of the day (Bing), Reddit, Gradient, My image |
+| | Subreddit *(Reddit)* | any subreddit; only TV-shaped images (16:9 to 21:9) are kept |
+| | Change image *(Reddit)* | every 1, 3, 6 or 24 hours |
+| | Ambient mode | Never, 2, 5, 10 or 20 minutes |
+| | Dim *(Rows)* | Light, Medium, Strong |
+| Home screen | Inputs | rename inputs, pick their icon |
 | | App channels | show any preview channel an app publishes |
 | | Show or hide apps | one checklist for apps and inputs |
-| | Rearrange apps | OK picks an app up, left/right moves it, OK puts it down |
-| Clock and weather | 24-hour clock, Date, Weather, City, Units | |
-| Standby | Ambient mode | Never, 2, 5, 10 or 20 minutes |
-| System | Check for updates | On / Off |
+| | Rows *(Rows)* | show, hide and reorder rows |
+| | Rearrange apps *(Rows)* | OK picks an app up, left/right moves it, OK puts it down |
+| Clock and weather | 24-hour clock, Weather | On / Off |
+| | City, Units *(weather on)* | |
+| | Date *(Rows)* | On / Off |
+| Couch | Permissions | HOME button, Notification access, Usage access, TV listings ([setup](setup.md#3-permissions)) |
+| | Other TVs, Remote buttons | their own pages |
+| | Check for updates | On / Off |
 | | About | the installed version; OK installs a newer one when there is one |
+| | Android settings | the TV's own settings |
 
 Couch follows the TV's language: English, or French on a TV set to French.
 

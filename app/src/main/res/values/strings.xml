@@ -142,7 +142,7 @@
     <string name="show_descriptions_help">The synopsis of the selected film or episode, at the top of the screen.</string>
 
     <!-- Settings: wallpaper -->
-    <string name="group_wallpaper">Wallpaper</string>
+    <string name="group_wallpaper">Wallpaper and ambient</string>
     <string name="wallpaper_source">Source</string>
     <string name="wallpaper_source_help">Photo of the day: a new Bing photo every day.\nReddit: the best images of a subreddit, changing through the day.\nMy image: wallpaper.jpg, sent over ADB.</string>
     <string name="wallpaper_daily">Photo of the day</string>
@@ -164,7 +164,7 @@
     <string name="dim_strong">Strong</string>
 
     <!-- Settings: home -->
-    <string name="group_home">Home</string>
+    <string name="group_home">Home screen</string>
     <string name="settings_rows">Rows</string>
     <string name="settings_rows_help">Choose which rows show and in what order.</string>
     <string name="settings_inputs">Inputs</string>
@@ -190,7 +190,6 @@
     <string name="units">Units</string>
 
     <!-- Settings: standby and system -->
-    <string name="group_standby">Standby</string>
     <string name="ambient">Ambient mode</string>
     <string name="ambient_help">After this long on the home screen without touching the remote: large clock, weather and wallpaper. Any button closes it.</string>
     <string name="ambient_never">Never</string>
@@ -205,7 +204,7 @@
     <string name="setup_usage_help">Screen time in the Index layout and the Recent row. If the TV has no screen for it: adb shell appops set cloud.samlo.couch GET_USAGE_STATS allow</string>
     <string name="setup_channels">TV listings</string>
     <string name="setup_channels_help">The preview channels apps publish (YouTube, Jellyfin and others). If the TV has no screen for it: adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS</string>
-    <string name="group_system">System</string>
+    <string name="group_system">Couch</string>
     <string name="android_settings">Android settings</string>
     <string name="android_settings_help">The TV’s own settings.</string>
     <string name="about">About</string>
@@ -626,4 +625,24 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="quick_section_bluetooth">Bluetooth audio</string>
     <string name="bt_connected">Connected</string>
     <string name="bt_not_connected">Not connected</string>
+    <string name="rows_only_more">More for the Rows layout</string>
+    <string name="rows_only_help">These options only change the Rows layout. Pick Rows under Layout to see them at work.</string>
+    <string name="rows_only_note">For the Rows layout</string>
+    <plurals name="rows_only_count">
+        <item quantity="one">%d option</item>
+        <item quantity="other">%d options</item>
+    </plurals>
+    <plurals name="setup_missing">
+        <item quantity="one">%d permission is off</item>
+        <item quantity="other">%d permissions are off</item>
+    </plurals>
+    <string name="setup_missing_help">Off: %s. The features that need them stay hidden until they are on.</string>
+    <string name="setup_page_help">What Couch may use on this TV: the HOME button, what’s playing, screen time and app channels.</string>
+    <string name="setup_hint">Each one turns on a feature. OK opens the place where it is granted.</string>
+    <string name="setup_all_on">All on</string>
+    <plurals name="setup_off">
+        <item quantity="one">%d off</item>
+        <item quantity="other">%d off</item>
+    </plurals>
+    <string name="units_help">Celsius or Fahrenheit.</string>
 </resources>

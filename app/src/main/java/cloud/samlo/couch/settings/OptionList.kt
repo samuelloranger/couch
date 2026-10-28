@@ -59,8 +59,23 @@ class OptionList(
     fun add(title: String, help: String, valueOf: () -> String): OptionRow {
         val row = OptionRow(activity, help, valueOf, screen.help)
         row.label.text = title
-        screen.list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = activity.dp(4) })
+        screen.list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
+            bottomMargin = activity.dp(4)
+            if (nesting) marginStart = activity.dp(NEST)
+        })
         return row
+    }
+
+    private var nesting = false
+
+    /** Rows added in [block] sit indented, under the option they depend on. */
+    fun nested(block: () -> Unit) {
+        nesting = true
+        try {
+            block()
+        } finally {
+            nesting = false
+        }
     }
 
     fun save(row: OptionRow) {
@@ -143,4 +158,8 @@ class OptionList(
         link(title, help, { withMark(valueOf(), "↗") }, onClick)
 
     private fun withMark(value: String, mark: String) = if (value.isEmpty()) mark else "$value  $mark"
+
+    private companion object {
+        const val NEST = 24
+    }
 }
