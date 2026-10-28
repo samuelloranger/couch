@@ -11,7 +11,7 @@ cloud.samlo.couch
 ├── data/      config, apps, inputs, channels, weather, wallpapers, image pipeline
 ├── update/    daily release check, download, checksum, Android's package installer
 ├── settings/  Customize: activity shell, option rows, one file per page, icon picker
-├── index/     the Index layout: app list, spotlight, channel row, usage figures, system line
+├── index/     the Index layout: app list, program text, channel row, the week, system line
 ├── godmode/   the hidden page: TV settings, real-home takeover, tools, frame readouts
 ├── debloat/   removing the apps a TV came with, measured and reversible, through the TV's own shell
 ├── adb/       a small ADB client (key, protocol, shell) for the TV's own debugging port
@@ -71,8 +71,10 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
 - **`AppList`** glides its column by translation, like `Rows`; `AppRow` only swaps colours when
   selected. `IndexScreen.focusSearch` routes the D-pad between the list, the channel row (a
   `FocusRow` of `Card`s with a thin ring) and the top pills.
-- **`Spotlight`** shows the focused program's art at its own shape with the text beside it, or the
-  app's banner; like `Hero`, art waits until focus rests. `Backdrop` crossfades a faint copy.
+- **`Spotlight`** is text only: the focused program's source, title, synopsis and progress, or the
+  app's name. The pictures are the channel's cards, so moving along them decodes no larger copy of
+  their art; an app without a channel shows its banner, rendered at card size, in the row's place.
+- **`StatsBar`** shows the week's total, when the app was last opened, and a bar per day.
 - **`Recommendations`** turns Fire TV's recommendation notifications (read through `MediaListener`)
   into one channel per app that has no preview channel; `Programs` lists them with the others.
 - **`Usage`** reads usage events (with usage access) into seven days per app; `Usage.Tally` is the

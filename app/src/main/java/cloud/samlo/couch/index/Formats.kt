@@ -8,7 +8,7 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Durations, dates and ranks in the TV's language. Date patterns come from ICU, which is slow
+ * Durations and dates in the TV's language. Date patterns come from ICU, which is slow
  * enough to drop frames, so formats are built once per locale and reused (main thread only).
  */
 object Formats {
@@ -19,7 +19,6 @@ object Formats {
     private lateinit var time24: SimpleDateFormat
     private lateinit var time12: SimpleDateFormat
     private lateinit var weekday: SimpleDateFormat
-    private lateinit var dayMonth: SimpleDateFormat
     private lateinit var narrowDay: SimpleDateFormat
     private val dayKey = SimpleDateFormat("yyyyMMdd", Locale.ROOT)
     private var lettersFor = ""
@@ -45,24 +44,19 @@ object Formats {
         }
     }
 
-    /** The big value and the line under it: "Hier" / "à 10 h 20", or "Mercredi" / "14 octobre à 22 h 37". */
-    fun lastOpened(context: Context, at: Long, now: Long, clock24h: Boolean): Pair<String, String> {
-        if (at <= 0L) return context.getString(R.string.index_none) to context.getString(R.string.index_not_opened)
-        val locale = formats()
+    /** When the app was last opened, to follow "last opened": "today at 10:20", "Wednesday at 22:37"; null if never. */
+    fun lastOpened(context: Context, at: Long, now: Long, clock24h: Boolean): String? {
+        if (at <= 0L) return null
+        formats()
         val date = Date(at)
         val time = (if (clock24h) time24 else time12).format(date)
-        return when (dayKey.format(date)) {
-            dayKey.format(Date(now)) -> context.getString(R.string.index_today) to context.getString(R.string.index_at, time)
-            dayKey.format(Date(now - DAY)) -> context.getString(R.string.index_yesterday) to context.getString(R.string.index_at, time)
-            else -> weekday.format(date).replaceFirstChar { it.titlecase(locale) } to
-                context.getString(R.string.index_date_at, dayMonth.format(date), time)
+        val day = when (dayKey.format(date)) {
+            dayKey.format(Date(now)) -> context.getString(R.string.index_today)
+            dayKey.format(Date(now - DAY)) -> context.getString(R.string.index_yesterday)
+            // Within the week, the weekday alone says which day: "Wednesday", "mercredi".
+            else -> weekday.format(date)
         }
-    }
-
-    /** "App la plus utilisée", "2e app la plus utilisée", "3rd most used app". */
-    fun rank(context: Context, rank: Int): String = when {
-        rank == 0 -> context.getString(R.string.index_rank_first)
-        else -> context.getString(R.string.index_rank, ordinal(rank + 1))
+        return context.getString(R.string.index_day_at, day, time)
     }
 
     /** Narrow, lowercase weekday initials for the seven bars, oldest first; recomputed once a day. */
@@ -84,20 +78,8 @@ object Formats {
             time24 = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, "Hm"), current)
             time12 = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, "hm"), current)
             weekday = SimpleDateFormat("EEEE", current)
-            dayMonth = SimpleDateFormat(DateFormat.getBestDateTimePattern(current, "dMMMM"), current)
             narrowDay = SimpleDateFormat("EEEEE", current)
         }
         return current
-    }
-
-    private fun ordinal(n: Int): String {
-        if (Locale.getDefault().language == "fr") return "${n}e"
-        val suffix = if (n % 100 in 11..13) "th" else when (n % 10) {
-            1 -> "st"
-            2 -> "nd"
-            3 -> "rd"
-            else -> "th"
-        }
-        return "$n$suffix"
     }
 }

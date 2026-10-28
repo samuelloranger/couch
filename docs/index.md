@@ -37,7 +37,7 @@ features:
     <figcaption>Home: your apps by screen time, and what the selected one offers.</figcaption>
   </figure>
   <figure>
-    <img src="./screenshots/channel.jpg" alt="Moving along an app's channel, with the program's art and details" loading="lazy">
+    <img src="./screenshots/channel.jpg" alt="Moving along an app's channel, with the program's title and synopsis above the cards" loading="lazy">
     <figcaption>Preview channels from the apps you use.</figcaption>
   </figure>
   <figure>

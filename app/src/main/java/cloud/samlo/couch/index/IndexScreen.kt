@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Images
@@ -17,8 +18,9 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
- * The Index layout: apps listed on the left; on the right, what the selected app offers (its
- * first channel), its last week of use, and the TV's readings along the bottom.
+ * The Index layout: apps listed on the left; on the right, what the selected app offers (the
+ * focused program's text over its first channel's cards), its last week of use, and the TV's
+ * readings along the bottom.
  *
  * D-pad: up/down walks the list, right enters the app's channel row, left (from its first card),
  * up or down comes back. Up from the first app reaches Inputs and Settings.
@@ -32,16 +34,16 @@ class IndexScreen(
     private val onAppMenu: (Tile) -> Unit,
     private val onProgramMenu: (Card) -> Unit,
 ) : FrameLayout(activity) {
-    private val backdrop = Backdrop(activity, images)
     val topBar = IndexTopBar(activity, { pickInput() }, onSettings, onUpdate)
     private val list = AppList(activity) { entry -> row(entry) }
-    private val spotlight = Spotlight(activity, images)
+    private val spotlight = Spotlight(activity)
     private val programs = FocusRow(activity).apply {
         gapDp = IndexTokens.CARD_GAP
         leavesAtStart = true
         setStartPadding(activity.dp(STRIP_START) - activity.dp(Tokens.RING_INSET))
     }
-    private val empty = IndexText(activity, 11f, 500, Tokens.textMuted, 1.4f)
+    /** The app's banner, in the channel row's place when the app has no channel. */
+    private val banner = ImageView(activity).apply { scaleType = ImageView.ScaleType.FIT_XY }
     private val stats = StatsBar(activity)
     val systemLine = SystemLine(activity)
 
@@ -64,22 +66,18 @@ class IndexScreen(
     private val buildMore = Runnable { selectedRow()?.entry?.takeIf { it.key == stripKey }?.let { buildStep(it) } }
 
     init {
-        // The window paints the background (HomeViews swaps it to Index's flat colour); the
-        // backdrop carries its own scrim. Each full-screen layer here costs the TV's GPU.
-        addView(backdrop, LayoutParams(activity.dp(IndexTokens.BACKDROP_W), LayoutParams.MATCH_PARENT, Gravity.END))
+        // The window paints the background (HomeViews swaps it to Index's flat colour), and no
+        // layer here covers the screen: each full-screen layer costs the TV's GPU.
         place(list, IndexTokens.LIST_X, IndexTokens.LIST_Y, IndexTokens.LIST_W, IndexTokens.LIST_H)
-        place(spotlight, IndexTokens.COLUMN_X, IndexTokens.PANEL_Y, IndexTokens.PANEL_W, IndexTokens.PANEL_H)
+        place(spotlight, IndexTokens.COLUMN_X, IndexTokens.HEADER_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         // The row starts a little left of the column so a scaled card's ring isn't clipped.
         val cardTop = 10 + Tokens.RING_INSET
         addView(programs, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             leftMargin = activity.dp(IndexTokens.COLUMN_X - STRIP_START)
             topMargin = activity.dp(IndexTokens.STRIP_Y - cardTop)
         })
-        addView(empty, LayoutParams(activity.dp(IndexTokens.PANEL_W), LayoutParams.WRAP_CONTENT).apply {
-            leftMargin = activity.dp(IndexTokens.COLUMN_X)
-            topMargin = activity.dp(IndexTokens.EMPTY_Y) - empty.inset
-        })
-        place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.PANEL_W, LayoutParams.WRAP_CONTENT)
+        place(banner, IndexTokens.COLUMN_X, IndexTokens.STRIP_Y, IndexTokens.cardWidth(-1), IndexTokens.CARD_H)
+        place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         addView(systemLine, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START).apply {
             leftMargin = activity.dp(IndexTokens.LIST_X)
             bottomMargin = activity.dp(IndexTokens.FOOTER_BOTTOM) - systemLine.inset
@@ -152,7 +150,7 @@ class IndexScreen(
         else if (!inRow) showProgram(row.entry, null)
     }
 
-    /** Fills the right column with [entry]: its channel row, the panel, the empty line, the figures. */
+    /** Fills the right column with [entry]: its channel row (or banner), the text above it, the week. */
     private fun show(entry: IndexEntry, deferStrip: Boolean) {
         if (data == null) return
         removeCallbacks(fillStrip)
@@ -164,8 +162,8 @@ class IndexScreen(
             fill(entry)
         }
         showProgram(entry, (activity.currentFocus as? Card)?.takeIf { programs.isAncestorOf(it) }?.tile)
-        empty.text = activity.getString(R.string.index_no_channel, entry.app.label)
-        empty.visibility = if (entry.programs.isEmpty()) VISIBLE else GONE
+        banner.setImageBitmap(entry.app.banner)
+        banner.visibility = if (entry.programs.isEmpty() && entry.app.banner != null) VISIBLE else GONE
         removeCallbacks(statsLater)
         if (deferStrip) post(statsLater) else showStats(entry)
     }
@@ -209,21 +207,19 @@ class IndexScreen(
         return tiles.size
     }
 
-    /** The panel and backdrop for [program], or the app's first one, or its banner. */
+    /** The text for [program], or the app's first one, or the app itself when it has no channel. */
     private fun showProgram(entry: IndexEntry, program: Tile?) {
         val tile = program ?: entry.programs.firstOrNull()
         if (tile != null) {
             spotlight.showProgram(entry.channelTitle.orEmpty(), tile)
-            backdrop.show(tile.backdropUrl ?: tile.imageUrl)
         } else {
-            spotlight.showApp(entry.app)
-            backdrop.show(null)
+            spotlight.showApp(entry.app, activity.getString(R.string.index_no_channel, entry.app.label))
         }
     }
 
     private fun card(tile: Tile, cardLook: String) = Card(
         activity, tile, IndexTokens.cardWidth(tile.imageRatio), IndexTokens.CARD_H, images,
-        showLabel = false, look = cardLook, onFocused = { onProgramFocused(it) },
+        showLabel = true, look = cardLook, onFocused = { onProgramFocused(it) },
         radiusDp = IndexTokens.CARD_RADIUS, thinRing = true,
     ).apply {
         isLongClickable = true

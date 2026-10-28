@@ -17,8 +17,9 @@ import cloud.samlo.couch.ui.dpf
 import java.io.File
 
 /**
- * One app in the list: its launch [app] tile (banner rendered for the empty panel), a small
- * rounded [icon], the first channel it publishes, and its last week of use.
+ * One app in the list: its launch [app] tile (banner rendered at card size, shown where the
+ * channel would be when it has none), a small rounded [icon], the first channel it publishes,
+ * and its last week of use.
  */
 class IndexEntry(
     val app: Tile,
@@ -27,11 +28,9 @@ class IndexEntry(
     val channelTitle: String?,
     val programs: List<Tile>,
     val usage: AppUsage?,
-    /** Position among the apps used this week, or -1. */
-    val rank: Int,
 ) {
     val key: String get() = app.key
-    val signature: String = "${app.signature}|${icon?.generationId}|$channelTitle|$rank|" +
+    val signature: String = "${app.signature}|${icon?.generationId}|$channelTitle|" +
         "${usage?.perDayMs?.joinToString(",")}|${usage?.opens}|${usage?.lastUsed}|" + programs.joinToString(";") { it.signature }
 }
 
@@ -47,13 +46,12 @@ object IndexBuilder {
     fun build(context: Context, config: Config, iconsDir: File?): IndexData {
         val apps = AppSource.tiles(
             context, config, iconsDir,
-            context.dp(Spotlight.BANNER_W), context.dp(Spotlight.BANNER_H), context.dpf(Spotlight.BANNER_RADIUS),
+            context.dp(IndexTokens.cardWidth(-1)), context.dp(IndexTokens.CARD_H), context.dpf(IndexTokens.CARD_RADIUS),
         )
         val usage = Usage.lastWeek(context)?.let { if (config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
         val channels = Programs.channels(context, config).groupBy { it.packageName }
         // Apps keep the user's order among equals (pinned first, then by name).
         val ordered = if (usage == null) apps else apps.sortedByDescending { usage[it.key]?.weekMs ?: 0L }
-        val used = ordered.filter { (usage?.get(it.key)?.weekMs ?: 0L) > 0L }.map { it.key }
         val entries = ordered.map { tile ->
             val channel = channels[tile.key]?.firstOrNull()
             IndexEntry(
@@ -62,7 +60,6 @@ object IndexBuilder {
                 channelTitle = channel?.let { Programs.title(context, it.packageName, it.name, ", ") },
                 programs = channel?.tiles.orEmpty(),
                 usage = usage?.get(tile.key),
-                rank = used.indexOf(tile.key),
             )
         }
         return IndexData(entries, usage != null, InputSource.tiles(context, config, iconsDir))

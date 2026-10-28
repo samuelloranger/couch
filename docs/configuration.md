@@ -32,10 +32,11 @@ Couch follows the TV's language: English, or French on a TV set to French.
 ## Index layout
 
 Index is the default layout: a list of your apps on the left, in place of the rows
-(**Layout → Rows** brings the rows back). The right side shows what the selected app offers (its first channel: the program's art, title and synopsis, then the
-channel as a row of cards), how much you used it over the last seven days, when you last opened
-it, and how often. The bottom line shows the TV's address, network traffic, memory, storage,
-uptime and whether ADB is on.
+(**Layout → Rows** brings the rows back). The right side shows what the selected app offers (its
+first channel: the program's title and synopsis, then the channel as a row of cards with their
+names), how much you used it over the last seven days with a bar per day, and when you last
+opened it. An app without a channel shows its banner in the channel's place. The bottom line
+shows the TV's address, network traffic, memory, storage, uptime and whether ADB is on.
 
 - Up and down move through the apps, OK opens one. Right enters its channel; left (from the first
   card), up, down or Back comes back. Up from the first app reaches Inputs and Settings.

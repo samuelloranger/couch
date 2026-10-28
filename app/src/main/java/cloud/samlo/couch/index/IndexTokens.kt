@@ -22,21 +22,16 @@ object IndexTokens {
     const val ROWS_SHOWN = 8
     const val ICON = 29
 
-    // The right column.
+    // The right column: the program's text, its channel's cards, then the week.
     const val COLUMN_X = 380
-    const val PANEL_Y = 61
-    const val PANEL_W = 556
-    const val PANEL_H = 225
-    const val PANEL_RADIUS = 8f
-    const val STRIP_Y = 306
-    const val CARD_H = 75
-    const val CARD_GAP = 8
-    const val CARD_RADIUS = 6f
-    const val EMPTY_Y = 315
-    const val STATS_Y = 415
+    const val COLUMN_W = 556
+    const val HEADER_Y = 64
+    const val STRIP_Y = 204
+    const val CARD_H = 99
+    const val CARD_GAP = 12
+    const val CARD_RADIUS = 8f
+    const val STATS_Y = 378
     const val FOOTER_BOTTOM = 17
-    const val BACKDROP_W = 700
-    const val BACKDROP_ALPHA = 0.22f
 
     val hours = Color.parseColor("#5E6865")
     val barOff = Color.parseColor("#2C3532")
@@ -49,19 +44,10 @@ object IndexTokens {
 
     /** Card widths by TvContract poster aspect ratio, at [CARD_H] tall. */
     fun cardWidth(ratio: Int): Int = when (ratio) {
-        1 -> 112 // 3:2
-        2 -> 100 // 4:3
-        3 -> 75 // 1:1
-        4, 5 -> 50 // 2:3 posters
-        else -> 133 // 16:9
-    }
-
-    /** Width-to-height of the spotlight image for a poster ratio. */
-    fun shape(ratio: Int): Float = when (ratio) {
-        1 -> 1.5f
-        2 -> 4 / 3f
-        3 -> 1f
-        4, 5 -> 2 / 3f
-        else -> 16 / 9f
+        1 -> 149 // 3:2
+        2 -> 132 // 4:3
+        3 -> 99 // 1:1
+        4, 5 -> 66 // 2:3 posters
+        else -> 176 // 16:9
     }
 }
