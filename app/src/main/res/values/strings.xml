@@ -636,7 +636,6 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
         <item quantity="one">%d permission is off</item>
         <item quantity="other">%d permissions are off</item>
     </plurals>
-    <string name="setup_missing_help">Off: %s. The features that need them stay hidden until they are on.</string>
     <string name="setup_page_help">What Couch may use on this TV: the HOME button, what’s playing, screen time and app channels.</string>
     <string name="setup_hint">Each one turns on a feature. OK opens the place where it is granted.</string>
     <string name="setup_all_on">All on</string>
@@ -645,4 +644,17 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
         <item quantity="other">%d off</item>
     </plurals>
     <string name="units_help">Celsius or Fahrenheit.</string>
+    <string name="summary_ambient">ambient after %d min</string>
+    <string name="summary_no_ambient">no ambient mode</string>
+    <string name="summary_no_hidden">Every app shown</string>
+    <plurals name="summary_hidden">
+        <item quantity="one">%d hidden app</item>
+        <item quantity="other">%d hidden apps</item>
+    </plurals>
+    <string name="summary_clock_24">24-hour clock</string>
+    <string name="summary_clock_12">12-hour clock</string>
+    <string name="summary_weather_on">weather</string>
+    <string name="summary_weather_off">no weather</string>
+    <string name="summary_version">Version %s</string>
+    <string name="summary_update">Version %s is out</string>
 </resources>

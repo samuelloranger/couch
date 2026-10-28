@@ -4,6 +4,7 @@ import android.app.Activity
 import android.graphics.Color
 import android.graphics.Typeface
 import android.view.KeyEvent
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
@@ -58,6 +59,7 @@ class OptionList(
 
     fun add(title: String, help: String, valueOf: () -> String): OptionRow {
         val row = OptionRow(activity, help, valueOf, screen.help)
+        row.id = View.generateViewId()
         row.label.text = title
         screen.list.addView(row, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply {
             bottomMargin = activity.dp(4)
@@ -78,9 +80,13 @@ class OptionList(
         }
     }
 
+    /** Called after every saved change, e.g. to update a summary elsewhere on screen. */
+    var onSave: (() -> Unit)? = null
+
     fun save(row: OptionRow) {
         config().save(files.dir)
         row.refresh()
+        onSave?.invoke()
     }
 
     /** Left/right step through [options]; OK steps forward. Short lists show every option at once. */

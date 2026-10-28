@@ -1,6 +1,8 @@
 package cloud.samlo.couch.settings
 
 import android.content.Intent
+import android.view.KeyEvent
+import android.view.View
 import android.provider.Settings
 import android.widget.Toast
 import cloud.samlo.couch.R
@@ -11,58 +13,106 @@ import cloud.samlo.couch.godmode.GodmodePage
 import cloud.samlo.couch.godmode.PRESSES
 import cloud.samlo.couch.godmode.Unlock
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.update.Installer
 import cloud.samlo.couch.update.UpdateCheck
 import cloud.samlo.couch.update.Versions
 
 /**
- * "Customize": five groups of options on one TV-friendly list. Left/right changes a value in place,
- * OK cycles or opens it, and the focused row explains itself. Rows that only matter for another
- * setting sit indented under it and show only when they apply; options for the Rows layout stay
- * folded at the end of their group while Index is in use, so a layout change doesn't reshuffle
- * the list.
+ * "Customize": the five groups down the left, the focused group's options on the right. Up and
+ * down the rail switch groups, Right or OK steps into the options, and Back or Left (on a row
+ * that doesn't use it) steps out again. Left/right changes a value in place, OK cycles or opens
+ * it, and the focused row explains itself. Rows that only matter for another setting sit indented
+ * under it and show only when they apply; options for the Rows layout stay folded at the end of
+ * their group while Index is in use, so a layout change doesn't reshuffle the page.
  */
 class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
     private val config get() = ctx.config
     private val rows get() = config.layout != Config.LAYOUT_INDEX
+    private val rail = Rail(ctx, focusable = true)
+    private var current = Group.LOOK
 
     /** Groups whose Rows-layout options were unfolded on this visit. */
-    private val unfolded = mutableSetOf<Int>()
+    private val unfolded = mutableSetOf<Group>()
 
     /** How many accesses were off at the last build, so a grant on return updates the warning. */
     private var off = 0
 
     override fun build() {
         off = offCount()
-        if (off > 0) missingWarning()
-        group(R.string.group_look, ::look)
-        group(R.string.group_wallpaper, ::wallpaper)
-        group(R.string.group_home, ::home)
-        group(R.string.group_clock, ::clock)
-        group(R.string.group_system) { system() }
+        rail.build(current, if (off > 0) missingWarning() else null)
+        rail.listen(onFocus = { if (it != current) show(it) }, onEnter = ::enter)
+        // A saved change shows at once in its group's line.
+        o.onSave = { rail.refresh() }
+        show(current)
     }
+
+    override fun focusStart() = rail.item(current).requestFocus()
 
     /** Back from another screen: show what changed, and redo the warning once a grant changed it. */
     override fun onResume() {
-        if (off != offCount()) rebuild((ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString())
-        else o.rows().forEach { it.refresh() }
+        if (off == offCount()) {
+            o.rows().forEach { it.refresh() }
+            rail.refresh()
+            return
+        }
+        val inPage = inPage()
+        val focus = (ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString()
+        build()
+        if (inPage) refocus(focus) else focusStart()
+    }
+
+    /** Back from the options returns to their group in the rail, instead of leaving Customize. */
+    override fun consumesKey(event: KeyEvent): Boolean {
+        if (event.keyCode != KeyEvent.KEYCODE_BACK || !inPage()) return false
+        if (event.action == KeyEvent.ACTION_DOWN) rail.item(current).requestFocus()
+        return true
+    }
+
+    private fun inPage() = ctx.activity.currentFocus?.parent == ctx.layout.list
+
+    private fun enter() {
+        o.rows().firstOrNull()?.requestFocus()
+    }
+
+    /** Fills the page on the right with [group]'s options. */
+    private fun show(group: Group) {
+        current = group
+        rail.select(group)
+        ctx.layout.list.removeAllViews()
+        ctx.layout.title.text = ctx.str(group.title)
+        // No hint here: the options start level with the first group in the rail.
+        ctx.layout.hint.visibility = View.GONE
+        ctx.layout.title.setPadding(ctx.activity.dp(20), 0, 0, ctx.activity.dp(20))
+        when (group) {
+            Group.LOOK -> withRowsOnly(group, ::look)
+            Group.WALLPAPER -> withRowsOnly(group, ::wallpaper)
+            Group.HOME -> withRowsOnly(group, ::home)
+            Group.CLOCK -> withRowsOnly(group, ::clock)
+            Group.COUCH -> system()
+        }
+        // Left from a row that doesn't use it goes back to this group, not to whichever is nearest.
+        val back = rail.item(group).id
+        val all = o.rows()
+        all.forEach { it.nextFocusLeftId = back }
+        all.firstOrNull()?.let { it.nextFocusUpId = it.id }
+        all.lastOrNull()?.let { it.nextFocusDownId = it.id }
     }
 
     private fun offCount() = Setup.items.count { !it.isOn(ctx.activity) }
 
     /**
-     * A group: its own rows, then the ones only the Rows layout uses. In Index those wait behind
-     * one row that unfolds them, so they are still found without filling the list.
+     * A group's own rows, then the ones only the Rows layout uses. In Index those wait behind
+     * one row that unfolds them, so they are still found without filling the page.
      */
-    private fun group(title: Int, rows: (RowsOnly) -> Unit) {
-        o.header(ctx.str(title))
+    private fun withRowsOnly(group: Group, rows: (RowsOnly) -> Unit) {
         val only = RowsOnly()
         rows(only)
         if (only.builders.isEmpty()) return
         when {
             this.rows -> only.builders.forEach { it() }
-            title in unfolded -> {
+            group in unfolded -> {
                 o.note(ctx.str(R.string.rows_only_note))
                 only.builders.forEach { it() }
             }
@@ -70,13 +120,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 ctx.str(R.string.rows_only_more), ctx.str(R.string.rows_only_help),
                 { ctx.activity.resources.getQuantityString(R.plurals.rows_only_count, only.builders.size, only.builders.size) },
             ) {
-                unfolded += title
+                unfolded += group
                 rebuild(focusAfter = ctx.str(R.string.rows_only_more))
             }
         }
     }
 
-    /** Collects the rows that only change the Rows layout, for [group] to place. */
+    /** Collects the rows that only change the Rows layout, for [withRowsOnly] to place. */
     private class RowsOnly {
         val builders = mutableListOf<() -> Unit>()
 
@@ -85,15 +135,15 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         }
     }
 
-    /** One row above everything while an access is missing; it opens the permissions page. */
-    private fun missingWarning() {
-        val off = Setup.items.filterNot { it.isOn(ctx.activity) }
-        val names = off.joinToString(", ") { ctx.str(it.title) }
-        val row = o.page(
-            ctx.activity.resources.getQuantityString(R.plurals.setup_missing, off.size, off.size),
-            ctx.activity.getString(R.string.setup_missing_help, names),
-        ) { open(SettingsActivity.PAGE_ACCESS) }
-        row.label.setTextColor(Tokens.warning)
+    /** A line above the groups while an access is missing; it opens the permissions page. */
+    private fun missingWarning(): RailItem {
+        val missing = Setup.items.filterNot { it.isOn(ctx.activity) }
+        return RailItem(ctx.activity, R.drawable.ic_group_warning, ctx.activity.resources.getQuantityString(R.plurals.setup_missing, missing.size, missing.size)).apply {
+            summary.text = missing.joinToString(", ") { ctx.str(it.title) }
+            isFocusable = true
+            warn()
+            setOnClickListener { open(SettingsActivity.PAGE_ACCESS) }
+        }
     }
 
     private fun look(rowsOnly: RowsOnly) {
@@ -116,8 +166,9 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             {
                 config.accent = it
                 Tokens.applyAccent(it)
-                // The focus ring here follows the new colour right away.
+                // The focus rings here follow the new colour right away.
                 o.restyle()
+                rail.restyle()
             },
         )
         rowsOnly {
@@ -193,7 +244,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
         o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
         o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) {
-            Dialogs.visibility(ctx.activity, config, ctx.files.dir) {}
+            Dialogs.visibility(ctx.activity, config, ctx.files.dir) { rail.refresh() }
         }
         rowsOnly { o.page(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) } }
         rowsOnly {
@@ -292,19 +343,21 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private fun open(page: String) = ctx.activity.startActivity(SettingsActivity.intent(ctx.activity, page))
 
     /**
-     * The list again, after a change that adds or removes rows. Focus goes back to the row titled
-     * [focus], or to the row now standing after the one titled [focusAfter].
+     * The group's options again, after a change that adds or removes rows. Focus goes back to the
+     * row titled [focus], or to the row now standing after the one titled [focusAfter].
      */
     private fun rebuild(focus: String? = null, focusAfter: String? = null) = ctx.layout.list.post {
-        val list = ctx.layout.list
-        val before = focusAfter?.let { title -> list.indexOfChild(o.rows().firstOrNull { it.label.text == title }) } ?: -1
-        list.removeAllViews()
-        build()
-        val target = when {
-            before >= 0 -> ctx.layout.items().drop(before).firstOrNull { it.isFocusable }
-            else -> o.rows().firstOrNull { it.label.text == focus }
+        val before = focusAfter?.let { title -> ctx.layout.list.indexOfChild(o.rows().firstOrNull { it.label.text == title }) } ?: -1
+        show(current)
+        if (before >= 0) {
+            (ctx.layout.items().drop(before).firstOrNull { it.isFocusable } ?: o.rows().firstOrNull())?.requestFocus()
+        } else {
+            refocus(focus)
         }
-        (target ?: ctx.layout.items().firstOrNull { it.isFocusable })?.requestFocus()
+    }
+
+    private fun refocus(title: String?) {
+        (o.rows().firstOrNull { it.label.text == title } ?: o.rows().firstOrNull())?.requestFocus()
     }
 
     private companion object {

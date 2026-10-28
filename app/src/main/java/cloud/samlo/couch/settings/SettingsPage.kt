@@ -28,6 +28,9 @@ interface SettingsPage {
     /** The screen is going away: let go of anything held open. */
     fun onDestroy() = Unit
 
+    /** Puts the focus where the page starts; false leaves it to the first row. */
+    fun focusStart(): Boolean = false
+
     /** True when the page handled the key itself. */
     fun consumesKey(event: KeyEvent): Boolean = false
 }

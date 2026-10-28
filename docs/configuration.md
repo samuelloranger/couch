@@ -5,7 +5,8 @@ Everything can be changed from the TV: press UP from the top row to reach ⚙ an
 
 ## Customize
 
-Five groups. Rows that only matter for another option sit indented under it and show only when
+Five groups, down the left of the screen, each with a line saying how it is set. Up and down
+move between groups, Right or OK opens one, Back returns to the list of groups. Rows that only matter for another option sit indented under it and show only when
 they apply. In the Index layout, the options that only change the Rows layout wait at the end of
 their group behind *More for the Rows layout*. While a permission is off, a line at the top says
 so and opens the permissions page.

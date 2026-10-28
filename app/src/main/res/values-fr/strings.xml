@@ -644,7 +644,6 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
         <item quantity="many">%d autorisations sont désactivées</item>
         <item quantity="other">%d autorisations sont désactivées</item>
     </plurals>
-    <string name="setup_missing_help">Désactivées : %s. Les fonctions qui en ont besoin restent cachées d’ici là.</string>
     <string name="setup_page_help">Ce que Couch peut utiliser sur cette télé : le bouton HOME, ce qui joue, le temps d’écran et les chaînes des applis.</string>
     <string name="setup_hint">Chacune active une fonction. OK ouvre l’endroit où l’accorder.</string>
     <string name="setup_all_on">Toutes activées</string>
@@ -654,4 +653,18 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
         <item quantity="other">%d désactivées</item>
     </plurals>
     <string name="units_help">Celsius ou Fahrenheit.</string>
+    <string name="summary_ambient">ambiant après %d min</string>
+    <string name="summary_no_ambient">sans mode ambiant</string>
+    <string name="summary_no_hidden">Toutes les applis affichées</string>
+    <plurals name="summary_hidden">
+        <item quantity="one">%d appli masquée</item>
+        <item quantity="many">%d applis masquées</item>
+        <item quantity="other">%d applis masquées</item>
+    </plurals>
+    <string name="summary_clock_24">Horloge 24 h</string>
+    <string name="summary_clock_12">Horloge 12 h</string>
+    <string name="summary_weather_on">météo</string>
+    <string name="summary_weather_off">sans météo</string>
+    <string name="summary_version">Version %s</string>
+    <string name="summary_update">Version %s disponible</string>
 </resources>

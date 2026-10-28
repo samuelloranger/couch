@@ -98,8 +98,12 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
 
 ## Settings
 
-`SettingsActivity` hosts one page at a time (main, rows, channels, inputs), chosen by an intent
-extra. Pages build their list from `OptionList` helpers, each producing an `OptionRow` whose right
+`SettingsActivity` hosts one page at a time, chosen by an intent extra. The main page is a
+`Rail` of the five `Group`s down the left, each with a one-line summary of how it is set, and the
+focused group's options on the right; Right or OK steps into them, Back or Left steps out. The
+pages that belong to a group (rows, channels, inputs, permissions, other TVs, remote buttons) show
+the same rail without focus, their group lit. Godmode and its built-in apps page keep the full
+width. Pages build their list from `OptionList` helpers, each producing an `OptionRow` whose right
 side shows what kind of row it is: `choice` (every option side by side when two or three short ones
 fit, else `‹ value ›`), `swatches` (the accent colours), `toggle` (a switch), `text` (an underlined
 value that opens the keyboard), `page` (`›`, opens another page), `leaves` (`↗`, opens one of

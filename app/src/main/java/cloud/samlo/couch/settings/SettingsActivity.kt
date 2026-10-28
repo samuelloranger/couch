@@ -24,9 +24,12 @@ class SettingsActivity : Activity() {
         val files = UserFiles(this)
         val config = Config.load(files.dir)
         Tokens.applyAccent(config.accent)
-        layout = SettingsLayout(this)
+        val name = intent.getStringExtra(EXTRA_PAGE)
+        // The main page and the pages inside its groups show the groups down the left.
+        val group = Group.of(name)
+        layout = SettingsLayout(this, withRail = name == null || group != null)
         val ctx = SettingsContext(this, files, layout, config)
-        page = when (intent.getStringExtra(EXTRA_PAGE)) {
+        page = when (name) {
             PAGE_ROWS -> RowsPage(ctx)
             PAGE_CHANNELS -> ChannelsPage(ctx)
             PAGE_INPUTS -> InputsPage(ctx)
@@ -39,7 +42,8 @@ class SettingsActivity : Activity() {
         }
         setContentView(layout.root)
         page.build()
-        layout.list.post { layout.items().firstOrNull { it.isFocusable }?.requestFocus() }
+        group?.let { Rail(ctx, focusable = false).build(it) }
+        layout.list.post { if (!page.focusStart()) layout.items().firstOrNull { it.isFocusable }?.requestFocus() }
     }
 
     /** The godmode pages paint phosphor green; put the user's accent back once they leave. */
