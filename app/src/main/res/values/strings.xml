@@ -196,7 +196,7 @@
     <string name="ambient_never">Never</string>
     <string name="group_setup">Permissions</string>
     <string name="setup_turn_on">Turn on</string>
-    <string name="setup_no_screen">This TV has no settings screen for this. The help on the right gives another way.</string>
+    <string name="setup_no_screen">This TV has no settings screen for this. The help under this row gives another way.</string>
     <string name="setup_home">HOME button</string>
     <string name="setup_home_help">Opens Couch when you press HOME, on TVs that send HOME to their own launcher. Turn on “Couch: Home button” in the accessibility settings. Not needed if HOME already opens Couch.</string>
     <string name="setup_notifications">Notification access</string>

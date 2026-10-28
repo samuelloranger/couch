@@ -196,7 +196,7 @@
     <string name="ambient_never">Jamais</string>
     <string name="group_setup">Autorisations</string>
     <string name="setup_turn_on">Activer</string>
-    <string name="setup_no_screen">Cette télé n’a pas d’écran de réglage pour ça. L’aide à droite donne une autre façon.</string>
+    <string name="setup_no_screen">Cette télé n’a pas d’écran de réglage pour ça. L’aide sous cette ligne donne une autre façon.</string>
     <string name="setup_home">Bouton HOME</string>
     <string name="setup_home_help">Ouvre Couch quand tu appuies sur HOME, sur les télés qui envoient HOME à leur propre lanceur. Active « Couch : bouton Accueil » dans les réglages d’accessibilité. Inutile si HOME ouvre déjà Couch.</string>
     <string name="setup_notifications">Accès aux notifications</string>
