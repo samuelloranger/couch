@@ -17,8 +17,7 @@ import cloud.samlo.couch.data.Prefs
 class HomeAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
-        // Amazon's launcher package also hosts Fire TV Settings: only its home screen is replaced.
-        if (event.packageName?.toString() == AMAZON_LAUNCHER && event.className?.toString() != AMAZON_HOME) return
+        if (!isStockHome(event.packageName?.toString(), event.className?.toString())) return
         openCouch()
     }
 
@@ -48,8 +47,21 @@ class HomeAccessibilityService : AccessibilityService() {
     companion object {
         private const val WANTED = "homeCaptureWanted"
         private const val REOPEN = "update:reopenAt"
-        private const val AMAZON_LAUNCHER = "com.amazon.tv.launcher"
-        private const val AMAZON_HOME = "com.amazon.tv.launcher.ui.HomeActivity_vNext"
+        /**
+         * Launchers whose package also hosts other screens, mapped to their home screen: Fire TV
+         * Settings lives in Amazon's, the profile chooser in Google TV's. Only the home screen is
+         * replaced. Every other launcher in `res/xml/home_accessibility.xml` is replaced whole.
+         */
+        private val SHARED_LAUNCHERS = mapOf(
+            "com.amazon.tv.launcher" to "com.amazon.tv.launcher.ui.HomeActivity_vNext",
+            "com.google.android.apps.tv.launcherx" to "com.google.android.apps.tv.launcherx.home.HomeActivity",
+        )
+
+        /** True when a window from [pkg] with [cls] is the stock home screen Couch should replace. */
+        fun isStockHome(pkg: String?, cls: String?): Boolean {
+            val home = SHARED_LAUNCHERS[pkg] ?: return true
+            return cls == home
+        }
         /** An update that hasn't landed by then was cancelled or failed: never reopen on a later connect. */
         private const val REOPEN_WINDOW_MS = 10 * 60_000L
         private const val WRITE_SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"

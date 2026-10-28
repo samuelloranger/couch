@@ -62,9 +62,9 @@ missing, and near the bottom once everything is granted.
 
 ### 4. Make HOME open Couch
 
-Most Android TV devices let you pick a default home app. Many TVs (Sony Bravia among them) don't:
-HOME always opens the stock launcher. For those, Couch includes an accessibility service that
-replaces the stock launcher as soon as it appears:
+Most Android TV devices let you pick a default home app. Google TV and many TVs (Sony Bravia among
+them) don't: HOME always opens the stock launcher. For those, Couch includes an accessibility service
+that replaces the stock launcher as soon as it appears:
 
 ```sh
 adb shell settings put secure enabled_accessibility_services \
@@ -85,6 +85,9 @@ On Fire TV, the same service replaces Amazon's home screen. Fire TV Settings bel
 app, so only the home screen is replaced: Settings opened from the quick menu (hold HOME) stays
 open. If you used a home-redirect app before, only one app should react to HOME; the command above
 replaces the whole list of enabled services, which turns the other app's service off.
+
+On Google TV, the service replaces only the Google TV home screen. The profile chooser, which belongs
+to the same app, stays open.
 
 ## Updating
 

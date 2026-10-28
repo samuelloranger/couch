@@ -7,13 +7,16 @@
 <p align="center">
   <a href="https://github.com/samuelloranger/couch/releases"><img src="https://img.shields.io/github/v/release/samuelloranger/couch" alt="Latest release" /></a>
   <a href="https://github.com/samuelloranger/couch/actions/workflows/ci.yml"><img src="https://github.com/samuelloranger/couch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-  <img src="https://img.shields.io/badge/Android%20TV-9%2B-34D399?logo=androidtv&logoColor=white" alt="Android TV 9+" />
+  <img src="https://img.shields.io/badge/Android%20TV%20%C2%B7%20Google%20TV%20%C2%B7%20Fire%20TV-9%2B-34D399?logo=androidtv&logoColor=white" alt="Android TV, Google TV and Fire TV, Android 9+" />
   <img src="https://img.shields.io/badge/APK-a%20few%20hundred%20KB-111715" alt="APK of a few hundred KB" />
   <a href="https://buymeacoffee.com/samlo122"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
 </p>
 
 A light, fast home screen for Android TV, built for TVs whose chips struggle with the stock
 launcher. Plain Android Views, no AndroidX, no Compose, no tracking: the APK is a few hundred KB.
+
+Runs on Android TV, Google TV and Fire TV, on Android 9 or later. On each, the HOME button can open
+Couch instead of the stock home screen.
 
 <p align="center">
   <img src="docs/screenshots/home.jpg" alt="The Index home screen" width="32%">
@@ -45,8 +48,8 @@ launcher. Plain Android Views, no AndroidX, no Compose, no tracking: the APK is 
 - **Customize**: card size, accent colour, dimming, names under cards, row order and
   visibility, app channels, inputs, clock format, weather, ambient delay, and which permissions
   are still missing.
-- HOME button takeover on TVs that hardwire HOME to the stock launcher, repairing itself if
-  Android drops it.
+- HOME button takeover on TVs that hardwire HOME to the stock launcher (Google TV, Fire TV, Sony
+  Bravia and others), repairing itself if Android drops it.
 - Updates itself: an Update button appears when a new release is out, one confirmation installs it.
 - **Other TVs**: share screen time between the TVs in the house, over your home network only,
   paired by comparing six digits on both screens. See [the docs](https://samlo.cloud/couch/sync).
@@ -85,11 +88,11 @@ itself. The [setup guide](https://samlo.cloud/couch/setup) explains each step.
 
 The full documentation is at **[samlo.cloud/couch](https://samlo.cloud/couch)**. The same pages live in [`docs/`](docs):
 
-- [Setup](docs/setup.md): install, permissions, HOME button, updating.
-- [Configuration](docs/configuration.md): every option, `config.json`, custom icons and wallpaper.
-- [Architecture](docs/architecture.md): how the code is organised and why it stays fast.
-- [Development](docs/development.md): building, the TV emulator, tests, releases.
-- [Decisions](docs/decisions.md): the trade-offs behind the less obvious choices.
+- [Setup](https://samlo.cloud/couch/setup): install, permissions, HOME button, updating.
+- [Configuration](https://samlo.cloud/couch/configuration): every option, `config.json`, custom icons and wallpaper.
+- [Architecture](https://samlo.cloud/couch/architecture): how the code is organised and why it stays fast.
+- [Development](https://samlo.cloud/couch/development): building, the TV emulator, tests, releases.
+- [Decisions](https://samlo.cloud/couch/decisions): the trade-offs behind the less obvious choices.
 
 ## Credits
 
