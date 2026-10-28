@@ -30,12 +30,12 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     /** Groups whose Rows-layout options were unfolded on this visit. */
     private val unfolded = mutableSetOf<Int>()
 
-    /** Whether something was missing at the last build, so a grant on return can drop the warning. */
-    private var missing = false
+    /** How many accesses were off at the last build, so a grant on return updates the warning. */
+    private var off = 0
 
     override fun build() {
-        missing = !Setup.allOn(ctx.activity)
-        if (missing) missingWarning()
+        off = offCount()
+        if (off > 0) missingWarning()
         group(R.string.group_look, ::look)
         group(R.string.group_wallpaper, ::wallpaper)
         group(R.string.group_home, ::home)
@@ -43,11 +43,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         group(R.string.group_system) { system() }
     }
 
-    /** Back from another screen: show what changed, and drop the warning once all is granted. */
+    /** Back from another screen: show what changed, and redo the warning once a grant changed it. */
     override fun onResume() {
-        if (missing != !Setup.allOn(ctx.activity)) rebuild((ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString())
+        if (off != offCount()) rebuild((ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString())
         else o.rows().forEach { it.refresh() }
     }
+
+    private fun offCount() = Setup.items.count { !it.isOn(ctx.activity) }
 
     /**
      * A group: its own rows, then the ones only the Rows layout uses. In Index those wait behind
