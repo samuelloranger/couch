@@ -80,7 +80,7 @@ class Card(
         super.onDetachedFromWindow()
     }
 
-    fun setDimmed(dimmed: Boolean) {
+    private fun setDimmed(dimmed: Boolean) {
         content.alpha = if (dimmed) 0.45f else 1f
     }
 

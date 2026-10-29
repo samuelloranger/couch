@@ -117,7 +117,7 @@ class DebloatPage(internal val ctx: SettingsContext) : SettingsPage {
 
     internal fun toast(text: String) = ui { Toast.makeText(ctx.activity, text, Toast.LENGTH_LONG).show() }
 
-    /** The same trick MainPage uses on a layout change: rebuild, then focus the first row or tile. */
+    /** Rebuilds the list, then focuses the first row or tile. */
     internal fun rebuild() = ctx.layout.list.post {
         ctx.layout.list.removeAllViews()
         build()

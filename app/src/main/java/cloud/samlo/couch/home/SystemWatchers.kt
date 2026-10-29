@@ -11,9 +11,8 @@ import android.os.Handler
 import android.os.Looper
 
 /**
- * Listens for installs, removals and TV input changes. Anything that changes what the rows
- * contain calls [onChanged]; an input merely (dis)connecting is a cheap in-place dim instead,
- * and one that turns on also calls [onInputWoke] with its port's input id.
+ * Listens for installs, removals and TV input changes. Anything that changes what the home screen
+ * lists calls [onChanged]; an input that turns on calls [onInputWoke] with its port's input id.
  */
 class SystemWatchers(
     private val activity: Activity,

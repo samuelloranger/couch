@@ -30,7 +30,7 @@ class Images(context: Context, fetcher: Fetcher) {
 
     /**
      * Loads [url] center-cropped to [w] x [h]. [isCurrent] lets the caller drop stale requests
-     * (a card scrolled away, a hero that moved on); it is also checked from the worker thread,
+     * (a card scrolled away, a program no longer focused); it is also checked from the worker thread,
      * so it must only read a volatile value.
      */
     fun load(
