@@ -7,6 +7,7 @@
 <p align="center">
   <a href="https://github.com/samuelloranger/couch/releases"><img src="https://img.shields.io/github/v/release/samuelloranger/couch" alt="Latest release" /></a>
   <a href="https://github.com/samuelloranger/couch/actions/workflows/ci.yml"><img src="https://github.com/samuelloranger/couch/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License: GPL-3.0" /></a>
   <img src="https://img.shields.io/badge/Android%20TV%20%C2%B7%20Google%20TV%20%C2%B7%20Fire%20TV-9%2B-34D399?logo=androidtv&logoColor=white" alt="Android TV, Google TV and Fire TV, Android 9+" />
   <img src="https://img.shields.io/badge/APK-a%20few%20hundred%20KB-111715" alt="APK of a few hundred KB" />
   <a href="https://buymeacoffee.com/samlo122"><img src="https://img.shields.io/badge/Buy%20me%20a%20coffee-FFDD00?logo=buymeacoffee&logoColor=black" alt="Buy me a coffee" /></a>
@@ -91,6 +92,20 @@ The full documentation is at **[samlo.cloud/couch](https://samlo.cloud/couch)**.
 - [Architecture](https://samlo.cloud/couch/architecture): how the code is organised and why it stays fast.
 - [Development](https://samlo.cloud/couch/development): building, the TV emulator, tests, releases.
 - [Decisions](https://samlo.cloud/couch/decisions): the trade-offs behind the less obvious choices.
+
+## License
+
+Copyright (c) 2026 Samuel Loranger.
+
+Couch is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License, version 3](LICENSE) (`GPL-3.0-only`).
+
+Couch is distributed without any warranty, including the implied warranties of merchantability
+or fitness for a particular purpose. See the license for details.
+
+Bundled third-party fonts and icons remain under their respective licenses. Hanken Grotesk is
+licensed under the [SIL Open Font License 1.1](app/src/main/assets/fonts/hanken_grotesk_OFL.txt);
+icon credits are listed below.
 
 ## Credits
 
