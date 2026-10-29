@@ -37,14 +37,15 @@ Couch instead of the stock home screen.
 
 ## Features
 
-- **Index**: a list of your apps, ordered by screen time, beside what the selected one offers
+- **Index**: a list of your apps, ordered by screen time, manually or alphabetically, beside what the selected one offers
   (the preview channels apps publish: YouTube, Jellyfin and others) and your week with it.
 - An Inputs list with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…).
 - When a console or player on an input turns on, a chip offers to switch to it.
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
 - Weather (Open-Meteo, located automatically or by city), now playing.
 - Ambient mode after a few idle minutes: full-screen wallpaper, large clock, weather.
-- Long-press an app to rename or hide it.
+- Long-press an app to pin it, move it, rename it or hide it. Pinned apps stay first.
+- Choose between an app's enabled channels from its channel name; Couch remembers your choice.
 - **Customize**: accent colour, ambient mode and its wallpaper, app channels, which apps show,
   inputs (name, icon, shown), clock format, weather, and which permissions are still missing.
 - HOME button takeover on TVs that hardwire HOME to the stock launcher (Google TV, Fire TV, Sony

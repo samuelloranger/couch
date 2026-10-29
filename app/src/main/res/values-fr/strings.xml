@@ -622,4 +622,15 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="inputs_shown">Sur l’écran d’accueil</string>
     <string name="input_shown_help">Désactivée, cette entrée n’apparaît plus sur l’accueil.</string>
     <string name="channel_item_help">Affiche les programmes de cette chaîne à côté de son appli.</string>
+    <string name="app_sort">Ordre des applis</string>
+    <string name="app_sort_help">Les applis épinglées restent en premier. Utilisation trie les autres par temps d’écran; Manuel garde l’ordre choisi avec Déplacer dans le menu d’appui long.</string>
+    <string name="sort_usage">Utilisation</string>
+    <string name="sort_manual">Manuel</string>
+    <string name="sort_alphabetical">Alphabétique</string>
+    <string name="menu_pin">Épingler en haut</string>
+    <string name="menu_unpin">Désépingler</string>
+    <string name="menu_move">Déplacer</string>
+    <string name="move_app_title">Déplacer %1$s à la position</string>
+    <string name="choose_channel">Choisir une chaîne</string>
+    <string name="choose_channel_label">%1$s. Choisir une chaîne</string>
 </resources>

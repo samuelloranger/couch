@@ -613,4 +613,15 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="inputs_shown">On the home screen</string>
     <string name="input_shown_help">Off hides this input from the home screen.</string>
     <string name="channel_item_help">Shows this channel’s programs beside its app.</string>
+    <string name="app_sort">App order</string>
+    <string name="app_sort_help">Pinned apps stay first. Usage sorts the others by screen time; Manual keeps the order you set with Move in an app’s long-press menu.</string>
+    <string name="sort_usage">Usage</string>
+    <string name="sort_manual">Manual</string>
+    <string name="sort_alphabetical">Alphabetical</string>
+    <string name="menu_pin">Pin to top</string>
+    <string name="menu_unpin">Unpin</string>
+    <string name="menu_move">Move</string>
+    <string name="move_app_title">Move %1$s to position</string>
+    <string name="choose_channel">Choose channel</string>
+    <string name="choose_channel_label">%1$s. Choose channel</string>
 </resources>
