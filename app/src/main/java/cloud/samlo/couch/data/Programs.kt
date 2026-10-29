@@ -21,7 +21,8 @@ object Programs {
 
     /** A preview channel as listed in settings, whether or not it is shown. */
     class ChannelInfo(val id: Long, val packageName: String, val name: String, val browsable: Boolean) {
-        fun shown(config: Config) = config.channels[id.toString()] ?: browsable
+        // Google TV can leave every third-party channel non-browsable on its own launcher.
+        fun shown(config: Config) = config.channels[id.toString()] ?: true
     }
 
     fun canRead(context: Context) =
@@ -42,7 +43,7 @@ object Programs {
             if (c.string("type") != TvContract.Channels.TYPE_PREVIEW) return@query null
             val pkg = c.string("package_name") ?: return@query null
             if (pkg in config.hiddenApps) return@query null
-            // Browsable = the user kept this channel on the stock home screen; that is the default.
+            // Stock-launcher visibility is independent of the user's choices in Couch.
             ChannelInfo(c.long("_id"), pkg, c.string("display_name").orEmpty(), c.int("browsable", 0) != 0)
         }.filterNotNull()
         val withChannels = preview.map { it.packageName }.toSet()

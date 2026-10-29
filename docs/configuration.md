@@ -54,6 +54,11 @@ chip never moves focus to itself (Up reaches it like the other chips), and goes 
 inputs never offer themselves, and nothing is offered in the first seconds after the home screen
 comes back (a TV waking up reports its inputs changing too).
 
+## App channels
+
+Preview channels are shown by default, even when hidden by the stock launcher. Use
+**Customize → Home screen → App channels** to hide individual channels; Couch keeps those choices.
+
 ## Fire TV recommendations
 
 On Fire TV most apps (Netflix, Amazon Kids…) post recommendations instead of publishing
@@ -101,7 +106,7 @@ setting changes, so edit it while the home screen is in the background.
 | `hiddenInputs` | string[] | `[]` | Hidden inputs (keys like `hdmi3`). |
 | `names` | object | `{}` | Custom names, by app package or input key. |
 | `inputIcons` | object | `{}` | Input key → icon id (`ps5`, `xbox`, `switch2`, `server`…). |
-| `channels` | object | `{}` | Channel id → shown or not, overriding the stock launcher's choice. |
+| `channels` | object | `{}` | Channel id → shown or not. Channels without a saved choice are shown. |
 | `accent` | string | `#34D399` | Accent colour (hex). |
 | `wallpaper` | string | `daily` | `daily`, `reddit`, `gradient`, `custom`. |
 | `subreddit` | string | `WidescreenWallpaper` | Subreddit for the `reddit` source. |
