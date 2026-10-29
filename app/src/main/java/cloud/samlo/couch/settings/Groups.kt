@@ -28,7 +28,10 @@ enum class Group(val title: Int, val icon: Int) {
             )
             HOME -> {
                 val hidden = AppSource.launchable(c.packageManager).count { it.activityInfo.packageName in config.hiddenApps }
-                listOf(if (hidden == 0) ctx.str(R.string.summary_no_hidden) else c.resources.getQuantityString(R.plurals.summary_hidden, hidden, hidden))
+                listOf(
+                    ctx.str(when (config.appSort) { "manual" -> R.string.sort_manual; "alphabetical" -> R.string.sort_alphabetical; else -> R.string.sort_usage }),
+                    if (hidden == 0) ctx.str(R.string.summary_no_hidden) else c.resources.getQuantityString(R.plurals.summary_hidden, hidden, hidden),
+                )
             }
             CLOCK -> listOf(
                 ctx.str(if (config.clock24h) R.string.summary_clock_24 else R.string.summary_clock_12),

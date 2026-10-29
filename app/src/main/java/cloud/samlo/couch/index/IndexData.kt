@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import cloud.samlo.couch.data.AppSource
+import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.AppUsage
 import cloud.samlo.couch.data.Banners
 import cloud.samlo.couch.data.Config
@@ -18,20 +19,26 @@ import java.io.File
 
 /**
  * One app in the list: its launch [app] tile (banner rendered at card size, shown where the
- * channel would be when it has none), a small rounded [icon], the first channel it publishes,
+ * channel would be when it has none), a small rounded [icon], its available channels,
  * and its last week of use.
  */
+class IndexChannel(val id: Long, val title: String, val programs: List<Tile>)
+
 class IndexEntry(
     val app: Tile,
     val icon: Bitmap?,
-    /** "Netflix", or "Jellyfin, Recently added" when the channel name doesn't say the app. */
-    val channelTitle: String?,
-    val programs: List<Tile>,
+    val channels: List<IndexChannel>,
+    preferredChannel: String?,
     val usage: AppUsage?,
 ) {
+    val channel = channels.firstOrNull { it.id.toString() == preferredChannel } ?: channels.firstOrNull()
+    val channelTitle get() = channel?.title
+    val programs get() = channel?.programs.orEmpty()
     val key: String get() = app.key
-    val signature: String = "${app.signature}|${icon?.generationId}|$channelTitle|" +
-        "${usage?.perDayMs?.joinToString(",")}|${usage?.opens}|${usage?.lastUsed}|" + programs.joinToString(";") { it.signature }
+    val stripKey: String get() = "$key|${channel?.id}"
+    val signature: String = "${app.signature}|${icon?.generationId}|${channel?.id}|" +
+        "${usage?.perDayMs?.joinToString(",")}|${usage?.opens}|${usage?.lastUsed}|" +
+        channels.joinToString(";") { "${it.id}|${it.title}|" + it.programs.joinToString(";") { tile -> tile.signature } }
 }
 
 class IndexData(
@@ -50,15 +57,15 @@ object IndexBuilder {
         )
         val usage = Usage.lastWeek(context)?.let { if (config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
         val channels = Programs.channels(context, config).groupBy { it.packageName }
-        // Apps keep the user's order among equals (pinned first, then by name).
-        val ordered = if (usage == null) apps else apps.sortedByDescending { usage[it.key]?.weekMs ?: 0L }
-        val entries = ordered.map { tile ->
-            val channel = channels[tile.key]?.firstOrNull()
+        val byKey = apps.associateBy { it.key }
+        val ordered = AppOrder.sorted(apps.map { it.key }, config, usage?.mapValues { it.value.weekMs })
+        val entries = ordered.map { key ->
+            val tile = byKey.getValue(key)
             IndexEntry(
                 app = tile,
                 icon = icon(context, tile.key),
-                channelTitle = channel?.let { Programs.title(context, it.packageName, it.name, ", ") },
-                programs = channel?.tiles.orEmpty(),
+                channels = channels[tile.key].orEmpty().map { IndexChannel(it.id, Programs.title(context, it.packageName, it.name, ", "), it.tiles) },
+                preferredChannel = config.preferredChannels[tile.key],
                 usage = usage?.get(tile.key),
             )
         }

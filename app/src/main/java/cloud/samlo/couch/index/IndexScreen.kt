@@ -2,6 +2,7 @@ package cloud.samlo.couch.index
 
 import android.annotation.SuppressLint
 import android.app.Activity
+import android.app.AlertDialog
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -18,11 +19,12 @@ import cloud.samlo.couch.ui.dp
 
 /**
  * The Index layout: apps listed on the left; on the right, what the selected app offers (the
- * focused program's text over its first channel's cards), its last week of use, and the TV's
+ * focused program's text over its chosen channel's cards), its last week of use, and the TV's
  * readings along the bottom.
  *
  * D-pad: up/down walks the list, right enters the app's channel row, left (from its first card),
- * up or down comes back. Up from the first app reaches Inputs and Settings.
+ * down comes back. With several channels, right reaches the channel picker first and up from
+ * the cards returns to it. Up from the first app reaches Inputs and Settings.
  */
 @SuppressLint("ViewConstructor")
 class IndexScreen(
@@ -32,6 +34,7 @@ class IndexScreen(
     onUpdate: () -> Unit,
     private val onAppMenu: (Tile) -> Unit,
     private val onProgramMenu: (Card) -> Unit,
+    private val onChannelSelected: (String, Long) -> Unit,
 ) : FrameLayout(activity) {
     val topBar = IndexTopBar(activity, { pickInput() }, onSettings, onUpdate)
     private val list = AppList(activity) { entry -> row(entry) }
@@ -50,10 +53,11 @@ class IndexScreen(
     private var config = Config()
     private var look = ""
     private var selectedKey: String? = null
-    /** The app whose programs the channel row holds. */
+    /** The app and channel whose programs the row holds. */
     private var stripKey: String? = null
     /** The Inputs pill's menu while it is open. */
     private var inputMenu: InputMenu? = null
+    private var channelMenu: AlertDialog? = null
     /** Placed once, on the first bind; later binds keep focus where it is. */
     private var placedFocus = false
     /** Set while [bind] moves focus itself, so the focus listener doesn't fill the column twice. */
@@ -64,9 +68,16 @@ class IndexScreen(
     private val statsLater = Runnable { selectedRow()?.let { showStats(it.entry) } }
     /** Cards are added a couple per frame: building them all at once cost a weak TV two frames. */
     private var built = 0
-    private val buildMore = Runnable { selectedRow()?.entry?.takeIf { it.key == stripKey }?.let { buildStep(it) } }
+    private val buildMore = Runnable { selectedRow()?.entry?.takeIf { it.stripKey == stripKey }?.let { buildStep(it) } }
 
     init {
+        spotlight.channelButton.setOnClickListener { chooseChannel() }
+        spotlight.channelButton.setOnFocusChangeListener { _, has ->
+            if (has) selectedRow()?.let {
+                list.select(it, inRow = true)
+                showProgram(it.entry, null)
+            }
+        }
         // The window paints the background (HomeViews swaps it to Index's flat colour), and no
         // layer here covers the screen: each full-screen layer costs the TV's GPU.
         place(list, IndexTokens.LIST_X, IndexTokens.LIST_Y, IndexTokens.LIST_W, IndexTokens.LIST_H)
@@ -113,13 +124,16 @@ class IndexScreen(
         }
         binding = false
         select(target, refresh = true)
+        if (activity.currentFocus === spotlight.channelButton && !spotlight.channelButton.isFocusable) target.requestFocus()
     }
+
+    fun appTiles(): List<Tile> = data?.entries.orEmpty().map { it.app }
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */
     fun consumesKey(event: KeyEvent): Boolean {
         if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
         val focused = activity.currentFocus ?: return false
-        if (!programs.isAncestorOf(focused) && !topBar.isAncestorOf(focused)) return false
+        if (!programs.isAncestorOf(focused) && !topBar.isAncestorOf(focused) && focused !== spotlight.channelButton) return false
         if (event.action == KeyEvent.ACTION_UP) selectedRow()?.requestFocus()
         return true
     }
@@ -127,6 +141,7 @@ class IndexScreen(
     /** HOME while home: back to the first app. */
     fun reset() {
         inputMenu?.dismiss()
+        channelMenu?.dismiss()
         val first = list.rows().firstOrNull() ?: return
         // Focus first: its listener selects the row, then the jump lands the selection with the list.
         first.requestFocus()
@@ -146,7 +161,7 @@ class IndexScreen(
     private fun select(row: AppRow, refresh: Boolean) {
         val changed = row.entry.key != selectedKey
         selectedKey = row.entry.key
-        val inRow = programs.hasFocus()
+        val inRow = programs.hasFocus() || spotlight.channelButton.hasFocus()
         list.select(row, inRow)
         if (row.hasFocus()) list.reveal(list.rows().indexOf(row))
         if (changed || refresh) show(row.entry, deferStrip = changed && !refresh)
@@ -159,7 +174,7 @@ class IndexScreen(
         removeCallbacks(fillStrip)
         if (deferStrip) {
             // Another app's cards must not linger under this one while the row waits.
-            if (stripKey != entry.key) programs.update(emptyList(), "") { error("no cards") }
+            if (stripKey != entry.stripKey) programs.update(emptyList(), "") { error("no cards") }
             postDelayed(fillStrip, STRIP_SETTLE_MS)
         } else {
             fill(entry)
@@ -178,8 +193,8 @@ class IndexScreen(
 
     private fun fill(entry: IndexEntry) {
         removeCallbacks(fillStrip)
-        if (stripKey != entry.key) {
-            stripKey = entry.key
+        if (stripKey != entry.stripKey) {
+            stripKey = entry.stripKey
             programs.forget()
         }
         removeCallbacks(buildMore)
@@ -196,7 +211,7 @@ class IndexScreen(
     }
 
     private fun update(entry: IndexEntry, tiles: List<Tile>) {
-        val cardLook = "${entry.key}|$look"
+        val cardLook = "${entry.stripKey}|$look"
         programs.update(tiles, cardLook) { card(it, cardLook) }
     }
 
@@ -214,7 +229,7 @@ class IndexScreen(
     private fun showProgram(entry: IndexEntry, program: Tile?) {
         val tile = program ?: entry.programs.firstOrNull()
         if (tile != null) {
-            spotlight.showProgram(entry.channelTitle.orEmpty(), tile)
+            spotlight.showProgram(entry.channelTitle.orEmpty(), tile, entry.channels.size > 1)
         } else {
             spotlight.showApp(entry.app, activity.getString(R.string.index_no_channel, entry.app.label))
         }
@@ -253,16 +268,21 @@ class IndexScreen(
                     FOCUS_DOWN -> rows.getOrNull(i + 1) ?: focused
                     FOCUS_RIGHT -> {
                         // Right before the row has filled: fill it now.
-                        if (stripKey != focused.entry.key) fill(focused.entry)
-                        programs.cards().firstOrNull() ?: focused
+                        if (stripKey != focused.entry.stripKey) fill(focused.entry)
+                        if (spotlight.channelButton.isFocusable) spotlight.channelButton else programs.cards().firstOrNull() ?: focused
                     }
                     else -> focused
                 }
             }
             inStrip -> when (direction) {
-                FOCUS_UP, FOCUS_DOWN -> leaveStrip(row) ?: focused
+                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else leaveStrip(row) ?: focused
+                FOCUS_DOWN -> leaveStrip(row) ?: focused
                 FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) leaveStrip(row) ?: focused else super.focusSearch(focused, direction)
                 else -> super.focusSearch(focused, direction)
+            }
+            focused === spotlight.channelButton -> when (direction) {
+                FOCUS_DOWN, FOCUS_RIGHT -> programs.cards().firstOrNull() ?: row ?: focused
+                else -> row ?: focused
             }
             inTop -> if (direction == FOCUS_DOWN) row ?: focused else super.focusSearch(focused, direction)?.takeIf { topBar.isAncestorOf(it) } ?: focused
             else -> super.focusSearch(focused, direction)
@@ -292,9 +312,26 @@ class IndexScreen(
         }
     }
 
+    private fun chooseChannel() {
+        val entry = selectedRow()?.entry ?: return
+        if (entry.channels.size < 2 || channelMenu != null) return
+        channelMenu = AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(R.string.choose_channel)
+            .setSingleChoiceItems(entry.channels.map { it.title }.toTypedArray(), entry.channels.indexOf(entry.channel)) { dialog, which ->
+                onChannelSelected(entry.key, entry.channels[which].id)
+                dialog.dismiss()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .create().apply {
+                setOnDismissListener { channelMenu = null }
+                show()
+            }
+    }
+
     // The activity is going away: a dialog left open would leak its window.
     override fun onDetachedFromWindow() {
         inputMenu?.dismiss()
+        channelMenu?.dismiss()
         super.onDetachedFromWindow()
     }
 

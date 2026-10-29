@@ -7,6 +7,7 @@ import android.net.Uri
 import android.provider.Settings
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.AppLabels
+import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.UserFiles
@@ -21,6 +22,7 @@ class CardMenus(
     private val activity: Activity,
     private val config: () -> Config,
     private val files: UserFiles,
+    private val apps: () -> List<Tile>,
     private val reload: () -> Unit,
 ) {
     fun show(card: Card) = show(card.tile)
@@ -34,7 +36,12 @@ class CardMenus(
     }
 
     private fun actionsFor(tile: Tile): List<Pair<String, () -> Unit>>? = when (tile.kind) {
-        Tile.Kind.APP -> listOf(
+        Tile.Kind.APP -> listOfNotNull(
+            activity.getString(if (tile.key in config().pinnedApps) R.string.menu_unpin else R.string.menu_pin) to { pin(tile) },
+            (activity.getString(R.string.menu_move) to { move(tile) }).takeIf {
+                val pinned = tile.key in config().pinnedApps
+                apps().count { (it.key in config().pinnedApps) == pinned } > 1
+            },
             activity.getString(R.string.menu_rename) to { rename(tile) },
             activity.getString(R.string.menu_hide) to { hide(tile) },
             activity.getString(R.string.menu_app_info) to { appInfo(tile.packageName) },
@@ -47,6 +54,31 @@ class CardMenus(
                 activity.getString(R.string.menu_app_info) to { appInfo(pkg) },
             )
         }
+    }
+
+    private fun pin(tile: Tile) {
+        val config = config()
+        AppOrder.pin(config, tile.key)
+        config.save(files.dir)
+        reload()
+    }
+
+    private fun move(tile: Tile) {
+        val config = config()
+        val visible = apps()
+        val pinned = tile.key in config.pinnedApps
+        val group = visible.filter { (it.key in config.pinnedApps) == pinned }
+        if (group.size < 2) return
+        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
+            .setTitle(activity.getString(R.string.move_app_title, tile.label))
+            .setSingleChoiceItems(group.mapIndexed { i, app -> "${i + 1}. ${app.label}" }.toTypedArray(), group.indexOfFirst { it.key == tile.key }) { dialog, which ->
+                AppOrder.move(config, visible.map { it.key }, tile.key, which)
+                config.save(files.dir)
+                dialog.dismiss()
+                reload()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun rename(tile: Tile) {

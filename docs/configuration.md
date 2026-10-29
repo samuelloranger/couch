@@ -17,7 +17,8 @@ is off, a line at the top says so and opens the permissions page.
 | | Wallpaper *(ambient on)* | Photo of the day (Bing), Reddit, Gradient, My image |
 | | Subreddit *(Reddit)* | any subreddit; only TV-shaped images (16:9 to 21:9) are kept |
 | | Change image *(Reddit)* | every 1, 3, 6 or 24 hours |
-| Home screen | App channels | a switch for each channel apps publish |
+| Home screen | App order | Usage, Manual, Alphabetical; pinned apps stay first |
+| | App channels | a switch for each channel apps publish |
 | | Show or hide apps | a switch for each app |
 | | Inputs | rename inputs, pick their icon, and a switch for each |
 | Clock and weather | 24-hour clock, Weather | On / Off |
@@ -33,17 +34,23 @@ Couch follows the TV's language: English, or French on a TV set to French.
 ## Home screen
 
 The home screen (Index) is a list of your apps on the left. The right side shows what the
-selected app offers (its first channel: the program's title and synopsis, then the channel as a
+selected app offers (the chosen channel: the program's title and synopsis, then the channel as a
 row of cards with their names), how much you used it over the last seven days with a bar per day,
 and when you last opened it. An app without a channel shows its banner in the channel's place. The
 bottom line shows the TV's address, network traffic, memory, storage, uptime and whether ADB is on.
 
 - Up and down move through the apps, OK opens one. Right enters its channel; left (from the first
-  card), up, down or Back comes back. Up from the first app reaches Inputs and Settings.
-- With usage access ([setup](setup.md#3-permissions)), apps are ordered by screen time over the
-  last seven days. Without it they follow `pinnedApps`, then the alphabet, and the figures are
-  replaced by a hint.
-- Long-press an app for Rename, Hide and App info.
+  card), down or Back comes back. With multiple channels, Right first reaches the channel name;
+  OK opens the channel picker, then Down enters its cards. Up from the cards returns to the
+  channel name. Up from the first app reaches Inputs and Settings.
+- Pinned apps always stay first, in their saved order. **Customize → Home screen → App order**
+  chooses how the other apps follow: Usage (screen time over the last seven days), Manual, or
+  Alphabetical. Without usage access, Usage falls back to alphabetical order and the figures
+  are replaced by a hint. Manual and Alphabetical still show usage figures when access is on.
+- Long-press an app for Pin to top / Unpin, Move, Rename, Hide and App info. Move picks a position
+  within the pinned apps or within the others. Moving an unpinned app switches to Manual;
+  newly installed apps follow the saved manual order alphabetically. Move appears when there
+  is another app in the same group.
 - The wallpaper shows in ambient mode.
 
 ## Inputs turning on
@@ -58,6 +65,10 @@ comes back (a TV waking up reports its inputs changing too).
 
 Preview channels are shown by default, even when hidden by the stock launcher. Use
 **Customize → Home screen → App channels** to hide individual channels; Couch keeps those choices.
+When an app has several enabled channels with programs, its channel name above the program title
+is a button. Press Right from the app, then OK to choose a channel. Couch remembers the choice
+for that app, including after a restart. If the chosen channel is hidden, removed or empty, the
+first available channel shows instead; the saved choice returns when it becomes available again.
 
 ## Fire TV recommendations
 
@@ -68,7 +79,7 @@ home screen and in the App channels list. It reads them through notification acc
 
 ## Long-press menus
 
-- **App**: Rename, Hide, App info.
+- **App**: Pin to top / Unpin, Move, Rename, Hide, App info.
 - **Show or video**: Open the app, App info.
 
 Inputs are renamed, given an icon and hidden in **Customize → Home screen → Inputs**.
@@ -101,12 +112,15 @@ setting changes, so edit it while the home screen is in the background.
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `pinnedApps` | string[] | `[]` | App order without usage access, and ties with it (package names). Unlisted apps follow, alphabetically. |
+| `pinnedApps` | string[] | `[]` | Favorite apps, in order (package names); always ahead of unpinned apps. |
+| `appSort` | string | `usage` | Order of unpinned apps: `usage`, `manual`, or `alphabetical`. |
+| `manualAppOrder` | string[] | `[]` | Saved manual order by package name. Unlisted apps follow alphabetically. |
 | `hiddenApps` | string[] | vendor extras | Hidden apps (package names). |
 | `hiddenInputs` | string[] | `[]` | Hidden inputs (keys like `hdmi3`). |
 | `names` | object | `{}` | Custom names, by app package or input key. |
 | `inputIcons` | object | `{}` | Input key → icon id (`ps5`, `xbox`, `switch2`, `server`…). |
 | `channels` | object | `{}` | Channel id → shown or not. Channels without a saved choice are shown. |
+| `preferredChannels` | object | `{}` | App package → chosen channel id (string). Falls back to the first available channel. |
 | `accent` | string | `#34D399` | Accent colour (hex). |
 | `wallpaper` | string | `daily` | `daily`, `reddit`, `gradient`, `custom`. |
 | `subreddit` | string | `WidescreenWallpaper` | Subreddit for the `reddit` source. |

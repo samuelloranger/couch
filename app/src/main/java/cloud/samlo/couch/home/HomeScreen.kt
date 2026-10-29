@@ -46,6 +46,11 @@ class HomeScreen(private val activity: Activity) {
         activity, images, { openSettings() }, { installUpdate() },
         onAppMenu = { menus.show(it) },
         onProgramMenu = { menus.show(it) },
+        onChannelSelected = { pkg, id ->
+            config.preferredChannels = config.preferredChannels + (pkg to id.toString())
+            config.save(files.dir)
+            load()
+        },
     )
     private val installer = Installer(activity, fetcher)
     private var update: Release? = null
@@ -57,7 +62,7 @@ class HomeScreen(private val activity: Activity) {
 
     private val ambientMode = AmbientMode(views.ambient) { resumed }
         .also { it.minutes = config.ambientMinutes }
-    private val menus: CardMenus = CardMenus(activity, { config }, files) { load() }
+    private val menus: CardMenus = CardMenus(activity, { config }, files, { views.index.appTiles() }) { load() }
     private val loader = HomeLoader(
         activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded,
     )

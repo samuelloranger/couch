@@ -7,11 +7,14 @@ import org.json.JSONObject
 internal object ConfigJson {
     fun encode(c: Config): JSONObject = JSONObject()
         .put("pinnedApps", JSONArray(c.pinnedApps))
+        .put("appSort", c.appSort)
+        .put("manualAppOrder", JSONArray(c.manualAppOrder))
         .put("hiddenApps", JSONArray(c.hiddenApps.sorted()))
         .put("hiddenInputs", JSONArray(c.hiddenInputs.sorted()))
         .put("names", JSONObject(c.names))
         .put("inputIcons", JSONObject(c.inputIcons))
         .put("channels", JSONObject(c.channels))
+        .put("preferredChannels", JSONObject(c.preferredChannels))
         .put("accent", c.accent)
         .put("wallpaper", c.wallpaper)
         .put("clock24h", c.clock24h)
@@ -34,10 +37,13 @@ internal object ConfigJson {
     /** Every field is optional; a missing one keeps what [into] already holds. */
     fun decode(json: JSONObject, into: Config) = with(into) {
         json.strings("pinnedApps")?.let { pinnedApps = it }
+        appSort = json.optString("appSort", appSort).takeIf { it in AppOrder.sorts } ?: "usage"
+        json.strings("manualAppOrder")?.let { manualAppOrder = it.distinct() }
         json.strings("hiddenApps")?.let { hiddenApps = it.toSet() }
         json.strings("hiddenInputs")?.let { hiddenInputs = it.toSet() }
         names = json.stringMap("names")
         inputIcons = json.stringMap("inputIcons")
+        preferredChannels = json.stringMap("preferredChannels")
         channels = json.optJSONObject("channels")?.let { o -> o.keys().asSequence().associateWith { o.optBoolean(it) } }
             ?: emptyMap()
         accent = Accents.migrate(json.optString("accent", accent))

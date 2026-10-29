@@ -19,8 +19,9 @@ class HomeViews(
     onUpdate: () -> Unit,
     onAppMenu: (Tile) -> Unit,
     onProgramMenu: (Card) -> Unit,
+    onChannelSelected: (String, Long) -> Unit,
 ) {
-    val index = IndexScreen(activity, images, onSettings, onUpdate, onAppMenu, onProgramMenu)
+    val index = IndexScreen(activity, images, onSettings, onUpdate, onAppMenu, onProgramMenu, onChannelSelected)
     val ambient = Ambient(activity, images)
 
     val root = FrameLayout(activity).apply {

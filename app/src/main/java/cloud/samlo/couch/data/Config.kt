@@ -11,6 +11,9 @@ import java.io.File
 class Config {
     // Apps and inputs
     var pinnedApps: List<String> = DEFAULT_PINNED
+    /** Unpinned apps follow usage, a saved manual order, or their names. */
+    var appSort: String = "usage"
+    var manualAppOrder: List<String> = emptyList()
     var hiddenApps: Set<String> = DEFAULT_HIDDEN
     var hiddenInputs: Set<String> = emptySet()
     /** Custom names, keyed like icons. */
@@ -19,8 +22,10 @@ class Config {
     var inputIcons: Map<String, String> = emptyMap()
 
     // Channels
-    /** Channel id to shown or not, overriding what the stock launcher had enabled. */
+    /** Channel id to shown or not; channels without a choice are shown. */
     var channels: Map<String, Boolean> = emptyMap()
+    /** Package name to the last channel chosen on the home screen. */
+    var preferredChannels: Map<String, String> = emptyMap()
 
     // Look
     var accent: String = Accents.default

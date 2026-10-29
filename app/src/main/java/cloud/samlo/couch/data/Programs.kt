@@ -15,7 +15,6 @@ import cloud.samlo.couch.R
 object Programs {
     const val READ_TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
     private const val MAX_ROW = 15
-    private const val MAX_CHANNELS = 12
 
     class Channel(val id: Long, val packageName: String, val name: String, val tiles: List<Tile>)
 
@@ -61,7 +60,6 @@ object Programs {
             .filter { it.shown(config) }
             .map { info -> Channel(info.id, info.packageName, info.name, programs(context, info, recommendations)) }
             .filter { it.tiles.isNotEmpty() }
-            .take(MAX_CHANNELS)
             .toList()
     }
 
