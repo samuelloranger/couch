@@ -113,14 +113,6 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
         strip.translationX = 0f
     }
 
-    fun focusFirst() {
-        strip.animate().cancel()
-        strip.translationX = 0f
-        strip.getChildAt(0)?.requestFocus()
-    }
-
-    fun restoreFocus(): Boolean = remembered()?.requestFocus() == true
-
     /** The card focused last time, or the one now at its position if it's gone. */
     private fun remembered(): View? {
         if (strip.childCount == 0) return null

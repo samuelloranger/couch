@@ -9,8 +9,6 @@ import android.media.tv.TvInputManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import cloud.samlo.couch.data.Sections
-import cloud.samlo.couch.ui.Rows
 
 /**
  * Listens for installs, removals and TV input changes. Anything that changes what the rows
@@ -19,7 +17,6 @@ import cloud.samlo.couch.ui.Rows
  */
 class SystemWatchers(
     private val activity: Activity,
-    private val rows: Rows,
     private val onChanged: () -> Unit,
     private val onInputWoke: (String) -> Unit,
 ) {
@@ -33,12 +30,9 @@ class SystemWatchers(
 
     private val inputCallback = object : TvInputManager.TvInputCallback() {
         override fun onInputStateChanged(inputId: String, state: Int) {
-            // Cheap in-place update: no rebuild, no layout pass.
-            rows.section(Sections.INPUTS)?.row?.cards()?.firstOrNull { it.tile.inputId == inputId }
-                ?.setDimmed(state == TvInputManager.INPUT_STATE_DISCONNECTED)
             val before = states.put(inputId, state)
             if (state == TvInputManager.INPUT_STATE_CONNECTED && before != null && before != state) {
-                // A CEC device reports as a child of its HDMI port; the Inputs row knows the port.
+                // A CEC device reports as a child of its HDMI port; the input list knows the port.
                 onInputWoke(inputs?.getTvInputInfo(inputId)?.parentId ?: inputId)
             }
         }

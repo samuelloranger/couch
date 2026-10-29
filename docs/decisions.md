@@ -13,7 +13,7 @@ slip in unnoticed. The cost is more hand-written view code, kept manageable by s
 ## Only render properties move
 
 Focus changes animate scale, alpha and translation, which the render thread applies without
-redrawing anything. Rows glide by translating a strip instead of scrolling, so holding the D-pad
+redrawing anything. Lists glide by translating a strip instead of scrolling, so holding the D-pad
 retargets one smooth animation instead of restarting a scroll (the stock smooth scroll snaps when a
 new scroll starts within 250 ms of the last). Text that changes on every focus move lives in
 fixed-size views, so it never triggers a layout pass.

@@ -29,7 +29,7 @@ import org.json.JSONObject
  * lowest rate, which is what "1% low" names, and more is better.
  */
 object BenchmarkCard {
-    fun show(activity: Activity, layout: String, r: Benchmark.Result, last: JSONObject?, fps: Boolean): View {
+    fun show(activity: Activity, r: Benchmark.Result, last: JSONObject?, fps: Boolean): View {
         val c = activity
         val card = LinearLayout(c).apply {
             orientation = LinearLayout.VERTICAL
@@ -41,7 +41,7 @@ object BenchmarkCard {
                 setStroke(c.dp(1), Tokens.GODMODE_COLOR)
             }
         }
-        card.addView(text(c, c.getString(R.string.bench_kicker, layoutName(c, layout), r.presses), 11f, Tokens.textMuted, mono = true))
+        card.addView(text(c, c.getString(R.string.bench_kicker, c.getString(R.string.bench_index), r.presses), 11f, Tokens.textMuted, mono = true))
         val title = when {
             last == null -> R.string.bench_first
             r.p90 < last.optInt("p90") -> R.string.bench_better
@@ -79,7 +79,6 @@ object BenchmarkCard {
         return card
     }
 
-    private fun layoutName(c: Context, layout: String) = c.getString(if (layout == "index") R.string.bench_index else R.string.bench_rows)
 
     private fun stat(c: Context, name: String, value: Int, delta: Int?, fps: Boolean) = LinearLayout(c).apply {
         orientation = LinearLayout.VERTICAL

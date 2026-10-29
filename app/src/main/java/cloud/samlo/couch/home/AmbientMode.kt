@@ -13,7 +13,6 @@ import cloud.samlo.couch.ui.Ambient
 class AmbientMode(
     private val ambient: Ambient,
     private val isResumed: () -> Boolean,
-    private val isOrganizing: () -> Boolean,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private var idleSince = 0L
@@ -24,7 +23,7 @@ class AmbientMode(
     var weatherLine: String? = null
 
     private val enter = Runnable {
-        if (!isResumed() || isOrganizing() || minutes <= 0) return@Runnable
+        if (!isResumed() || minutes <= 0) return@Runnable
         ambient.show(pictures, weatherLine)
     }
 

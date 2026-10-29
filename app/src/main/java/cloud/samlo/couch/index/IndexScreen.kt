@@ -92,8 +92,9 @@ class IndexScreen(
     fun bind(data: IndexData, config: Config) {
         this.data = data
         this.config = config
-        val rebuild = look != config.look
-        look = config.look
+        // The accent is the one setting that changes how rows and cards are drawn.
+        val rebuild = look != config.accent
+        look = config.accent
         topBar.setHasInputs(data.inputs.isNotEmpty())
         binding = true
         list.bind(data.entries, rebuild) { it.requestFocus() }

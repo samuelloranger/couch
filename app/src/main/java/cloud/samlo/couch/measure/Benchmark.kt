@@ -12,8 +12,8 @@ import org.json.JSONObject
 /**
  * Godmode's benchmark: a fixed set of D-pad presses sent to Couch's own window (no permission
  * needed for one's own window), the frames that follow each press timed like the HUD times them.
- * Each layout has its own script, and a result is only compared with the last one of the same
- * layout and script, so changing the script never makes a run look better or worse.
+ * A result is only compared with the last one of the same script, so changing the script never
+ * makes a run look better or worse.
  */
 class Benchmark(private val activity: Activity) {
     class Result(val p50: Int, val p90: Int, val p99: Int, val slow: Int, val frames: Int, val presses: Int, val histogram: IntArray)
@@ -27,9 +27,9 @@ class Benchmark(private val activity: Activity) {
     val running: Boolean get() = done != null
 
     /** Runs [script] from where the home screen was reset to; [onDone] gets null when a real press stopped it. */
-    fun run(index: Boolean, onDone: (Result?) -> Unit) {
+    fun run(onDone: (Result?) -> Unit) {
         if (running) return
-        val keys = if (index) INDEX_SCRIPT else ROWS_SCRIPT
+        val keys = INDEX_SCRIPT
         pressesNs = LongArray(keys.size)
         frames.clear()
         done = onDone
@@ -84,11 +84,8 @@ class Benchmark(private val activity: Activity) {
         private const val START_MS = 800L
         /** Slower than the 260 ms glide is long, so each press is measured on its own. */
         private const val GAP_MS = 300L
-        private val R = KeyEvent.KEYCODE_DPAD_RIGHT
-        private val L = KeyEvent.KEYCODE_DPAD_LEFT
         private val D = KeyEvent.KEYCODE_DPAD_DOWN
         private val U = KeyEvent.KEYCODE_DPAD_UP
-        private val ROWS_SCRIPT = (List(10) { R } + D + List(10) { R } + D + List(10) { L } + U + List(10) { L } + U).let { it + it }
         private val INDEX_SCRIPT = (List(20) { D } + List(20) { U }).let { it + it }
 
         /** Frame times in 2 ms buckets from 0 to 32 ms; the last bucket holds everything slower. */
@@ -98,14 +95,17 @@ class Benchmark(private val activity: Activity) {
             return buckets
         }
 
-        /** The last result for [layout] with the current script, or null. */
-        fun last(activity: Activity, layout: String): JSONObject? =
-            Prefs.of(activity).getString("bench:$layout", null)?.let { runCatching { JSONObject(it) }.getOrNull() }
+        /** Where the last result is kept; the key predates the one layout, so earlier runs still compare. */
+        private const val LAST = "bench:index"
+
+        /** The last result with the current script, or null. */
+        fun last(activity: Activity): JSONObject? =
+            Prefs.of(activity).getString(LAST, null)?.let { runCatching { JSONObject(it) }.getOrNull() }
                 ?.takeIf { it.optInt("script") == SCRIPT }
 
-        fun save(activity: Activity, layout: String, r: Result) {
+        fun save(activity: Activity, r: Result) {
             val json = JSONObject().put("script", SCRIPT).put("p50", r.p50).put("p90", r.p90).put("p99", r.p99)
-            Prefs.of(activity).edit().putString("bench:$layout", json.toString()).apply()
+            Prefs.of(activity).edit().putString(LAST, json.toString()).apply()
         }
     }
 }

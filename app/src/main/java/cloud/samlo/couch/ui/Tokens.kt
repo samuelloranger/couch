@@ -50,27 +50,10 @@ object Tokens {
     const val APP_W = 164
     const val APP_H = 92
 
-    /** Program cards in channel rows, keyed by TvContract poster aspect ratio. */
-    fun programSize(ratio: Int): Pair<Int, Int> = when (ratio) {
-        1 -> 138 to 92 // 3:2
-        2 -> 123 to 92 // 4:3
-        3 -> 102 to 102 // 1:1
-        4, 5 -> 82 to 123 // 2:3 posters
-        else -> APP_W to APP_H
-    }
-
-    /** Where the rows start; the hero owns everything above. */
-    const val ROWS_TOP = 262
-
-    const val HERO_FADE_MS = 320L
-    /** The backdrop only changes once focus has rested, so fast scrolling never decodes art. */
-    const val HERO_SETTLE_MS = 380L
-
     /** Row and column glides; long enough to read as motion, short enough to keep up with key repeat. */
     const val GLIDE_MS = 260L
 
     const val FOCUS_SCALE = 1.08f
-    const val MOVE_SCALE = 1.14f
     const val PRESS_SCALE = 1.02f
     const val FOCUS_IN_MS = 200L
     const val FOCUS_OUT_MS = 140L

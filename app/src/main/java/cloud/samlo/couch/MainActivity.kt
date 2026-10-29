@@ -48,12 +48,6 @@ class MainActivity : Activity() {
         home.load()
     }
 
-    @Deprecated("Settings only reports back one action.")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        home.onSettingsResult(resultCode)
-    }
-
     // Opted out of predictive back in the manifest, so this legacy hook still swallows Back.
     @SuppressLint("GestureBackNavigation")
     @Deprecated("Home has nowhere to go back to.")

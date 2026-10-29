@@ -11,40 +11,35 @@ import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.settings.Dialogs
-import cloud.samlo.couch.settings.IconPickerActivity
 import cloud.samlo.couch.ui.Card
 
-/** The long-press menu on a card, and the actions it offers: move, rename, icon, hide, app info. */
+/**
+ * The long-press menu on an app or a program card, and the actions it offers: rename, hide, app
+ * info, or open the program's app. Inputs are named, given icons and hidden in settings.
+ */
 class CardMenus(
     private val activity: Activity,
     private val config: () -> Config,
     private val files: UserFiles,
     private val reload: () -> Unit,
-    private val startMove: (Card) -> Unit,
 ) {
-    fun show(card: Card) = show(card.tile, card)
+    fun show(card: Card) = show(card.tile)
 
-    /** Without a [card] there is nothing to move, so the menu leaves Move out. */
-    fun show(tile: Tile, card: Card? = null) {
-        val actions = actionsFor(tile, card) ?: return
+    fun show(tile: Tile) {
+        val actions = actionsFor(tile) ?: return
         AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
             .setTitle(tile.label)
             .setItems(actions.map { it.first }.toTypedArray()) { _, which -> actions[which].second() }
             .show()
     }
 
-    private fun actionsFor(tile: Tile, card: Card?): List<Pair<String, () -> Unit>>? = when (tile.kind) {
-        Tile.Kind.APP -> listOfNotNull(
-            card?.let { activity.getString(R.string.menu_move) to { startMove(it) } },
+    private fun actionsFor(tile: Tile): List<Pair<String, () -> Unit>>? = when (tile.kind) {
+        Tile.Kind.APP -> listOf(
             activity.getString(R.string.menu_rename) to { rename(tile) },
             activity.getString(R.string.menu_hide) to { hide(tile) },
             activity.getString(R.string.menu_app_info) to { appInfo(tile.packageName) },
         )
-        Tile.Kind.INPUT -> listOf(
-            activity.getString(R.string.menu_rename) to { rename(tile) },
-            activity.getString(R.string.menu_icon) to { pickIcon(tile) },
-            activity.getString(R.string.menu_hide) to { hide(tile) },
-        )
+        Tile.Kind.INPUT -> null
         Tile.Kind.PROGRAM -> tile.packageName?.let { pkg ->
             val app = AppLabels.of(activity, pkg) ?: pkg
             listOf(
@@ -63,18 +58,9 @@ class CardMenus(
         }
     }
 
-    /** The picker saves the choice; coming back to home reloads the row. */
-    private fun pickIcon(tile: Tile) {
-        activity.startActivity(IconPickerActivity.intent(activity, tile.key, tile.label))
-    }
-
     private fun hide(tile: Tile) {
         val config = config()
-        when (tile.kind) {
-            Tile.Kind.APP -> config.hiddenApps = config.hiddenApps + tile.key
-            Tile.Kind.INPUT -> config.hiddenInputs = config.hiddenInputs + tile.key
-            Tile.Kind.PROGRAM -> return
-        }
+        config.hiddenApps = config.hiddenApps + tile.key
         config.save(files.dir)
         reload()
     }

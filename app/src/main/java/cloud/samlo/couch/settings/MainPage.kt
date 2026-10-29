@@ -19,22 +19,17 @@ import cloud.samlo.couch.update.UpdateCheck
 import cloud.samlo.couch.update.Versions
 
 /**
- * "Customize": the five groups down the left, the focused group's options on the right. Up and
- * down the rail switch groups, Right or OK steps into the options, and Back or Left (on a row
- * that doesn't use it) steps out again. Left/right changes a value in place, OK cycles or opens
- * it, and the focused row explains itself. Rows that only matter for another setting sit indented
- * under it and show only when they apply; options for the Rows layout stay folded at the end of
- * their group while Index is in use, so a layout change doesn't reshuffle the page.
+ * "Customize": the groups down the left, the focused group's options on the right. Up and down
+ * the rail switch groups, Right or OK steps into the options, and Back or Left (on a row that
+ * doesn't use it) steps out again. Left/right changes a value in place, OK cycles or opens it, and
+ * the focused row explains itself. Rows that only matter for another setting sit indented under
+ * it and show only when they apply.
  */
 class MainPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
     private val config get() = ctx.config
-    private val rows get() = config.layout != Config.LAYOUT_INDEX
     private val rail = Rail(ctx, focusable = true)
     private var current = Group.LOOK
-
-    /** Groups whose Rows-layout options were unfolded on this visit. */
-    private val unfolded = mutableSetOf<Group>()
 
     /** How many accesses were off at the last build, so a grant on return updates the warning. */
     private var off = 0
@@ -98,10 +93,9 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         ctx.layout.hint.visibility = View.GONE
         ctx.layout.title.setPadding(ctx.activity.dp(20), 0, 0, ctx.activity.dp(20))
         when (group) {
-            Group.LOOK -> withRowsOnly(group, ::look)
-            Group.WALLPAPER -> withRowsOnly(group, ::wallpaper)
-            Group.HOME -> withRowsOnly(group, ::home)
-            Group.CLOCK -> withRowsOnly(group, ::clock)
+            Group.LOOK -> look()
+            Group.HOME -> home()
+            Group.CLOCK -> clock()
             Group.COUCH -> system()
         }
         // Left from a row that doesn't use it goes back to this group, not to whichever is nearest.
@@ -114,39 +108,6 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun offCount() = Setup.items.count { !it.isOn(ctx.activity) }
 
-    /**
-     * A group's own rows, then the ones only the Rows layout uses. In Index those wait behind
-     * one row that unfolds them, so they are still found without filling the page.
-     */
-    private fun withRowsOnly(group: Group, rows: (RowsOnly) -> Unit) {
-        val only = RowsOnly()
-        rows(only)
-        if (only.builders.isEmpty()) return
-        when {
-            this.rows -> only.builders.forEach { it() }
-            group in unfolded -> {
-                o.note(ctx.str(R.string.rows_only_note))
-                only.builders.forEach { it() }
-            }
-            else -> o.link(
-                ctx.str(R.string.rows_only_more), ctx.str(R.string.rows_only_help),
-                { ctx.activity.resources.getQuantityString(R.plurals.rows_only_count, only.builders.size, only.builders.size) },
-            ) {
-                unfolded += group
-                rebuild(focusAfter = ctx.str(R.string.rows_only_more))
-            }
-        }
-    }
-
-    /** Collects the rows that only change the Rows layout, for [withRowsOnly] to place. */
-    private class RowsOnly {
-        val builders = mutableListOf<() -> Unit>()
-
-        operator fun invoke(build: () -> Unit) {
-            builders += build
-        }
-    }
-
     /** A line above the groups while an access is missing; it opens the permissions page. */
     private fun missingWarning(): RailItem {
         val missing = Setup.items.filterNot { it.isOn(ctx.activity) }
@@ -158,19 +119,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         }
     }
 
-    private fun look(rowsOnly: RowsOnly) {
-        o.choice(
-            ctx.str(R.string.layout), ctx.str(R.string.layout_help),
-            listOf(
-                Option(ctx.str(R.string.layout_rows), Config.LAYOUT_ROWS),
-                Option(ctx.str(R.string.layout_index), Config.LAYOUT_INDEX),
-            ),
-            { config.layout },
-            {
-                config.layout = it
-                rebuild(ctx.str(R.string.layout))
-            },
-        )
+    /** The accent, and ambient mode with the wallpaper it shows: Index has no other wallpaper. */
+    private fun look() {
         o.swatches(
             ctx.str(R.string.accent), ctx.str(R.string.accent_help),
             Accents.all.map { it.hex },
@@ -183,22 +133,22 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 rail.restyle()
             },
         )
-        rowsOnly {
-            o.choice(
-                ctx.str(R.string.card_size), ctx.str(R.string.card_size_help),
-                listOf(
-                    Option(ctx.str(R.string.size_small), "small"),
-                    Option(ctx.str(R.string.size_medium), "medium"),
-                    Option(ctx.str(R.string.size_large), "large"),
-                ),
-                { config.cardSize }, { config.cardSize = it },
-            )
-        }
-        rowsOnly { o.toggle(ctx.str(R.string.show_labels), ctx.str(R.string.show_labels_help), { config.showLabels }, { config.showLabels = it }) }
-        rowsOnly { o.toggle(ctx.str(R.string.show_descriptions), ctx.str(R.string.show_descriptions_help), { config.showDescriptions }, { config.showDescriptions = it }) }
+        val minutes = listOf(2, 5, 10, 20).map { Option(ctx.activity.getString(R.string.minutes_short, it), it.toString()) }
+        o.choice(
+            ctx.str(R.string.ambient), ctx.str(R.string.ambient_help),
+            listOf(Option(ctx.str(R.string.ambient_never), "0")) + minutes,
+            { config.ambientMinutes.toString() },
+            {
+                val was = config.ambientMinutes > 0
+                config.ambientMinutes = it.toInt()
+                // The wallpaper rows come and go with ambient mode; other steps keep the page as it is.
+                if (was != (config.ambientMinutes > 0)) rebuild(ctx.str(R.string.ambient))
+            },
+        )
+        if (config.ambientMinutes > 0) o.nested(::wallpaper)
     }
 
-    private fun wallpaper(rowsOnly: RowsOnly) {
+    private fun wallpaper() {
         o.choice(
             ctx.str(R.string.wallpaper_source), ctx.str(R.string.wallpaper_source_help),
             listOf(
@@ -211,62 +161,34 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             {
                 val was = config.wallpaper == REDDIT
                 config.wallpaper = it
-                // The subreddit rows come and go with Reddit; other steps keep the list as it is.
+                // The subreddit rows come and go with Reddit; other steps keep the page as it is.
                 if (was != (it == REDDIT)) rebuild(ctx.str(R.string.wallpaper_source))
             },
         )
-        if (config.wallpaper == REDDIT) o.nested {
-            o.text(
-                ctx.str(R.string.subreddit), ctx.str(R.string.subreddit_help), Config.DEFAULT_SUBREDDIT,
-                { "r/" + config.subreddit }, { config.subreddit = it.removePrefix("r/").ifEmpty { Config.DEFAULT_SUBREDDIT } },
-            )
-            o.choice(
-                ctx.str(R.string.wallpaper_hours), ctx.str(R.string.wallpaper_hours_help),
-                listOf(
-                    Option(ctx.str(R.string.hours_1), "1"),
-                    Option(ctx.str(R.string.hours_3), "3"),
-                    Option(ctx.str(R.string.hours_6), "6"),
-                    Option(ctx.str(R.string.hours_24), "24"),
-                ),
-                { config.wallpaperHours.toString() }, { config.wallpaperHours = it.toInt() },
-            )
-        }
-        // Ambient mode is the wallpaper at full screen, with the clock and the weather over it.
-        val minutes = listOf(2, 5, 10, 20).map { Option(ctx.activity.getString(R.string.minutes_short, it), it.toString()) }
-        o.choice(
-            ctx.str(R.string.ambient), ctx.str(R.string.ambient_help),
-            listOf(Option(ctx.str(R.string.ambient_never), "0")) + minutes,
-            { config.ambientMinutes.toString() }, { config.ambientMinutes = it.toInt() },
+        if (config.wallpaper != REDDIT) return
+        o.text(
+            ctx.str(R.string.subreddit), ctx.str(R.string.subreddit_help), Config.DEFAULT_SUBREDDIT,
+            { "r/" + config.subreddit }, { config.subreddit = it.removePrefix("r/").ifEmpty { Config.DEFAULT_SUBREDDIT } },
         )
-        // Index has no hero to darken; its wallpaper only shows in ambient mode.
-        rowsOnly {
-            o.choice(
-                ctx.str(R.string.dim), ctx.str(R.string.dim_help),
-                listOf(
-                    Option(ctx.str(R.string.dim_light), "light"),
-                    Option(ctx.str(R.string.dim_medium), "medium"),
-                    Option(ctx.str(R.string.dim_strong), "strong"),
-                ),
-                { config.dim }, { config.dim = it },
-            )
-        }
+        o.choice(
+            ctx.str(R.string.wallpaper_hours), ctx.str(R.string.wallpaper_hours_help),
+            listOf(
+                Option(ctx.str(R.string.hours_1), "1"),
+                Option(ctx.str(R.string.hours_3), "3"),
+                Option(ctx.str(R.string.hours_6), "6"),
+                Option(ctx.str(R.string.hours_24), "24"),
+            ),
+            { config.wallpaperHours.toString() }, { config.wallpaperHours = it.toInt() },
+        )
     }
 
-    private fun home(rowsOnly: RowsOnly) {
-        // Index only uses the channels among the rows, so the same page is about those there.
-        if (rows) o.page(ctx.str(R.string.settings_rows), ctx.str(R.string.settings_rows_help)) { open(SettingsActivity.PAGE_ROWS) }
-        else o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_ROWS) }
+    private fun home() {
+        o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
         o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) { open(SettingsActivity.PAGE_APPS) }
         o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
-        rowsOnly {
-            o.leaves(ctx.str(R.string.settings_organize), ctx.str(R.string.settings_organize_help)) {
-                ctx.activity.setResult(SettingsActivity.RESULT_ORGANIZE)
-                ctx.activity.finish()
-            }
-        }
     }
 
-    private fun clock(rowsOnly: RowsOnly) {
+    private fun clock() {
         o.toggle(ctx.str(R.string.clock24h), ctx.str(R.string.clock24h_help), { config.clock24h }, { config.clock24h = it })
         o.toggle(ctx.str(R.string.weather), ctx.str(R.string.weather_help), { config.weather }) {
             config.weather = it
@@ -283,7 +205,6 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 { if (config.fahrenheit) "f" else "c" }, { config.fahrenheit = it == "f" },
             )
         }
-        rowsOnly { o.toggle(ctx.str(R.string.show_date), ctx.str(R.string.show_date_help), { config.showDate }, { config.showDate = it }) }
     }
 
     private fun system() {
@@ -353,18 +274,10 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun open(page: String) = ctx.activity.startActivity(SettingsActivity.intent(ctx.activity, page))
 
-    /**
-     * The group's options again, after a change that adds or removes rows. Focus goes back to the
-     * row titled [focus], or to the row now standing after the one titled [focusAfter].
-     */
-    private fun rebuild(focus: String? = null, focusAfter: String? = null) = ctx.layout.list.post {
-        val before = focusAfter?.let { title -> ctx.layout.list.indexOfChild(o.rows().firstOrNull { it.label.text == title }) } ?: -1
+    /** The group's options again, after a change that adds or removes rows; focus back on [focus]. */
+    private fun rebuild(focus: String) = ctx.layout.list.post {
         show(current)
-        if (before >= 0) {
-            (ctx.layout.items().drop(before).firstOrNull { it.isFocusable } ?: o.rows().firstOrNull())?.requestFocus()
-        } else {
-            refocus(focus)
-        }
+        refocus(focus)
     }
 
     private fun refocus(title: String?) {

@@ -18,11 +18,11 @@ hero:
 
 features:
   - title: Smooth on weak hardware
-    details: Focus only animates render properties, rows glide instead of scrolling, and every image is decoded at the size it is drawn. Frames stay under 16 ms on a 2020 TV chip.
+    details: Focus only animates render properties, lists glide instead of scrolling, and every image is decoded at the size it is drawn. Frames stay under 16 ms on a 2020 TV chip.
   - title: Nothing you didn't ask for
     details: No ads, no sponsored rows, no analytics. The network is only used for the features you turn on.
   - title: Yours to arrange
-    details: Reorder, rename and hide apps, inputs and rows, pick each input's icon, and change the accent colour, all from the remote.
+    details: Rename and hide apps and inputs, pick each input's icon and which channels show, and change the accent colour, all from the remote.
   - title: Takes over HOME
     details: Works on TVs that hardwire the HOME button to the stock launcher, and repairs itself when Android turns it off.
 ---
@@ -52,13 +52,13 @@ features:
 
 ## Features
 
-- Hero area showing the focused show or film: backdrop, title, episode, time left, synopsis.
-- Apps row, HDMI inputs row with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…),
-  and the preview channels apps publish.
+- Your apps ordered by screen time, beside what the selected one offers: its preview channel,
+  the program's title and synopsis, and your week with it.
+- An Inputs list with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…).
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
-- Weather (Open-Meteo, located automatically or by city), clock, now playing.
+- Weather (Open-Meteo, located automatically or by city), now playing.
 - Ambient mode after a few idle minutes: full-screen wallpaper, large clock, weather.
-- Long-press any card to move, rename, hide or change its icon.
+- Long-press an app to rename or hide it.
 - Updates itself: an Update button appears when a new release is out.
 
 The interface is in English, or French on a TV set to French. Start with [Setup](./setup).

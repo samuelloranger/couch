@@ -28,26 +28,24 @@ Couch instead of the stock home screen.
 
 - **Smooth on weak hardware.** On a 2020 MediaTek-based TV, Couch renders frames in
   10 / 13 / 14 ms (p50 / p90 / p99) where a popular third-party launcher needs 14 / 25 / 31 ms
-  for the same remote presses. Focus only animates render properties, rows glide by translation,
+  for the same remote presses. Focus only animates render properties, lists glide by translation,
   and every bitmap is decoded at the exact size it is drawn.
 - **Nothing you didn't ask for.** No ads, no sponsored rows, no analytics. The network is only
   used for the features you turn on (wallpaper, weather, app artwork).
-- **Yours to arrange.** Every row, app, input and colour can be changed from the remote.
+- **Yours to arrange.** Every app, channel, input and colour can be changed from the remote.
 
 ## Features
 
-- Two layouts: **Index** (the default), a list of your apps beside what the selected one offers
-  and your screen time with it, or rows of cards with a hero area for the focused show or film.
-- Apps row, recently used apps, HDMI inputs row with brand logos (PlayStation, Xbox, Nintendo
-  Switch, Apple TV…), and the preview channels apps publish (YouTube, Jellyfin and others).
+- **Index**: a list of your apps, ordered by screen time, beside what the selected one offers
+  (the preview channels apps publish: YouTube, Jellyfin and others) and your week with it.
+- An Inputs list with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…).
 - When a console or player on an input turns on, a chip offers to switch to it.
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
-- Weather (Open-Meteo, located automatically or by city), clock, now playing.
+- Weather (Open-Meteo, located automatically or by city), now playing.
 - Ambient mode after a few idle minutes: full-screen wallpaper, large clock, weather.
-- Long-press any card to move, rename, hide or change its icon.
-- **Customize**: card size, accent colour, dimming, names under cards, row order and
-  visibility, app channels, inputs, clock format, weather, ambient delay, and which permissions
-  are still missing.
+- Long-press an app to rename or hide it.
+- **Customize**: accent colour, ambient mode and its wallpaper, app channels, which apps show,
+  inputs (name, icon, shown), clock format, weather, and which permissions are still missing.
 - HOME button takeover on TVs that hardwire HOME to the stock launcher (Google TV, Fire TV, Sony
   Bravia and others), repairing itself if Android drops it.
 - Updates itself: an Update button appears when a new release is out, one confirmation installs it.

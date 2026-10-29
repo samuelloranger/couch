@@ -6,12 +6,12 @@ no file is longer than about 160 lines.
 ```
 cloud.samlo.couch
 ├── MainActivity, HomeAccessibilityService, MediaListener, BootReceiver
-├── home/      the home screen: wiring, loading, binding, top bar, menus, reorder, ambient
-├── ui/        reusable views: Card, FocusRow, Rows, Hero, Ambient, NowPlaying, tokens
+├── home/      the home screen's wiring: loading, system watchers, long-press menus, ambient
+├── ui/        reusable views: Card, FocusRow, Ambient, NowPlaying, chips, tokens
 ├── data/      config, apps, inputs, channels, weather, wallpapers, image pipeline
 ├── update/    daily release check, download, checksum, Android's package installer
 ├── settings/  Customize: activity shell, option rows, one file per page, icon picker
-├── index/     the Index layout: app list, program text, channel row, the week, system line
+├── index/     the home screen itself: app list, program text, channel row, the week, system line
 ├── godmode/   the hidden page: TV settings, real-home takeover, tools, frame readouts
 ├── debloat/   removing the apps a TV came with, measured and reversible, through the TV's own shell
 ├── adb/       a small ADB client (key, protocol, shell) for the TV's own debugging port
@@ -30,22 +30,20 @@ loader thread                                         main thread
 ─────────────                                         ───────────
 config.json ─▶ HomeLoader
                 ├─ AppSource ───┐
-                ├─ InputSource ─┼─▶ SectionBuilder ─SectionData─▶ SectionBinder
-                ├─ Programs ────┘                                    │
-                └─ Weather, Wallpapers                               ▼
-                                                     Rows / FocusRow / Card ─focus─▶ Hero
+                ├─ InputSource ─┼─▶ IndexBuilder ─IndexData─▶ IndexScreen.bind
+                ├─ Programs ────┘                               │
+                └─ Weather, Wallpapers                          ▼
+                                                     AppList / FocusRow / Card
 settings/* ─▶ config.json
 ```
 
 1. `HomeLoader` runs on a single background thread: it reads `config.json`, lists apps and inputs,
-   queries preview channels, and fetches weather and the wallpaper. Banners are rendered there, at
-   their final pixel size.
-2. `SectionBuilder` turns that into `SectionData`: one per row, in the user's order, each with a
-   signature of everything that affects how it looks.
-3. `SectionBinder` applies it on the main thread. Rows whose signature didn't change are left
-   alone; inside a changed row, only cards whose data or look changed are replaced
-   (`FocusRow.update` and `arrange`). The focused card is never detached before focus has
-   somewhere to go, so reloads don't move you.
+   queries preview channels and screen time, and fetches the weather and the ambient pictures.
+   Banners are rendered there, at their final pixel size.
+2. `IndexBuilder` turns that into `IndexData`: the apps in order, each with what it offers.
+3. `IndexScreen.bind` applies it on the main thread. Rows and cards whose data didn't change are
+   left alone (`FocusRow.update` and `arrange`), and the focused one is never detached before
+   focus has somewhere to go, so reloads don't move you.
 
 Loads happen on every return to the home screen and when apps or inputs change
 (`SystemWatchers`). Because unchanged rows aren't touched, a reload is invisible.
@@ -56,19 +54,15 @@ Loads happen on every return to the home screen and when apps or inputs change
   pre-rounded bitmap, remote art loaded at its exact size, or an icon with a label.
 - **`FocusRow`** never scrolls: it translates its strip so the focused card sits at a fixed
   anchor, retargeting one animation per move. It draws the focused card last and keeps left/right
-  inside the row. Coming back from another row returns to the card you left.
-- **`Rows`** does the same vertically: the focused row glides to the top of the rows area.
-- **`Hero`** updates its text on every move (fixed-size views, so no layout pass) and only loads
-  the backdrop once focus has rested, crossfading between two stacked image views.
+  inside the row.
 - **`Tokens`** holds every colour, size and timing. Everything shares one expo-out curve.
 
-## Index layout
+## Home screen
 
-`IndexScreen` is the second layout, shown instead of the hero and rows when `config.layout` is
-`index`; `HomeLoader` then builds `IndexData` (`IndexBuilder`) instead of rows. Everything sits at
-fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves never lay out.
+`IndexScreen` is the home screen, called Index in the docs. Everything sits at fixed positions
+from `IndexTokens` (dp on the 960x540 canvas), so focus moves never lay out.
 
-- **`AppList`** glides its column by translation, like `Rows`; `AppRow` only swaps colours when
+- **`AppList`** glides its column by translation instead of scrolling; `AppRow` only swaps colours when
   selected. `IndexScreen.focusSearch` routes the D-pad between the list, the channel row (a
   `FocusRow` of `Card`s with a thin ring) and the top pills.
 - **`Spotlight`** is text only: the focused program's source, title, synopsis and progress, or the
@@ -99,9 +93,9 @@ fixed positions from `IndexTokens` (dp on the 960x540 canvas), so focus moves ne
 ## Settings
 
 `SettingsActivity` hosts one page at a time, chosen by an intent extra. The main page is a
-`Rail` of the five `Group`s down the left, each with a one-line summary of how it is set, and the
+`Rail` of the four `Group`s down the left, each with a one-line summary of how it is set, and the
 focused group's options on the right; Right or OK steps into them, Back or Left steps out. The
-pages that belong to a group (rows and channels, apps, inputs, permissions, other TVs, remote buttons) show
+pages that belong to a group (channels, apps, inputs, permissions, other TVs, remote buttons) show
 the same rail without focus, their group lit. Godmode and its built-in apps page keep the full
 width. Pages build their list from `OptionList` helpers, each producing an `OptionRow` whose right
 side shows what kind of row it is: `choice` (every option side by side when two or three short ones

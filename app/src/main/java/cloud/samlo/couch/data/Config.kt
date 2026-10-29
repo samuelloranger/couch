@@ -18,23 +18,14 @@ class Config {
     /** Input key to an [InputIcon] id. */
     var inputIcons: Map<String, String> = emptyMap()
 
-    // Rows
-    var sectionOrder: List<String> = emptyList()
-    var hiddenSections: Set<String> = emptySet()
+    // Channels
     /** Channel id to shown or not, overriding what the stock launcher had enabled. */
     var channels: Map<String, Boolean> = emptyMap()
 
     // Look
-    /** "index" (a list of apps beside what the focused one offers, the default) or "rows" (cards in rows). */
-    var layout: String = LAYOUT_INDEX
-    var cardSize: String = "medium"
     var accent: String = Accents.default
     var wallpaper: String = "daily"
-    var dim: String = "medium"
-    var showLabels = false
-    var showDescriptions = true
     var clock24h = true
-    var showDate = true
 
     // Wallpaper: "daily" (Bing photo of the day), "reddit", "gradient" or "custom" (wallpaper.jpg)
     var subreddit = DEFAULT_SUBREDDIT
@@ -80,16 +71,6 @@ class Config {
     /** Godmode's frame HUD on the home screen: [HUD_OFF], [HUD_MS] or [HUD_FPS]. */
     var hud = HUD_OFF
 
-    val cardScale: Float
-        get() = when (cardSize) {
-            "small" -> 0.85f
-            "large" -> 1.18f
-            else -> 1f
-        }
-
-    /** Changes whenever a setting that affects how cards are drawn changes. */
-    val look: String get() = "$cardSize|$accent|$showLabels"
-
     /** Written atomically so a half-written file never wipes the user's setup. */
     fun save(dir: File?) {
         dir ?: return
@@ -110,9 +91,6 @@ class Config {
 
         /** The same frames as a rate, capped at what the screen can actually show. */
         const val HUD_FPS = "fps"
-
-        const val LAYOUT_ROWS = "rows"
-        const val LAYOUT_INDEX = "index"
 
         /** Defaults stay generic: the user pins their own apps. */
         val DEFAULT_PINNED = emptyList<String>()

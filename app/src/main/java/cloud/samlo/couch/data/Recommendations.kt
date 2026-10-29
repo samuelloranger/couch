@@ -61,8 +61,6 @@ object Recommendations {
             label = item.title,
             packageName = item.packageName,
             imageUrl = item.image,
-            backdropUrl = item.image,
-            meta = AppLabels.of(context, item.packageName),
             description = item.text,
             progress = item.progress,
             intent = fallback.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),

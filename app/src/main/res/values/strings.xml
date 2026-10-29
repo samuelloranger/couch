@@ -9,7 +9,6 @@
     <!-- Home -->
     <string name="section_inputs">Inputs</string>
     <string name="section_apps">Apps</string>
-    <string name="section_recent">Recent</string>
     <string name="input_offer">Switch to %1$s</string>
     <string name="input_disconnected">Disconnected</string>
     <string name="input_menu_hint">"OK: switch  ·  Back: close"</string>
@@ -17,10 +16,6 @@
     <string name="settings">Settings</string>
     <string name="now_playing_paused">Paused</string>
     <string name="channel_recommended">Recommended</string>
-    <string name="program_season_episode">S%1$s E%2$s</string>
-    <string name="program_episode">E%1$s</string>
-    <string name="program_remaining_hours">%1$d h %2$s left</string>
-    <string name="program_remaining_minutes">%1$d min left</string>
 
     <!-- Index layout -->
     <string name="index_minutes">%1$d min</string>
@@ -52,15 +47,10 @@
     <string name="index_adb_on">on</string>
 
     <!-- Card menus and reordering -->
-    <string name="menu_move">Move</string>
     <string name="menu_hide">Hide</string>
     <string name="menu_rename">Rename</string>
-    <string name="menu_icon">Change icon</string>
     <string name="menu_app_info">App info</string>
     <string name="menu_open_app">Open %1$s</string>
-    <string name="organize_title">Rearrange apps</string>
-    <string name="organize_idle">OK to pick up an app  ·  Back when done</string>
-    <string name="organize_moving">Left or right to move it  ·  OK to drop it</string>
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
 
@@ -106,7 +96,6 @@
     <string name="weather_snow">Snow</string>
     <string name="weather_storm">Thunderstorm</string>
     <string name="weather_temperature">%1$d°</string>
-    <string name="weather_place_range">"%1$s  ·  %2$d° / %3$d°"</string>
     <string name="weather_line">"%1$d°  %2$s  ·  %3$s"</string>
 
     <!-- Settings: shared -->
@@ -117,15 +106,6 @@
 
     <!-- Settings: appearance -->
     <string name="group_look">Appearance</string>
-    <string name="layout">Layout</string>
-    <string name="layout_help">Rows: apps, inputs and channels as rows of cards. Index: a list of your apps, with what the selected one has for you and how much you use it.</string>
-    <string name="layout_rows">Rows</string>
-    <string name="layout_index">Index</string>
-    <string name="card_size">Card size</string>
-    <string name="card_size_help">Small to see more apps at once, large to read from across the room.</string>
-    <string name="size_small">Small</string>
-    <string name="size_medium">Medium</string>
-    <string name="size_large">Large</string>
     <string name="accent">Accent colour</string>
     <string name="accent_help">The glow around the selected card and the progress bars.</string>
     <string name="accent_ember">Ember</string>
@@ -134,14 +114,9 @@
     <string name="accent_sky">Sky</string>
     <string name="accent_coral">Coral</string>
     <string name="accent_white">White</string>
-    <string name="show_labels">Names under cards</string>
-    <string name="show_labels_help">Shows each app’s and input’s name under its card.</string>
-    <string name="show_descriptions">Descriptions</string>
-    <string name="show_descriptions_help">The synopsis of the selected film or episode, at the top of the screen.</string>
 
     <!-- Settings: wallpaper -->
-    <string name="group_wallpaper">Wallpaper and ambient</string>
-    <string name="wallpaper_source">Source</string>
+    <string name="wallpaper_source">Wallpaper</string>
     <string name="wallpaper_source_help">Photo of the day: a new Bing photo every day.\nReddit: the best images of a subreddit, changing through the day.\nMy image: wallpaper.jpg, sent over ADB.</string>
     <string name="wallpaper_daily">Photo of the day</string>
     <string name="wallpaper_reddit">Reddit</string>
@@ -155,31 +130,20 @@
     <string name="hours_3">Every 3 h</string>
     <string name="hours_6">Every 6 h</string>
     <string name="hours_24">Every day</string>
-    <string name="dim">Dim</string>
-    <string name="dim_help">The darker it is, the easier text is to read on a bright image.</string>
-    <string name="dim_light">Light</string>
-    <string name="dim_medium">Medium</string>
-    <string name="dim_strong">Strong</string>
 
     <!-- Settings: home -->
     <string name="group_home">Home screen</string>
-    <string name="settings_rows">Rows and channels</string>
-    <string name="settings_rows_help">Which rows the home screen shows, app channels included, and in what order.</string>
     <string name="settings_inputs">Inputs</string>
     <string name="settings_inputs_help">The name and icon of each HDMI input, and which ones the home screen shows.</string>
     <string name="settings_channels">App channels</string>
     <string name="settings_channels_help">The rows your apps publish (Jellyfin, YouTube…). Turn on the ones you want to see.</string>
     <string name="settings_visibility">Show or hide apps</string>
     <string name="settings_visibility_help">Choose which apps the home screen shows.</string>
-    <string name="settings_organize">Rearrange apps</string>
-    <string name="settings_organize_help">Goes back home: OK to pick up an app, left or right to move it.</string>
 
     <!-- Settings: clock and weather -->
     <string name="group_clock">Clock and weather</string>
     <string name="clock24h">24-hour clock</string>
     <string name="clock24h_help">Otherwise, 12-hour format.</string>
-    <string name="show_date">Date</string>
-    <string name="show_date_help">The date under the time.</string>
     <string name="weather">Weather</string>
     <string name="weather_help">Current temperature and sky, next to the time. Data from Open-Meteo.</string>
     <string name="city">City</string>
@@ -209,9 +173,6 @@
     <string name="about_help">Couch, your launcher.</string>
 
     <!-- Settings: sub-pages -->
-    <string name="rows_hint">"OK: show or hide  ·  Long press: move"</string>
-    <string name="rows_item_help">Long press to move it.</string>
-    <string name="rows_moving_hint">"Up or down to move  ·  OK to drop"</string>
     <string name="channels_hint">Turn on the channels to show on the home screen.</string>
     <string name="channels_empty">No channels yet. Apps publish them once you open them.</string>
     <string name="inputs_hint">"OK: choose the icon  ·  Long press: rename"</string>
@@ -444,7 +405,6 @@
     <string name="bench_delta">%1$s%2$d ms</string>
     <string name="bench_meta">slow frames: %1$d/%2$d · %3$s · Android %4$s · Couch %5$s</string>
     <string name="bench_close">Press any key to close.</string>
-    <string name="bench_rows">ROWS</string>
     <string name="bench_index">INDEX</string>
     <!-- Godmode's live readings; the spaces align the monospace columns. -->
     <string name="readout_ram">"RAM       %1$d%% used"</string>
@@ -623,13 +583,6 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="quick_section_bluetooth">Bluetooth audio</string>
     <string name="bt_connected">Connected</string>
     <string name="bt_not_connected">Not connected</string>
-    <string name="rows_only_more">More for the Rows layout</string>
-    <string name="rows_only_help">These options only change the Rows layout. Pick Rows under Layout to see them at work.</string>
-    <string name="rows_only_note">For the Rows layout</string>
-    <plurals name="rows_only_count">
-        <item quantity="one">%d option</item>
-        <item quantity="other">%d options</item>
-    </plurals>
     <plurals name="setup_missing">
         <item quantity="one">%d permission is off</item>
         <item quantity="other">%d permissions are off</item>

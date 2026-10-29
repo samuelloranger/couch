@@ -25,8 +25,6 @@ class Tile(
     val dimmed: Boolean = false,
     val inputId: String? = null,
     val packageName: String? = null,
-    val backdropUrl: String? = null,
-    val meta: String? = null,
     val description: String? = null,
     val progress: Float = -1f,
     /** Solid card colour behind the icon, for brand marks. */

@@ -4,7 +4,6 @@ import android.content.Context
 import android.text.format.DateFormat
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewTreeObserver
 import android.widget.FrameLayout
 import android.widget.TextClock
 import java.util.Locale
@@ -54,23 +53,3 @@ fun View.fadeOut() {
 
 private const val APPEAR_RISE_DP = 6f
 
-/**
- * Call just before reordering [views] in their parent. Once the next layout has placed them,
- * each glides from where it was drawn to its new place: translation only, so the move costs one
- * layout pass, not one per frame. The first view must stay attached (the focused one).
- */
-fun glideToNewPlaces(vararg views: View) {
-    val anchor = views.first()
-    val before = views.map { floatArrayOf(it.left + it.translationX, it.top + it.translationY) }
-    anchor.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
-        override fun onPreDraw(): Boolean {
-            anchor.viewTreeObserver.removeOnPreDrawListener(this)
-            views.forEachIndexed { i, view ->
-                view.translationX = before[i][0] - view.left
-                view.translationY = before[i][1] - view.top
-                view.animate().translationX(0f).translationY(0f).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
-            }
-            return true
-        }
-    })
-}

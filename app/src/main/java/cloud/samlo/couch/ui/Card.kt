@@ -2,7 +2,6 @@ package cloud.samlo.couch.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.view.Gravity
 import android.view.KeyEvent
@@ -38,15 +37,6 @@ class Card(
     private var alive = true
     private val content = CardContent(context, tile, widthDp, heightDp, images, radiusDp) { alive }
 
-    var moving = false
-        set(value) {
-            field = value
-            (ringDrawable.getDrawable(1) as GradientDrawable).setStroke(
-                context.dp(3),
-                if (value) Tokens.accent else Tokens.ring,
-            )
-            scaleTo(if (value) Tokens.MOVE_SCALE else Tokens.FOCUS_SCALE, Tokens.FOCUS_IN_MS)
-        }
 
     init {
         isFocusable = true
@@ -111,12 +101,12 @@ class Card(
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
-        if (isConfirmKey(keyCode) && event.repeatCount == 0 && !moving) scaleTo(Tokens.PRESS_SCALE, Tokens.PRESS_MS)
+        if (isConfirmKey(keyCode) && event.repeatCount == 0) scaleTo(Tokens.PRESS_SCALE, Tokens.PRESS_MS)
         return super.onKeyDown(keyCode, event)
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (isConfirmKey(keyCode) && hasFocus() && !moving) scaleTo(Tokens.FOCUS_SCALE, Tokens.FOCUS_IN_MS)
+        if (isConfirmKey(keyCode) && hasFocus()) scaleTo(Tokens.FOCUS_SCALE, Tokens.FOCUS_IN_MS)
         return super.onKeyUp(keyCode, event)
     }
 

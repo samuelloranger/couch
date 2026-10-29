@@ -75,7 +75,6 @@ object InputSource {
             key = key,
             kind = Tile.Kind.INPUT,
             label = name,
-            meta = listOfNotNull(systemLabel.takeIf { it != name }, disconnectedLabel.takeIf { disconnected }).joinToString("  ·  "),
             subtitle = when {
                 disconnected -> disconnectedLabel
                 name != systemLabel -> systemLabel

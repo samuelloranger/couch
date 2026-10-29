@@ -29,7 +29,7 @@ internal fun GodmodePage.measureRows() {
 
 /** The last run's p90, in whichever unit the HUD is set to. */
 private fun GodmodePage.lastRun(): String {
-    val p90 = Benchmark.last(ctx.activity, ctx.config.layout)?.optInt("p90") ?: return ""
+    val p90 = Benchmark.last(ctx.activity)?.optInt("p90") ?: return ""
     if (ctx.config.hud != Config.HUD_FPS) return ctx.activity.getString(R.string.bench_value, p90)
     val hz = ctx.activity.windowManager.defaultDisplay?.refreshRate?.takeIf { it > 1f } ?: 60f
     return ctx.activity.getString(R.string.bench_value_fps, fps(p90.toFloat(), hz))

@@ -18,8 +18,6 @@ class ConfigTest {
         val config = Config()
         assertTrue(config.pinnedApps.isEmpty())
         assertTrue("com.sony.dtv.promos" in config.hiddenApps)
-        assertEquals("medium", config.cardSize)
-        assertEquals("index", config.layout)
         assertEquals(5, config.ambientMinutes)
         assertEquals(3, config.wallpaperHours)
         assertEquals(Config.DEFAULT_SUBREDDIT, config.subreddit)
@@ -33,18 +31,10 @@ class ConfigTest {
             hiddenInputs = setOf("hdmi3")
             names = mapOf("hdmi4" to "Console")
             inputIcons = mapOf("hdmi4" to "ps5")
-            sectionOrder = listOf("inputs", "apps", "ch:7")
-            hiddenSections = setOf("ch:7")
             channels = mapOf("7" to true, "8" to false)
-            layout = "rows"
-            cardSize = "large"
             accent = "#34D399"
             wallpaper = "reddit"
-            dim = "strong"
-            showLabels = true
-            showDescriptions = false
             clock24h = false
-            showDate = false
             subreddit = "EarthPorn"
             wallpaperHours = 6
             weather = false
@@ -58,8 +48,18 @@ class ConfigTest {
         assertEquals(mapOf("7" to true, "8" to false), copy.channels)
         assertEquals("ps5", copy.inputIcons["hdmi4"])
         assertEquals("Montréal", copy.weatherCity)
-        assertFalse(copy.showDescriptions)
-        assertEquals("rows", copy.layout)
+        assertFalse(copy.clock24h)
+    }
+
+    @Test
+    fun aFileFromTheRowsLayoutStillLoadsAndForgetsIt() {
+        val old = """{"layout":"rows","cardSize":"large","sectionOrder":["inputs","apps"],"hiddenSections":["ch:7"],""" +
+            """"dim":"strong","showLabels":true,"showDescriptions":false,"showDate":false,"weatherCity":"Montréal"}"""
+        val config = Config.fromJson(old)
+        assertEquals("Montréal", config.weatherCity)
+        listOf("layout", "cardSize", "sectionOrder", "hiddenSections", "dim", "showLabels", "showDescriptions", "showDate").forEach {
+            assertFalse(it, config.toJson().contains("\"$it\""))
+        }
     }
 
     @Test
@@ -73,8 +73,8 @@ class ConfigTest {
 
     @Test
     fun missingKeysKeepDefaults() {
-        val config = Config.fromJson("""{"cardSize":"small","pinnedApps":["a.b"]}""")
-        assertEquals("small", config.cardSize)
+        val config = Config.fromJson("""{"wallpaper":"gradient","pinnedApps":["a.b"]}""")
+        assertEquals("gradient", config.wallpaper)
         assertEquals(listOf("a.b"), config.pinnedApps)
         assertEquals(Config.DEFAULT_HIDDEN, config.hiddenApps)
         assertTrue(config.clock24h)
@@ -126,10 +126,10 @@ class ConfigTest {
     @Test
     fun saveThenLoadThroughAFile() {
         val dir = folder.newFolder()
-        val config = Config().apply { cardSize = "large"; hiddenInputs = setOf("hdmi1") }
+        val config = Config().apply { wallpaper = "custom"; hiddenInputs = setOf("hdmi1") }
         config.save(dir)
         val loaded = Config.load(dir)
-        assertEquals("large", loaded.cardSize)
+        assertEquals("custom", loaded.wallpaper)
         assertEquals(setOf("hdmi1"), loaded.hiddenInputs)
         assertFalse(dir.resolve("config.json.tmp").exists())
     }
@@ -138,12 +138,5 @@ class ConfigTest {
     fun loadWithoutAFileGivesDefaults() {
         assertEquals(Config().toJson(), Config.load(folder.newFolder()).toJson())
         assertEquals(Config().toJson(), Config.load(null).toJson())
-    }
-
-    @Test
-    fun cardScaleFollowsSize() {
-        assertEquals(0.85f, Config().apply { cardSize = "small" }.cardScale, 0f)
-        assertEquals(1f, Config().cardScale, 0f)
-        assertEquals(1.18f, Config().apply { cardSize = "large" }.cardScale, 0f)
     }
 }
