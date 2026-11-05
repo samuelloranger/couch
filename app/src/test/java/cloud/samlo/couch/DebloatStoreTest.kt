@@ -10,7 +10,7 @@ import java.io.File
 
 /** The ledger: originals recorded once, removals remembered, undos held, all across restarts. */
 class DebloatStoreTest {
-    private fun dir(): File = createTempDir("debloat")
+    private fun dir(): File = kotlin.io.path.createTempDirectory("debloat").toFile()
 
     private fun original(pkg: String, d: File): String =
         JSONObject(File(d, "debloat.json").readText()).getJSONObject("originals").getString(pkg)

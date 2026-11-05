@@ -138,7 +138,7 @@ tasks.named("preBuild") { dependsOn(relayTasks) }
 dependencies {
     testImplementation("junit:junit:4.13.2")
     // The android.jar used by JVM tests only has stubs for org.json.
-    testImplementation("org.json:json:20240303")
+    testImplementation("org.json:json:20260814")
 }
 
 // Release is the variant that ships, so its unit tests must run too (AGP skips them by default).
