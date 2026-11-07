@@ -9,6 +9,8 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import cloud.samlo.couch.data.Tile
+import cloud.samlo.couch.index.HomeIcons
+import cloud.samlo.couch.index.HomePill
 import cloud.samlo.couch.index.IndexText
 import cloud.samlo.couch.index.IndexTokens
 import cloud.samlo.couch.ui.Tokens
@@ -22,14 +24,20 @@ import cloud.samlo.couch.ui.dpf
  * swaps text colours; the background and marker belong to [PanelView], which glides them.
  */
 @SuppressLint("ViewConstructor")
-class PanelRow(context: Context, val item: PanelItem) : FrameLayout(context) {
-    private val name = IndexText(context, 19f, 600, Tokens.textMuted).apply {
+class PanelRow(context: Context, val item: PanelItem, compact: Boolean = false) : FrameLayout(context) {
+    private val name = IndexText(context, if (compact) 15f else 19f, 600, Tokens.textMuted).apply {
         letterSpacing = -0.015f
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         text = item.label
     }
     private val port = IndexText(context, 11f, 500, IndexTokens.hours).apply { maxLines = 1 }
+
+    /** A Home Assistant device's icon, redrawn on [refresh]. */
+    private var home: ImageView? = null
+
+    /** Held OK: Left and Right change the value, shown between arrows. */
+    var adjusting = false
 
     var chosen = false
         set(value) {
@@ -41,13 +49,21 @@ class PanelRow(context: Context, val item: PanelItem) : FrameLayout(context) {
 
     init {
         if (item.dimmed) alpha = DIMMED_ALPHA
-        refresh()
         val slot = FrameLayout(context)
         when (val icon = item.icon) {
             is PanelItem.Icon.Input -> slot.addView(inputIcon(context, icon.tile), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
             is PanelItem.Icon.Glyph -> slot.addView(glyph(context, icon.res), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+            is PanelItem.Icon.Home -> {
+                val size = context.dp(if (compact) COMPACT_ICON else IndexTokens.ICON)
+                home = ImageView(context).apply {
+                    val pad = context.dp(5)
+                    setPadding(pad, pad, pad, pad)
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }
+                slot.addView(home, LayoutParams(size, size, Gravity.CENTER))
+            }
             is PanelItem.Icon.App -> {
-                val size = context.dp(IndexTokens.ICON)
+                val size = context.dp(if (compact) COMPACT_ICON else IndexTokens.ICON)
                 slot.addView(ImageView(context).apply { setImageBitmap(icon.bitmap) }, LayoutParams(size, size, Gravity.CENTER))
             }
         }
@@ -55,16 +71,39 @@ class PanelRow(context: Context, val item: PanelItem) : FrameLayout(context) {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(context.dp(15), 0, context.dp(13), 0)
-            addView(slot, LinearLayout.LayoutParams(context.dp(SLOT_W), context.dp(IndexTokens.ICON)))
+            addView(slot, LinearLayout.LayoutParams(
+                context.dp(if (compact) COMPACT_SLOT_W else SLOT_W),
+                context.dp(if (compact) COMPACT_ICON else IndexTokens.ICON),
+            ))
             addView(name, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = context.dp(12) })
             addView(port, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(8) })
         }
         addView(line, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        refresh()
     }
 
     /** Reads the item's detail again, after OK changed it in place. */
     fun refresh() {
-        port.text = item.detail().orEmpty()
+        val detail = item.detail().orEmpty()
+        port.text = if (adjusting) "◀  $detail  ▶" else detail
+        val icon = item.icon as? PanelItem.Icon.Home ?: return
+        val d = icon.state()
+        val offline = !icon.reachable() || d?.available == false
+        val on = !offline && d?.on == true
+        home?.apply {
+            setImageResource(HomeIcons.of(icon.id, on))
+            val tint = when {
+                offline -> IndexTokens.hours
+                on && d?.isLight == true -> HomePill.GOLD
+                on -> Tokens.accent
+                else -> Tokens.textMuted
+            }
+            setColorFilter(tint)
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL
+                setColor(if (on) (tint and 0x00FFFFFF) or 0x2E000000 else Tokens.surface)
+            }
+        }
     }
 
     private fun glyph(context: Context, res: Int) = ImageView(context).apply {
@@ -106,5 +145,8 @@ class PanelRow(context: Context, val item: PanelItem) : FrameLayout(context) {
         const val SLOT_W = 52
         const val ICON_RADIUS = 6f
         const val DIMMED_ALPHA = 0.45f
+        /** In a grid, rows are shorter so every app and input fits without scrolling. */
+        const val COMPACT_ICON = 26
+        const val COMPACT_SLOT_W = 44
     }
 }

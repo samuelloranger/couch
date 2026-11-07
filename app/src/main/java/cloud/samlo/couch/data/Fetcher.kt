@@ -6,10 +6,14 @@ import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-/** Opens http(s) URLs and content URIs alike. Blocking: call from a worker thread. */
+/**
+ * Opens https URLs and content URIs. Blocking: call from a worker thread. Plain http is refused:
+ * the app allows cleartext only for devices on the home network, never for internet content.
+ */
 class Fetcher(private val context: Context) {
     fun open(url: String): InputStream = when (Uri.parse(url).scheme) {
-        "http", "https" -> {
+        "http" -> throw java.io.IOException("Plain HTTP refused: $url")
+        "https" -> {
             val connection = URL(url).openConnection() as HttpURLConnection
             connection.connectTimeout = TIMEOUT_MS
             connection.readTimeout = TIMEOUT_MS

@@ -8,7 +8,10 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.adb.AdbShell
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Prefs
+import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.data.UserFiles
+import cloud.samlo.couch.hass.HassDevices
+import cloud.samlo.couch.hass.HomeAssistant
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -23,7 +26,9 @@ class RemoteButtons(private val context: Context) {
 
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
-    private val inputs = OverlayPanel(context, context.getString(R.string.remote_input_hint))
+    // Every input and app at once, in a grid, with the Home Assistant row's lights and plugs on top.
+    private val inputs = OverlayPanel(context, context.getString(R.string.remote_input_hint), grid = true)
+    private val home = HassDevices(HomeAssistant(Prefs.of(context))) { inputs.refreshRows() }
     // Settings opens on the right, like the TV's own panel sits apart from the inputs.
     private val quick = OverlayPanel(context, context.getString(R.string.remote_quick_hint), end = true)
     private val bluetooth = BluetoothAudio(context)
@@ -189,7 +194,7 @@ class RemoteButtons(private val context: Context) {
             config.remoteInputKey -> {
                 quick.close()
                 // A second press steps to the next input, as the TV's own list does.
-                inputs.show(if (inputs.isOpen) nextInput() else Prefs.of(context).getString(LAST_INPUT, null))
+                inputs.show(if (inputs.isOpen) nextInput() else onScreen())
             }
             config.remoteSettingsKey -> {
                 inputs.close()
@@ -205,6 +210,19 @@ class RemoteButtons(private val context: Context) {
                 }
             }
         }
+    }
+
+    /**
+     * What is on screen, for the panel to open on: the app in front, else (an input's picture
+     * belongs to the TV's own player, which isn't listed) the input last chosen here, else the first
+     * input. Couch's own home screen counts as nothing on screen.
+     */
+    private fun onScreen(): String? {
+        val front = Usage.front(context)
+        if (front != null && front != context.packageName && front in inputs) return front
+        val keys = inputs.inputKeys
+        if (front != context.packageName) Prefs.of(context).getString(LAST_INPUT, null)?.takeIf { it in keys }?.let { return it }
+        return keys.firstOrNull()
     }
 
     private fun nextInput(): String? {
@@ -231,13 +249,28 @@ class RemoteButtons(private val context: Context) {
     private fun loadInputs() {
         if (stopped) return
         runCatching {
-            worker.execute { InputItems.load(context).let { main.post { if (!stopped) inputs.prepare(it) } } }
+            worker.execute {
+                val loaded = InputItems.load(context, home)
+                main.post {
+                    if (stopped) return@post
+                    home.use(loaded.url, loaded.ids)
+                    val hint = context.getString(if (loaded.ids.isEmpty()) R.string.remote_input_hint else R.string.remote_input_hint_home)
+                    inputs.prepare(loaded.items, hint)
+                }
+            }
         }
     }
 
     init {
         inputs.onChosen = { Prefs.of(context).edit().putString(LAST_INPUT, it).apply() }
-        inputs.onClosed = ::loadInputs
+        inputs.onClosed = {
+            home.live(false)
+            loadInputs()
+        }
+        inputs.onShown = {
+            home.live(true)
+            home.refresh()
+        }
     }
 
     companion object {

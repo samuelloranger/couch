@@ -62,6 +62,28 @@ object Usage {
         return result
     }
 
+    /**
+     * The app in front now, from the last one to come to the front; null without usage access or
+     * when nothing came forward in the last few hours. Quick enough for a key press.
+     */
+    fun front(context: Context, now: Long = System.currentTimeMillis()): String? {
+        if (!canRead(context)) return null
+        val manager = context.getSystemService(UsageStatsManager::class.java) ?: return null
+        val events = try {
+            manager.queryEvents(now - FRONT_WINDOW_MS, now)
+        } catch (e: SecurityException) {
+            return null
+        } ?: return null
+        val event = UsageEvents.Event()
+        return lastResumed(generateSequence { if (events.getNextEvent(event)) event.eventType to event.packageName else null })
+    }
+
+    /** The package of the last [Tally.RESUMED] event among (type, package) pairs. */
+    internal fun lastResumed(events: Sequence<Pair<Int, String?>>): String? =
+        events.fold(null as String?) { front, (type, pkg) -> if (type == Tally.RESUMED && pkg != null) pkg else front }
+
+    private const val FRONT_WINDOW_MS = 12 * 3_600_000L
+
     /** Walks the event stream in order; kept apart from Android so it can be tested on its own. */
     internal class Tally(private val dayStarts: LongArray, private val self: String) {
         private val perDay = HashMap<String, LongArray>()

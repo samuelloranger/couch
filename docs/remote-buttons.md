@@ -25,8 +25,11 @@ as a key. Navigation, OK, Back, Home, volume and power can't be taken over.
 
 ## Input
 
-The TV's inputs, then your apps in the Index list's order. A second press of Input moves to the next
-input, as the TV's own list does.
+The Home Assistant row's devices, the TV's inputs, then your apps in the Index list's order, in a
+grid with as many columns as it takes to show them all without scrolling. The D-pad moves in every
+direction. OK switches a light or plug and the panel stays open; holding OK on a dimmable light sets
+its brightness with Left and Right. A second press of Input moves to the next input, as the TV's own
+list does.
 
 ## Settings
 

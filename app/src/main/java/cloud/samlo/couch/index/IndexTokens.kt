@@ -22,6 +22,18 @@ object IndexTokens {
     const val ROWS_SHOWN = 8
     const val ICON = 29
 
+    // With the Home Assistant row at the top left: the list starts under it, a row shorter, and
+    // Inputs and Settings move from the top right to below the list.
+    const val HOME_ROW_Y = 21
+    const val HOME_ROW_H = 38
+    const val LIST_Y_HOME = 71
+    const val LIST_H_HOME = 391
+    const val LIST_FADE_Y_HOME = 330
+    const val ROWS_SHOWN_HOME = 7
+    const val TOOLS_Y = 470
+    /** Lines Inputs and Settings up with the app icons. */
+    const val TOOLS_X = 36
+
     // The right column: the program's text, its channel's cards, then the week.
     const val COLUMN_X = 380
     const val COLUMN_W = 556

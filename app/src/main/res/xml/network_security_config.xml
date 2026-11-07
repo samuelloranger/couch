@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Plain HTTP only to the TV's own control API on this device (Sony's IP control listens on
-     127.0.0.1:80 without TLS). Everything else keeps Android's HTTPS-only default. -->
-<network-security-config>
-    <domain-config cleartextTrafficPermitted="true">
-        <domain includeSubdomains="false">127.0.0.1</domain>
-    </domain-config>
+<!-- Plain HTTP is allowed because Couch talks to devices on the home network that only speak it:
+     the TV's own control API (Sony's IP control on 127.0.0.1:80) and Home Assistant, usually
+     http://<address>:8123. Their addresses are the user's, so no domain list can name them.
+     Couch enforces the limit itself: Home Assistant requests over http go only to private
+     addresses (hass/LocalNetwork.kt), and everything fetched from the internet must be https
+     (data/Fetcher.kt). -->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration" />
 </network-security-config>

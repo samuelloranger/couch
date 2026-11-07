@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.LinearLayout
 import cloud.samlo.couch.R
@@ -21,7 +22,7 @@ import cloud.samlo.couch.ui.dpf
 
 /**
  * Top right: an input that just turned on, what's playing, an update when there is one, the
- * weather, then Inputs and Settings.
+ * weather, then Inputs and Settings (below the app list instead while the Home Assistant row shows).
  */
 @SuppressLint("ViewConstructor")
 class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit, onUpdate: () -> Unit) : LinearLayout(context) {
@@ -57,8 +58,19 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
         weather.addView(place, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(7) })
         addView(weather, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(15) })
         addView(god, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(10) })
-        addView(inputs, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(6) })
-        addView(settings, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)))
+        placePills(null)
+    }
+
+    /**
+     * Puts Inputs and Settings at the end of this bar, or in [into] (below the app list) while the
+     * Home Assistant row takes the top left.
+     */
+    fun placePills(into: LinearLayout?) {
+        val target = into ?: this
+        if (settings.parent === target) return
+        listOf(inputs, settings).forEach { (it.parent as? ViewGroup)?.removeView(it) }
+        target.addView(inputs, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(6) })
+        target.addView(settings, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)))
     }
 
     fun showWeather(now: WeatherNow?) {

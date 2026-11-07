@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A light that is on: the bulb filled. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M 8.2 14.2 A 5.6 5.6 0 1 1 15.8 14.2 C 15 14.9 14.6 15.7 14.6 16.6 H 9.4 C 9.4 15.7 9 14.9 8.2 14.2 Z"
+        android:fillColor="#59FFFFFF"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M 9.4 19.2 H 14.6 M 10.4 21.6 H 13.6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"/>
+</vector>
