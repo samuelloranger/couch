@@ -212,18 +212,19 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
     private fun isOk(keyCode: Int) = keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER ||
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
 
-    private companion object {
-        const val OFF = 0
-        const val LIT = 1
-        const val POWERED = 2
-        const val OFFLINE = 3
+    companion object {
+        private const val OFF = 0
+        private const val LIT = 1
+        private const val POWERED = 2
+        private const val OFFLINE = 3
+        /** A lit bulb's colour, also for its brightness wherever it is written. */
         val GOLD = Color.parseColor("#FFD488")
-        val GOLD_LABEL = Color.parseColor("#FFE2A8")
-        val GOLD_BG = Color.parseColor("#2A2619")
-        val OFFLINE_BG = Color.parseColor("#141917")
-        val OFFLINE_FG = Color.parseColor("#5E6865")
+        private val GOLD_LABEL = Color.parseColor("#FFE2A8")
+        private val GOLD_BG = Color.parseColor("#2A2619")
+        private val OFFLINE_BG = Color.parseColor("#141917")
+        private val OFFLINE_FG = Color.parseColor("#5E6865")
 
-        fun blend(base: Int, over: Int, amount: Float): Int {
+        private fun blend(base: Int, over: Int, amount: Float): Int {
             fun mix(shift: Int) = (((base shr shift) and 0xFF) * (1 - amount) + ((over shr shift) and 0xFF) * amount).toInt()
             return Color.rgb(mix(16), mix(8), mix(0))
         }

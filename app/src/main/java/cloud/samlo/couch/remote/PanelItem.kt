@@ -3,12 +3,15 @@ package cloud.samlo.couch.remote
 import android.content.Context
 import android.graphics.Bitmap
 import cloud.samlo.couch.data.Tile
+import cloud.samlo.couch.hass.HassDevice
 
 /**
  * One line of a panel the remote's buttons open: an input, an app or a setting, under its
  * [section] title. [detail] is read each time the row is drawn, so a value (the sleep timer's
  * minutes) stays current. A [keepOpen] item changes that value in place instead of closing, and
- * an item with [adjust] is stepped back and forth with Left and Right (OK steps forward).
+ * an item with [adjust] is stepped back and forth with Left and Right (OK steps forward). In a
+ * grid, where Left and Right move, holding OK on an item with [hold] adjusts it instead, until OK
+ * or Back calls [endHold].
  */
 class PanelItem(
     val key: String,
@@ -19,6 +22,9 @@ class PanelItem(
     val keepOpen: Boolean = false,
     val detail: () -> String? = { null },
     val adjust: ((Context, Int) -> Unit)? = null,
+    /** Starts adjusting with Left and Right; false when this item can't be adjusted now. */
+    val hold: (() -> Boolean)? = null,
+    val endHold: () -> Unit = {},
     val action: (Context) -> Unit = { adjust?.invoke(it, 1) },
 ) {
     /** What fills the icon slot: an input's card, an app's launcher icon, or a drawn glyph. */
@@ -26,6 +32,9 @@ class PanelItem(
         class Input(val tile: Tile) : Icon()
         class App(val bitmap: Bitmap?) : Icon()
         class Glyph(val res: Int) : Icon()
+
+        /** A light or plug from Home Assistant, drawn as it is now. */
+        class Home(val isLight: Boolean, val state: () -> HassDevice?, val reachable: () -> Boolean) : Icon()
     }
 
     companion object {

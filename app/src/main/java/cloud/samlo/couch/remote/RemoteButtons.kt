@@ -9,6 +9,8 @@ import cloud.samlo.couch.adb.AdbShell
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.UserFiles
+import cloud.samlo.couch.hass.HassDevices
+import cloud.samlo.couch.hass.HomeAssistant
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -23,7 +25,9 @@ class RemoteButtons(private val context: Context) {
 
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor()
-    private val inputs = OverlayPanel(context, context.getString(R.string.remote_input_hint))
+    // Every input and app at once, in a grid, with the Home Assistant row's lights and plugs on top.
+    private val inputs = OverlayPanel(context, context.getString(R.string.remote_input_hint), grid = true)
+    private val home = HassDevices(HomeAssistant(Prefs.of(context))) { inputs.refreshRows() }
     // Settings opens on the right, like the TV's own panel sits apart from the inputs.
     private val quick = OverlayPanel(context, context.getString(R.string.remote_quick_hint), end = true)
     private val bluetooth = BluetoothAudio(context)
@@ -231,13 +235,23 @@ class RemoteButtons(private val context: Context) {
     private fun loadInputs() {
         if (stopped) return
         runCatching {
-            worker.execute { InputItems.load(context).let { main.post { if (!stopped) inputs.prepare(it) } } }
+            worker.execute {
+                val loaded = InputItems.load(context, home)
+                main.post {
+                    if (stopped) return@post
+                    home.use(loaded.url, loaded.ids)
+                    home.seed(loaded.states)
+                    val hint = context.getString(if (loaded.ids.isEmpty()) R.string.remote_input_hint else R.string.remote_input_hint_home)
+                    inputs.prepare(loaded.items, hint)
+                }
+            }
         }
     }
 
     init {
         inputs.onChosen = { Prefs.of(context).edit().putString(LAST_INPUT, it).apply() }
         inputs.onClosed = ::loadInputs
+        inputs.onShown = { home.refresh() }
     }
 
     companion object {

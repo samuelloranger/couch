@@ -639,6 +639,11 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="choose_channel_label">%1$s. Choisir une chaîne</string>
 
     <!-- Home Assistant -->
+    <string name="section_home">Maison</string>
+    <string name="remote_input_hint_home">OK : ouvrir ou allumer  ·  Maintenir OK : intensité  ·  Retour : fermer</string>
+    <string name="home_state_unreachable">Injoignable</string>
+    <string name="home_failed_short">Échec</string>
+    <string name="home_percent">%1$d %%</string>
     <string name="home_all_off">Tout est éteint</string>
     <plurals name="home_on">
         <item quantity="one">%1$d allumée</item>
