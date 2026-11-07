@@ -20,6 +20,9 @@ import java.util.concurrent.Executors
  *
  * While [live], a [HassSocket] streams every change as it happens, whoever made it, and plain
  * reads stop; if the socket drops, it comes back with a growing delay and reads fill in meanwhile.
+ *
+ * An appliance only reports. Its cycle's end comes from a sibling sensor, found once and followed
+ * with the rest; while one runs, [onChange] also fires every minute so the time left counts down.
  */
 class HassDevices(private val hass: HomeAssistant, private val onChange: () -> Unit) {
     private val main = Handler(Looper.getMainLooper())
@@ -37,6 +40,17 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     private var live = false
     private var drops = 0
     private val reconnect = Runnable { connect() }
+    /** Appliance id to the sensor saying when its cycle ends. */
+    private val finishOf = HashMap<String, String>()
+    /** Appliance id to when its cycle ends, in epoch milliseconds. */
+    private val finishAt = HashMap<String, Long>()
+    private val tick = object : Runnable {
+        override fun run() {
+            if (!live || ids.none { known[it]?.let { d -> d.isAppliance && d.on } == true }) return
+            onChange()
+            main.postDelayed(this, TICK_MS)
+        }
+    }
 
     var url = ""
         private set
@@ -51,6 +65,9 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
 
     operator fun get(id: String): HassDevice? = known[id]
 
+    /** When appliance [id]'s cycle ends, if known. */
+    fun finish(id: String): Long? = finishAt[id]
+
     /** The devices to follow; true when they changed. */
     fun use(url: String, ids: List<String>): Boolean {
         val base = HassJson.baseUrl(url)
@@ -63,6 +80,38 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
             disconnect()
             connect()
         }
+        findFinishSensors()
+        return true
+    }
+
+    /** Looks up the end-time sensor of each appliance not looked up yet, then follows it too. */
+    private fun findFinishSensors() {
+        val missing = ids.filter { Appliances.isStateSensor(it) && it !in finishOf }
+        if (missing.isEmpty()) return
+        val base = url
+        worker.execute {
+            val found = missing.mapNotNull { id -> hass.finishSensor(base, id)?.let { id to it } }
+            main.post {
+                if (found.isEmpty() || base != url) return@post
+                finishOf.putAll(found)
+                readAt = 0L
+                if (live) {
+                    disconnect()
+                    connect()
+                }
+                refresh()
+            }
+        }
+    }
+
+    /** Everything followed: the devices and their appliances' end-time sensors. */
+    private fun followed(): List<String> = ids + ids.mapNotNull { finishOf[it] }
+
+    /** A finish sensor's new state, for the appliance it belongs to; false when [d] isn't one. */
+    private fun finished(d: HassDevice): Boolean {
+        val appliance = finishOf.entries.firstOrNull { it.value == d.id }?.key ?: return false
+        val at = Appliances.finishAt(d.raw, d.unit, System.currentTimeMillis())
+        if (at == null) finishAt -= appliance else finishAt[appliance] = at
         return true
     }
 
@@ -70,14 +119,20 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     fun live(on: Boolean) {
         if (live == on) return
         live = on
-        if (on) connect() else disconnect()
+        if (on) {
+            connect()
+            main.post(tick)
+        } else {
+            disconnect()
+            main.removeCallbacks(tick)
+        }
     }
 
     private fun connect() {
         if (!live || ids.isEmpty() || socket != null) return
         lateinit var s: HassSocket
         s = HassSocket(
-            url, hass.token, ids,
+            url, hass.token, followed(),
             onStates = { states -> main.post { if (socket === s) streamed(states) } },
             onDown = { rejected ->
                 main.post {
@@ -108,7 +163,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         drops = 0
         reachable = true
         states.forEach { d ->
-            if (d.id == dimmingId) return@forEach
+            if (finished(d) || d.id == dimmingId) return@forEach
             val wanted = known[d.id]
             // A command not yet confirmed keeps its state until the device reports the one asked for.
             if (d.id in unconfirmed && wanted != null && !agrees(d, wanted, checkBrightness = false)) return@forEach
@@ -123,6 +178,12 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         states.forEach { if (it.id in ids && it.id !in known) known[it.id] = it }
         reachable = true
         onChange()
+        restartTick()
+    }
+
+    private fun restartTick() {
+        main.removeCallbacks(tick)
+        if (live) main.postDelayed(tick, TICK_MS)
     }
 
     /** Reads every device again unless that happened a moment ago. */
@@ -131,13 +192,16 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val now = SystemClock.elapsedRealtime()
         if (now - readAt < MIN_READ_MS) return
         readAt = now
-        val asked = ids.associateWith { versions[it] ?: 0 }
+        val asked = followed().associateWith { versions[it] ?: 0 }
         val base = url
         worker.execute {
             val read = asked.keys.associateWith { hass.state(base, it) }
             main.post {
                 reachable = read.values.any { it != null }
-                read.forEach { (id, d) -> if (d != null && (versions[id] ?: 0) == asked[id] && id !in unconfirmed) known[id] = d }
+                read.forEach { (id, d) ->
+                    if (d == null || finished(d)) return@forEach
+                    if ((versions[id] ?: 0) == asked[id] && id !in unconfirmed) known[id] = d
+                }
                 failed = null
                 onChange()
             }
@@ -147,7 +211,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     /** Switches [id] on or off; false when it can't be (not read yet, offline, Home Assistant down). */
     fun toggle(id: String): Boolean {
         val before = known[id] ?: return false.also { refresh() }
-        if (!reachable || !before.available) return false
+        if (!reachable || !before.available || !before.switchable) return false
         known[id] = before.copy(on = !before.on)
         failed = null
         onChange()
@@ -265,6 +329,8 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         const val BRIGHTNESS_SETTLE_MS = 350L
         /** When to check a command took: devices report back in well under a second to a few seconds. */
         val CONFIRM_MS = longArrayOf(1000L, 1500L, 3500L)
+        /** A running appliance's time left is a count of minutes. */
+        const val TICK_MS = 60_000L
         /** Waits before reconnecting a dropped socket, growing with each drop in a row. */
         val RECONNECT_MS = longArrayOf(2000L, 5000L, 15_000L, 30_000L)
     }

@@ -243,6 +243,6 @@ class EntityStates {
                 touched += id
             }
         }
-        return touched.mapNotNull { states[it]?.let(HassJson::device) }
+        return touched.mapNotNull { states[it]?.let(HassJson::state) }
     }
 }

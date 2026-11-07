@@ -33,8 +33,8 @@ class PanelItem(
         class App(val bitmap: Bitmap?) : Icon()
         class Glyph(val res: Int) : Icon()
 
-        /** A light or plug from Home Assistant, drawn as it is now. */
-        class Home(val isLight: Boolean, val state: () -> HassDevice?, val reachable: () -> Boolean) : Icon()
+        /** A Home Assistant device, drawn as it is now. */
+        class Home(val id: String, val state: () -> HassDevice?, val reachable: () -> Boolean) : Icon()
     }
 
     companion object {

@@ -17,11 +17,15 @@ class HomeAssistant(private val prefs: SharedPreferences) {
 
     fun connected(url: String) = url.isNotBlank() && token.isNotBlank()
 
-    /** The device's current state; null when Home Assistant can't be reached or doesn't know it. */
+    /** The entity's current state; null when Home Assistant can't be reached or doesn't know it. */
     fun state(url: String, id: String): HassDevice? =
         request("GET", "$url/api/states/$id", token)?.takeIf { it.first == 200 }?.let { (_, body) ->
-            runCatching { HassJson.device(JSONObject(body)) }.getOrNull()
+            runCatching { HassJson.state(JSONObject(body)) }.getOrNull()
         }
+
+    /** The sensor that says when appliance [id]'s cycle ends, if it has one. */
+    fun finishSensor(url: String, id: String): String? =
+        Appliances.finishCandidates(id).firstOrNull { request("GET", "$url/api/states/$it", token)?.first == 200 }
 
     /** Every light and plug, for choosing the row's devices; null when unreachable. */
     fun all(url: String): List<HassDevice>? =

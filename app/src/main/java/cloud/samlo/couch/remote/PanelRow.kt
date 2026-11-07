@@ -8,8 +8,8 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
-import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Tile
+import cloud.samlo.couch.index.HomeIcons
 import cloud.samlo.couch.index.HomePill
 import cloud.samlo.couch.index.IndexText
 import cloud.samlo.couch.index.IndexTokens
@@ -91,17 +91,10 @@ class PanelRow(context: Context, val item: PanelItem, compact: Boolean = false) 
         val offline = !icon.reachable() || d?.available == false
         val on = !offline && d?.on == true
         home?.apply {
-            setImageResource(
-                when {
-                    icon.isLight && on -> R.drawable.ic_home_bulb_lit
-                    icon.isLight -> R.drawable.ic_home_bulb
-                    on -> R.drawable.ic_home_plug_lit
-                    else -> R.drawable.ic_home_plug
-                },
-            )
+            setImageResource(HomeIcons.of(icon.id, on))
             val tint = when {
                 offline -> IndexTokens.hours
-                on && icon.isLight -> HomePill.GOLD
+                on && d?.isLight == true -> HomePill.GOLD
                 on -> Tokens.accent
                 else -> Tokens.textMuted
             }

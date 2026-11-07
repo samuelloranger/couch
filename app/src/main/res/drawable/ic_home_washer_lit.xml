@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A washer or dryer in the Index's Home Assistant row, running: the door filled. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M 7 3.5 H 17 A 2.5 2.5 0 0 1 19.5 6 V 18 A 2.5 2.5 0 0 1 17 20.5 H 7 A 2.5 2.5 0 0 1 4.5 18 V 6 A 2.5 2.5 0 0 1 7 3.5 Z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.9"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M 8 13.5 A 4 4 0 1 0 16 13.5 A 4 4 0 1 0 8 13.5 Z"
+        android:fillColor="#4DFFFFFF"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.9"
+        android:strokeLineJoin="round"/>
+    <path
+        android:pathData="M 7.6 7 H 7.61 M 10.2 7 H 10.21"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="1.9"
+        android:strokeLineCap="round"/>
+</vector>

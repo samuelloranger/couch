@@ -6,7 +6,6 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.widget.LinearLayout
-import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.hass.HassDevice
 import cloud.samlo.couch.hass.HassDevices
@@ -17,16 +16,16 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
- * The Index's Home Assistant row, top left: up to six lights and plugs, lights first, each pill
- * showing its own state. States are read when the Index shows, when focus comes up to the row and
+ * The Index's Home Assistant row, top left: up to six devices, lights, then plugs, then
+ * appliances, each pill showing its own state. States are read when the Index shows, when focus comes up to the row and
  * after each command, never on a timer; see [HassDevices].
  */
 @SuppressLint("ViewConstructor")
 class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), HomePill.Actions {
     private val devices = HassDevices(hass) { apply() }
-    private val lights = group()
-    private val plugs = group()
-    private val divider = FlatView(context).apply { setBackgroundColor(0x14FFFFFF) }
+    /** Lights, plugs and appliances, each in its own group with a rule between them. */
+    private val groups = List(3) { group() }
+    private val dividers = List(2) { FlatView(context).apply { setBackgroundColor(0x14FFFFFF) } }
     private var names: Map<String, String> = emptyMap()
     private var lastFocused: HomePill? = null
     var dimming: HomePill? = null
@@ -41,12 +40,15 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         setPadding(inset, inset, inset, inset)
         clipChildren = false
         clipToPadding = false
-        addView(lights, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
-        addView(divider, LayoutParams(context.dp(1), context.dp(16)).apply {
-            marginStart = context.dp(12)
-            marginEnd = context.dp(12)
-        })
-        addView(plugs, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        groups.forEachIndexed { i, group ->
+            if (i > 0) {
+                addView(dividers[i - 1], LayoutParams(context.dp(1), context.dp(16)).apply {
+                    marginStart = context.dp(DIVIDER_SPACE)
+                    marginEnd = context.dp(DIVIDER_SPACE)
+                })
+            }
+            addView(group, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        }
     }
 
     /**
@@ -56,16 +58,16 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     fun fit(available: Int) {
         val pills = pills()
         if (pills.isEmpty()) return
-        val dividerW = if (divider.visibility == VISIBLE) context.dp(1 + 24) else 0
-        val fixed = paddingLeft + paddingRight + dividerW + context.dp(GAP) * (lights.childCount.coerceAtLeast(1) - 1 + plugs.childCount.coerceAtLeast(1) - 1)
+        val rules = dividers.count { it.visibility == VISIBLE } * context.dp(1 + 2 * DIVIDER_SPACE)
+        val gaps = groups.sumOf { (it.childCount - 1).coerceAtLeast(0) } * context.dp(GAP)
+        val fixed = paddingLeft + paddingRight + rules + gaps
         val natural = fixed + pills.sumOf { it.naturalWidth() }
         val excess = natural - available
         val cap = if (excess <= 0) Int.MAX_VALUE else labelCap(pills.map { it.labelWidth() }, excess)
         pills.forEach { it.labelLimit = cap }
     }
 
-    fun pills(): List<HomePill> = (0 until lights.childCount).map { lights.getChildAt(it) as HomePill } +
-        (0 until plugs.childCount).map { plugs.getChildAt(it) as HomePill }
+    fun pills(): List<HomePill> = groups.flatMap { g -> (0 until g.childCount).map { g.getChildAt(it) as HomePill } }
 
     /** Where focus lands coming up from the apps: the pill last used, else the first. */
     fun entry(): View? = lastFocused?.takeIf { it.parent != null } ?: pills().firstOrNull()
@@ -114,8 +116,7 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     }
 
     private fun rebuild() {
-        lights.removeAllViews()
-        plugs.removeAllViews()
+        groups.forEach { it.removeAllViews() }
         lastFocused = null
         devices.ids.forEach { id ->
             val pill = HomePill(context, id, this).apply {
@@ -128,12 +129,17 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
                     }
                 }
             }
-            val into = if (id.startsWith(HassDevice.LIGHT)) lights else plugs
+            val into = groups[HassDevice.order(id)]
             into.addView(pill, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(PILL_H)).apply {
                 if (into.childCount > 0) marginStart = context.dp(GAP)
             })
         }
-        divider.visibility = if (lights.childCount > 0 && plugs.childCount > 0) VISIBLE else GONE
+        // A rule only between two groups that both have pills.
+        val filled = groups.map { it.childCount > 0 }
+        dividers.forEachIndexed { i, rule ->
+            val before = filled.take(i + 1).any { it }
+            rule.visibility = if (before && filled[i + 1]) VISIBLE else GONE
+        }
         apply()
     }
 
@@ -144,27 +150,10 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
                 ?: HassJson.shortName(d?.name ?: pill.entityId.substringAfter('.'))
             pill.device = d
             pill.reachable = devices.reachable
-            pill.status = status(pill, d)
-            pill.statusColor = when {
-                d == null -> Tokens.textMuted
-                !devices.reachable || devices.failed == d.id || !d.available -> Tokens.warning
-                dimming === pill || (d.on && d.isLight) -> HomePill.GOLD
-                d.on -> Tokens.accent
-                else -> Tokens.textMuted
-            }
+            val failed = devices.failed == pill.entityId
+            pill.status = HomeStatus.text(context, d, devices.reachable, failed, dimming === pill, devices.finish(pill.entityId))
+            pill.statusColor = HomeStatus.color(d, devices.reachable, failed, dimming === pill)
         }
-    }
-
-    private fun status(pill: HomePill, d: HassDevice?): String = when {
-        d == null -> ""
-        !devices.reachable -> context.getString(R.string.home_state_unreachable)
-        devices.failed == d.id -> context.getString(R.string.home_failed_short)
-        !d.available -> context.getString(R.string.home_state_offline)
-        dimming === pill -> context.getString(R.string.home_dimming, d.brightness)
-        // Switched on but not reported yet: no level to show.
-        d.on && d.dimmable && d.brightness > 0 -> context.getString(R.string.home_percent, d.brightness)
-        d.on -> context.getString(R.string.home_state_on)
-        else -> context.getString(R.string.home_state_off)
     }
 
     /** The widest name width that saves [excess] pixels across names of [widths]. */
@@ -188,5 +177,6 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     private companion object {
         const val PILL_H = 36
         const val GAP = 8
+        const val DIVIDER_SPACE = 12
     }
 }

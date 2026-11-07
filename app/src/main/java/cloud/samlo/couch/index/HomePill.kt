@@ -12,16 +12,16 @@ import android.text.TextUtils
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
-import cloud.samlo.couch.R
 import cloud.samlo.couch.hass.HassDevice
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dpf
 
 /**
- * One light or plug in the Index's Home Assistant row: a bulb or a plug in a small circle, then its
- * short name over its [status] (a brightness, Off, Offline). A light that is on turns gold, a plug
- * that is on takes the accent, and one Home Assistant reports unavailable dims with an amber dot. Drawn in one view so a state change is a
+ * One device in the Index's Home Assistant row: a bulb, a plug or an appliance in a small circle,
+ * then its short name over its [status] (a brightness, Off, time left). A light that is on turns
+ * gold, a plug that is on or an appliance that runs takes the accent, and one Home Assistant
+ * reports unavailable dims with an amber dot. Drawn in one view so a state change is a
  * single redraw.
  */
 @SuppressLint("ViewConstructor")
@@ -72,8 +72,8 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         }
 
     private val isLight = entityId.startsWith(HassDevice.LIGHT)
-    private val off: Drawable = context.getDrawable(if (isLight) R.drawable.ic_home_bulb else R.drawable.ic_home_plug)!!.mutate()
-    private val lit: Drawable = context.getDrawable(if (isLight) R.drawable.ic_home_bulb_lit else R.drawable.ic_home_plug_lit)!!.mutate()
+    private val off: Drawable = context.getDrawable(HomeIcons.of(entityId, lit = false))!!.mutate()
+    private val lit: Drawable = context.getDrawable(HomeIcons.of(entityId, lit = true))!!.mutate()
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE

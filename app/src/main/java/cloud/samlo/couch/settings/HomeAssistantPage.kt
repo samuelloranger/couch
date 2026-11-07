@@ -15,13 +15,14 @@ import cloud.samlo.couch.hass.HassJson
 import cloud.samlo.couch.hass.HomeAssistant
 import cloud.samlo.couch.hass.PhoneLink
 import cloud.samlo.couch.hass.QrCode
+import cloud.samlo.couch.index.HomeStatus
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 import java.util.concurrent.Executors
 
 /**
- * Home Assistant: connect from the phone, then pick up to six lights and plugs for the Index's row
- * and give them short names. The row's order is the order they were picked in.
+ * Home Assistant: connect from the phone, then pick up to six lights, plugs and appliances for the
+ * Index's row and give them short names. The row's order is the order they were picked in.
  */
 class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
@@ -68,16 +69,19 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
                 }
             }
         }
-        o.header(ctx.str(R.string.hass_others))
-        all.filter { it.id !in chosen }.forEach { deviceRow(it.id, it) }
+        val others = all.filter { it.id !in chosen }
+        others.filter { !it.isAppliance }.takeIf { it.isNotEmpty() }?.let { list ->
+            o.header(ctx.str(R.string.hass_others))
+            list.forEach { deviceRow(it.id, it) }
+        }
+        others.filter { it.isAppliance }.takeIf { it.isNotEmpty() }?.let { list ->
+            o.header(ctx.str(R.string.hass_appliances))
+            list.forEach { deviceRow(it.id, it) }
+        }
     }
 
     private fun deviceRow(id: String, d: HassDevice?) {
-        val state = when {
-            d == null || !d.available -> ctx.str(R.string.home_state_offline)
-            d.on -> ctx.str(R.string.home_state_on)
-            else -> ctx.str(R.string.home_state_off)
-        }
+        val state = if (d == null) ctx.str(R.string.home_state_offline) else HomeStatus.text(ctx.activity, d)
         val title = d?.name ?: id
         o.toggle(title, "$id · $state", { id in config.homeDevices }) { on ->
             if (on && config.homeDevices.size >= Config.MAX_HOME_DEVICES) {
