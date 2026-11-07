@@ -254,7 +254,6 @@ class RemoteButtons(private val context: Context) {
                 main.post {
                     if (stopped) return@post
                     home.use(loaded.url, loaded.ids)
-                    home.seed(loaded.states)
                     val hint = context.getString(if (loaded.ids.isEmpty()) R.string.remote_input_hint else R.string.remote_input_hint_home)
                     inputs.prepare(loaded.items, hint)
                 }

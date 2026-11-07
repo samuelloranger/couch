@@ -99,7 +99,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         reading = true
         val base = url
         worker.execute {
-            val all = hass.all(base)
+            val all = hass.all(base)?.also { hass.remember(it) }
             ctx.activity.runOnUiThread {
                 reading = false
                 if (ctx.activity.isFinishing) return@runOnUiThread

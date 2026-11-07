@@ -18,10 +18,14 @@ import cloud.samlo.couch.ui.Tokens
  * the Index list's order.
  */
 object InputItems {
-    /** The items, and what Home Assistant said about the devices among them. */
-    class Loaded(val items: List<PanelItem>, val url: String, val ids: List<String>, val states: List<HassDevice>)
+    /** The items, and the Home Assistant devices among them for [home] to follow. */
+    class Loaded(val items: List<PanelItem>, val url: String, val ids: List<String>)
 
-    /** Reads the apps, inputs and devices; slow, so call it from a worker. [home] answers the devices' items. */
+    /**
+     * Reads the apps, inputs and devices; slow, so call it from a worker. Nothing here waits on
+     * Home Assistant: devices are named from what it last said, and [home] reads their states once
+     * the panel opens.
+     */
     fun load(context: Context, home: HassDevices): Loaded {
         val files = UserFiles(context)
         val config = Config.load(files.dir)
@@ -34,16 +38,14 @@ object InputItems {
         val url = HassJson.baseUrl(config.homeAssistantUrl)
         // Lights, then plugs, then appliances, as in the Index's row.
         val ids = if (hass.connected(url)) config.homeDevices.filter { HassDevice.supported(it) }.sortedBy { HassDevice.order(it) } else emptyList()
-        val states = if (ids.isEmpty()) emptyList() else hass.all(url)?.filter { it.id in ids }.orEmpty()
-        val names = states.associate { it.id to it.name }
         val section = context.getString(R.string.section_home)
         val devices = ids.map { id ->
-            val label = config.homeNames[id]?.takeIf { it.isNotBlank() } ?: HassJson.shortName(names[id] ?: id.substringAfter('.'))
+            val label = config.homeNames[id]?.takeIf { it.isNotBlank() } ?: HassJson.shortName(hass.knownName(id) ?: id.substringAfter('.'))
             device(context, home, id, label, section)
         }
         return Loaded(
             devices + data.inputs.map { PanelItem.of(it, inputs, null) } + data.entries.map { PanelItem.of(it.app, apps, it.icon) },
-            url, ids, states,
+            url, ids,
         )
     }
 

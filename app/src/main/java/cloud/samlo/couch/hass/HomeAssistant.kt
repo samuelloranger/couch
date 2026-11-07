@@ -17,6 +17,16 @@ class HomeAssistant(private val prefs: SharedPreferences) {
 
     fun connected(url: String) = url.isNotBlank() && token.isNotBlank()
 
+    /** The name Home Assistant last gave [id], so a list can label it without asking again. */
+    fun knownName(id: String): String? = prefs.getString(NAME + id, null)
+
+    /** Keeps [devices]' names for [knownName]; writes only what changed. */
+    fun remember(devices: Collection<HassDevice>) {
+        val changed = devices.filter { prefs.getString(NAME + it.id, null) != it.name }
+        if (changed.isEmpty()) return
+        prefs.edit().apply { changed.forEach { putString(NAME + it.id, it.name) } }.apply()
+    }
+
     /** The entity's current state; null when Home Assistant can't be reached or doesn't know it. */
     fun state(url: String, id: String): HassDevice? =
         request("GET", "$url/api/states/$id", token)?.takeIf { it.first == 200 }?.let { (_, body) ->
@@ -49,6 +59,8 @@ class HomeAssistant(private val prefs: SharedPreferences) {
         request("POST", "$url/api/services/$domain/$service", token, body.toString())?.first == 200
 
     private fun request(method: String, url: String, token: String, body: String? = null): Pair<Int, String>? = try {
+        // Plain HTTP only on the home network, where the token can't be read on the way.
+        if (!LocalNetwork.allowed(url)) throw java.io.IOException("Not sent: plain HTTP off the home network")
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
             connection.requestMethod = method
@@ -73,6 +85,7 @@ class HomeAssistant(private val prefs: SharedPreferences) {
 
     private companion object {
         const val TOKEN = "homeassistant:token"
+        const val NAME = "homeassistant:name:"
         // On the home network: a slow answer means it is down, and the row should say so soon.
         const val TIMEOUT_MS = 4000
     }

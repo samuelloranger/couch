@@ -174,13 +174,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
             unconfirmed -= d.id
             levelPending -= d.id
         }
-        onChange()
-    }
-
-    /** States read elsewhere (a full list on a worker), for devices not known yet. */
-    fun seed(states: Collection<HassDevice>) {
-        states.forEach { if (it.id in ids && it.id !in known) known[it.id] = it }
-        reachable = true
+        hass.remember(states.filter { it.id in ids })
         onChange()
     }
 
@@ -205,6 +199,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
                     if (d == null || finished(d)) return@forEach
                     if ((versions[id] ?: 0) == asked[id] && id !in unconfirmed) known[id] = d
                 }
+                hass.remember(read.values.filterNotNull().filter { it.id in ids })
                 failed = null
                 onChange()
             }

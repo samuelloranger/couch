@@ -59,6 +59,7 @@ class HassSocket(
     /** True when Home Assistant refused the token. */
     private fun run(): Boolean {
         val uri = URI(url)
+        if (!LocalNetwork.allowed(url)) return false
         val secure = uri.scheme == "https"
         val port = if (uri.port > 0) uri.port else if (secure) 443 else 80
         val s = if (secure) SSLSocketFactory.getDefault().createSocket() else Socket()

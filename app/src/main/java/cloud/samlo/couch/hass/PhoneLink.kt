@@ -11,13 +11,17 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.URLDecoder
 import java.security.SecureRandom
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
  * The page a phone opens to hand Couch Home Assistant's address and token, since typing a token
  * with a remote is out of the question. Listens only while the TV shows the code, at a path with
  * a random secret, so a neighbour on the network can't find it by scanning. Each connection is
- * short and bounded; anything but the secret path gets a 404.
+ * short and bounded: a few at a time, each closed after [DEADLINE_MS] however slowly it sends;
+ * anything but the secret path gets a 404.
  */
 class PhoneLink(
     private val context: Context,
@@ -29,6 +33,8 @@ class PhoneLink(
 ) {
     private var socket: ServerSocket? = null
     private val secret = randomSecret()
+    private val live = AtomicInteger()
+    private val watchdog = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "couch-phone-link-watchdog").apply { isDaemon = true } }
 
     /** Starts listening; returns the address to show, or null without a network. */
     fun start(): String? {
@@ -46,7 +52,23 @@ class PhoneLink(
                 } catch (e: Exception) {
                     break
                 }
-                thread(name = "couch-phone-link-client", isDaemon = true) { client.use { serve(it) } }
+                if (live.incrementAndGet() > MAX_CONNECTIONS) {
+                    live.decrementAndGet()
+                    runCatching { client.close() }
+                    continue
+                }
+                // A client that trickles its request is cut off at the deadline, not left holding a thread.
+                val deadline = watchdog.schedule({ runCatching { client.close() } }, DEADLINE_MS, TimeUnit.MILLISECONDS)
+                thread(name = "couch-phone-link-client", isDaemon = true) {
+                    try {
+                        client.use { serve(it) }
+                    } catch (e: Exception) {
+                        // Closed at the deadline, or the phone went away.
+                    } finally {
+                        deadline.cancel(false)
+                        live.decrementAndGet()
+                    }
+                }
             }
         }
         return "http://$host:${server.localPort}/$secret"
@@ -55,6 +77,7 @@ class PhoneLink(
     fun stop() {
         runCatching { socket?.close() }
         socket = null
+        watchdog.shutdownNow()
     }
 
     private fun serve(client: Socket) {
@@ -160,6 +183,9 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:#34D399;co
 
     companion object {
         private const val TIMEOUT_MS = 10_000
+        /** Longest a connection may last: reading the form and checking it with Home Assistant. */
+        private const val DEADLINE_MS = 30_000L
+        private const val MAX_CONNECTIONS = 4
         private const val MAX_HEAD = 8 * 1024
         private const val MAX_BODY = 8 * 1024
 
