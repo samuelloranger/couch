@@ -644,24 +644,10 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="home_state_unreachable">Injoignable</string>
     <string name="home_failed_short">Échec</string>
     <string name="home_percent">%1$d %%</string>
-    <string name="home_all_off">Tout est éteint</string>
-    <plurals name="home_on">
-        <item quantity="one">%1$d allumée</item>
-        <item quantity="many">%1$d allumées</item>
-        <item quantity="other">%1$d allumées</item>
-    </plurals>
-    <plurals name="home_offline">
-        <item quantity="one">%1$d hors ligne</item>
-        <item quantity="many">%1$d hors ligne</item>
-        <item quantity="other">%1$d hors ligne</item>
-    </plurals>
-    <string name="home_unreachable">Home Assistant injoignable</string>
     <string name="home_state_on">Allumée</string>
     <string name="home_state_off">Éteinte</string>
     <string name="home_state_offline">Hors ligne</string>
-    <string name="home_brightness_hint">%1$d %% · maintenez OK pour l\'intensité</string>
     <string name="home_dimming">◀  %1$d %%  ▶</string>
-    <string name="home_failed">La commande n\'est pas passée</string>
     <string name="hass_title">Home Assistant</string>
     <string name="hass_hint">Jusqu\'à six lumières et prises sur une ligne, en haut de l\'Index. OK allume ou éteint, maintenir OK règle l\'intensité.</string>
     <string name="hass_help">Lumières et prises dans l\'Index</string>

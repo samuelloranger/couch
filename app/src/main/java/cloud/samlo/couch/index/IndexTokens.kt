@@ -24,8 +24,8 @@ object IndexTokens {
 
     // With the Home Assistant row at the top left: the list starts under it, a row shorter, and
     // Inputs and Settings move from the top right to below the list.
-    const val HOME_ROW_Y = 23
-    const val HOME_ROW_H = 34
+    const val HOME_ROW_Y = 21
+    const val HOME_ROW_H = 38
     const val LIST_Y_HOME = 71
     const val LIST_H_HOME = 391
     const val LIST_FADE_Y_HOME = 330

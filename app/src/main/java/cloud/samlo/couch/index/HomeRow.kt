@@ -2,10 +2,6 @@ package cloud.samlo.couch.index
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.text.SpannableStringBuilder
-import android.text.Spanned
-import android.text.TextUtils
-import android.text.style.ForegroundColorSpan
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -21,9 +17,9 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
- * The Index's Home Assistant row, top left: up to six lights and plugs, lights first, then a
- * line that sums them up or describes the focused one. States are read when the Index shows,
- * when focus comes up to the row and after each command, never on a timer; see [HassDevices].
+ * The Index's Home Assistant row, top left: up to six lights and plugs, lights first, each pill
+ * showing its own state. States are read when the Index shows, when focus comes up to the row and
+ * after each command, never on a timer; see [HassDevices].
  */
 @SuppressLint("ViewConstructor")
 class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), HomePill.Actions {
@@ -31,11 +27,6 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     private val lights = group()
     private val plugs = group()
     private val divider = FlatView(context).apply { setBackgroundColor(0x14FFFFFF) }
-    private val readout = IndexText(context, 11f, 500, Tokens.textMuted).apply {
-        maxLines = 1
-        ellipsize = TextUtils.TruncateAt.END
-        maxWidth = context.dp(READOUT_W)
-    }
     private var names: Map<String, String> = emptyMap()
     private var lastFocused: HomePill? = null
     var dimming: HomePill? = null
@@ -56,13 +47,11 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
             marginEnd = context.dp(12)
         })
         addView(plugs, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
-        addView(readout, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(16) })
     }
 
     /**
-     * Fits the row in [available] pixels, padding included: the summary goes first, then the
-     * longest names are cut to a common width. Worked out from the full widths, so every layout
-     * pass lands on the same answer.
+     * Fits the row in [available] pixels, padding included, cutting the longest names to a common
+     * width. Worked out from the full widths, so every layout pass lands on the same answer.
      */
     fun fit(available: Int) {
         val pills = pills()
@@ -70,10 +59,6 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         val dividerW = if (divider.visibility == VISIBLE) context.dp(1 + 24) else 0
         val fixed = paddingLeft + paddingRight + dividerW + context.dp(GAP) * (lights.childCount.coerceAtLeast(1) - 1 + plugs.childCount.coerceAtLeast(1) - 1)
         val natural = fixed + pills.sumOf { it.naturalWidth() }
-        val summary = context.dp(16) + readout.paint.measureText(readout.text.toString()).toInt().coerceAtMost(context.dp(READOUT_W))
-        val withSummary = natural + summary <= available
-        val wanted = if (withSummary) VISIBLE else GONE
-        if (readout.visibility != wanted) readout.visibility = wanted
         val excess = natural - available
         val cap = if (excess <= 0) Int.MAX_VALUE else labelCap(pills.map { it.labelWidth() }, excess)
         pills.forEach { it.labelLimit = cap }
@@ -104,6 +89,7 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         dimming = pill
         pill.dimming = true
         devices.startDimming(pill.entityId)
+        apply()
     }
 
     override fun step(pill: HomePill, direction: Int) = devices.step(pill.entityId, direction)
@@ -114,6 +100,7 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         dimming = null
         pill.dimming = false
         devices.stopDimming()
+        apply()
     }
 
     /** Back ends dimming (OK does too, through [press]); true when the key was used for that. */
@@ -136,7 +123,6 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
                     } else if (this@HomeRow.dimming === v) {
                         stopDimming()
                     }
-                    post { showReadout() }
                 }
             }
             val into = if (id.startsWith(HassDevice.LIGHT)) lights else plugs
@@ -155,50 +141,26 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
                 ?: HassJson.shortName(d?.name ?: pill.entityId.substringAfter('.'))
             pill.device = d
             pill.reachable = devices.reachable
-        }
-        showReadout()
-    }
-
-    private fun showReadout() {
-        val focused = pills().firstOrNull { it.isFocused }
-        readout.text = if (focused != null) describe(focused) else summary()
-    }
-
-    private fun describe(pill: HomePill): CharSequence {
-        val d = devices[pill.entityId] ?: return ""
-        return when {
-            !devices.reachable -> warn(context.getString(R.string.home_unreachable))
-            devices.failed == d.id -> warn(context.getString(R.string.home_failed))
-            !d.available -> warn(context.getString(R.string.home_state_offline))
-            dimming === pill -> gold(context.getString(R.string.home_dimming, d.brightness))
-            d.on && d.dimmable -> context.getString(R.string.home_brightness_hint, d.brightness)
-            d.on -> context.getString(R.string.home_state_on)
-            else -> context.getString(R.string.home_state_off)
+            pill.status = status(pill, d)
+            pill.statusColor = when {
+                d == null -> Tokens.textMuted
+                !devices.reachable || devices.failed == d.id || !d.available -> Tokens.warning
+                dimming === pill || (d.on && d.isLight) -> HomePill.GOLD
+                d.on -> Tokens.accent
+                else -> Tokens.textMuted
+            }
         }
     }
 
-    private fun summary(): CharSequence {
-        val shown = devices.ids.mapNotNull { devices[it] }
-        if (shown.isEmpty() && devices.reachable) return ""
-        if (!devices.reachable) return warn(context.getString(R.string.home_unreachable))
-        val on = shown.count { it.available && it.on }
-        val offline = shown.count { !it.available }
-        val text = SpannableStringBuilder(
-            if (on == 0) context.getString(R.string.home_all_off) else resources.getQuantityString(R.plurals.home_on, on, on),
-        )
-        if (offline > 0) {
-            text.append(" · ")
-            text.append(warn(resources.getQuantityString(R.plurals.home_offline, offline, offline)))
-        }
-        return text
-    }
-
-    private fun warn(text: String) = colored(text, Tokens.warning)
-
-    private fun gold(text: String) = colored(text, HomePill.GOLD)
-
-    private fun colored(text: String, color: Int) = SpannableStringBuilder(text).apply {
-        setSpan(ForegroundColorSpan(color), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    private fun status(pill: HomePill, d: HassDevice?): String = when {
+        d == null -> ""
+        !devices.reachable -> context.getString(R.string.home_state_unreachable)
+        devices.failed == d.id -> context.getString(R.string.home_failed_short)
+        !d.available -> context.getString(R.string.home_state_offline)
+        dimming === pill -> context.getString(R.string.home_dimming, d.brightness)
+        d.on && d.dimmable -> context.getString(R.string.home_percent, d.brightness)
+        d.on -> context.getString(R.string.home_state_on)
+        else -> context.getString(R.string.home_state_off)
     }
 
     /** The widest name width that saves [excess] pixels across names of [widths]. */
@@ -220,8 +182,7 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     }
 
     private companion object {
-        const val PILL_H = 30
+        const val PILL_H = 36
         const val GAP = 8
-        const val READOUT_W = 190
     }
 }

@@ -20,8 +20,8 @@ import cloud.samlo.couch.ui.dpf
 
 /**
  * One light or plug in the Index's Home Assistant row: a bulb or a plug in a small circle, then its
- * short name. A light that is on turns gold, a plug that is on takes the accent, and one Home
- * Assistant reports unavailable dims with an amber dot. Drawn in one view so a state change is a
+ * short name over its [status] (a brightness, Off, Offline). A light that is on turns gold, a plug
+ * that is on takes the accent, and one Home Assistant reports unavailable dims with an amber dot. Drawn in one view so a state change is a
  * single redraw.
  */
 @SuppressLint("ViewConstructor")
@@ -37,6 +37,19 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
             if (field == value) return
             field = value
             requestLayout()
+            invalidate()
+        }
+    /** The second line: what the device is doing, in [statusColor]. */
+    var status = ""
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+            invalidate()
+        }
+    var statusColor = Tokens.textMuted
+        set(value) {
+            field = value
             invalidate()
         }
     /** Null until Home Assistant has answered once. */
@@ -70,6 +83,10 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         typeface = Fonts.hanken(context, 500)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, resources.displayMetrics)
     }
+    private val small = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        typeface = Fonts.hanken(context, 500)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
+    }
     private val rect = RectF()
     private val padStart = context.dpf(4f)
     private val disc = context.dpf(22f)
@@ -82,8 +99,9 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
             field = value
             requestLayout()
         }
-    /** The name as drawn, cut to [labelLimit]. */
+    /** The name and status as drawn, cut to [labelLimit]. */
     private var shown: CharSequence = ""
+    private var shownStatus: CharSequence = ""
     /** Set when a hold turned into dimming, so its key-up doesn't also switch the light. */
     private var held = false
 
@@ -100,14 +118,18 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         invalidate()
     }
 
-    /** Width with the whole name, whatever [labelLimit] is. */
+    /** Width with the whole name and status, whatever [labelLimit] is. */
     fun naturalWidth(): Int = Math.ceil((padStart + disc + gap + padEnd).toDouble()).toInt() + labelWidth()
 
-    fun labelWidth(): Int = Math.ceil(text.measureText(label).toDouble()).toInt()
+    /** The wider of the two lines. */
+    fun labelWidth(): Int = Math.ceil(maxOf(text.measureText(label), small.measureText(status)).toDouble()).toInt()
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        shown = if (labelWidth() <= labelLimit) label else TextUtils.ellipsize(label, text, labelLimit.toFloat(), TextUtils.TruncateAt.END)
-        val width = padStart + disc + gap + text.measureText(shown, 0, shown.length) + padEnd
+        val limit = labelLimit.toFloat()
+        shown = if (text.measureText(label) <= limit) label else TextUtils.ellipsize(label, text, limit, TextUtils.TruncateAt.END)
+        shownStatus = if (small.measureText(status) <= limit) status else TextUtils.ellipsize(status, small, limit, TextUtils.TruncateAt.END)
+        val lines = maxOf(text.measureText(shown, 0, shown.length), small.measureText(shownStatus, 0, shownStatus.length))
+        val width = padStart + disc + gap + lines + padEnd
         setMeasuredDimension(Math.ceil(width.toDouble()).toInt(), MeasureSpec.getSize(heightMeasureSpec))
     }
 
@@ -163,9 +185,15 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
             canvas.drawCircle(dx, dy, r, fill)
         }
 
+        // Name above, status below, the pair centred on the pill.
+        val x = padStart + disc + gap
+        val nameH = text.descent() - text.ascent()
+        val statusH = small.descent() - small.ascent()
+        val top = cy - (nameH + statusH - context.dpf(LINE_OVERLAP)) / 2
         text.color = label(state)
-        val baseline = cy - (text.descent() + text.ascent()) / 2
-        canvas.drawText(shown, 0, shown.length, padStart + disc + gap, baseline, text)
+        canvas.drawText(shown, 0, shown.length, x, top - text.ascent(), text)
+        small.color = statusColor
+        canvas.drawText(shownStatus, 0, shownStatus.length, x, top + nameH - context.dpf(LINE_OVERLAP) - small.ascent(), small)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
@@ -230,6 +258,8 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         keyCode == KeyEvent.KEYCODE_NUMPAD_ENTER
 
     companion object {
+        /** Hanken's line box is roomy: the two lines sit this much closer than it would put them. */
+        private const val LINE_OVERLAP = 4f
         private const val OFF = 0
         private const val LIT = 1
         private const val POWERED = 2

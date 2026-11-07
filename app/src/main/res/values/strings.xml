@@ -635,22 +635,10 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="home_state_unreachable">Unreachable</string>
     <string name="home_failed_short">Failed</string>
     <string name="home_percent">%1$d %%</string>
-    <string name="home_all_off">Everything is off</string>
-    <plurals name="home_on">
-        <item quantity="one">%1$d on</item>
-        <item quantity="other">%1$d on</item>
-    </plurals>
-    <plurals name="home_offline">
-        <item quantity="one">%1$d offline</item>
-        <item quantity="other">%1$d offline</item>
-    </plurals>
-    <string name="home_unreachable">Home Assistant unreachable</string>
     <string name="home_state_on">On</string>
     <string name="home_state_off">Off</string>
     <string name="home_state_offline">Offline</string>
-    <string name="home_brightness_hint">%1$d %% · hold OK to dim</string>
     <string name="home_dimming">◀  %1$d %%  ▶</string>
-    <string name="home_failed">Didn\'t go through</string>
     <string name="hass_title">Home Assistant</string>
     <string name="hass_hint">Up to six lights and plugs in a row at the top of the Index. OK switches one, holding OK dims a light.</string>
     <string name="hass_help">Lights and plugs on the Index</string>
