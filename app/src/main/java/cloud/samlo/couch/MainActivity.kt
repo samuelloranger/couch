@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import cloud.samlo.couch.debloat.Keepalive
+import cloud.samlo.couch.godmode.IdleClose
 import cloud.samlo.couch.home.HomeScreen
 import cloud.samlo.couch.sync.Sync
 
@@ -26,6 +27,7 @@ class MainActivity : Activity() {
         super.onResume()
         home.onResume()
         Keepalive.maybe(this)
+        IdleClose.arm(this)
         Sync.start(this)
     }
 

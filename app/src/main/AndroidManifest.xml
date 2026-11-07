@@ -22,6 +22,8 @@
         android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Godmode's closing of idle apps, as Android would under memory pressure. -->
+    <uses-permission android:name="android.permission.KILL_BACKGROUND_PROCESSES" />
     <!-- Quick settings list the paired Bluetooth audio devices and which one is connected. Android
          12 and later ask for BLUETOOTH_CONNECT; Couch grants it to itself over ADB. -->
     <uses-permission
@@ -119,6 +121,11 @@
 
         <receiver
             android:name=".update.InstallResult"
+            android:exported="false" />
+
+        <!-- Godmode's quarter-hourly check for idle apps. -->
+        <receiver
+            android:name=".godmode.IdleCloseReceiver"
             android:exported="false" />
 
         <!-- Godmode's sleep timer. -->

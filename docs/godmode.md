@@ -37,6 +37,9 @@ the two commands to run from a computer instead, with this TV's address already 
 - **Ad blocking** — Android's private DNS for the whole TV, through AdGuard's free resolver or a
   server of your own. It blocks what most apps load, but not the ads inside YouTube videos.
 - **Close background apps** — closes what Android would close anyway when memory runs low.
+- **Close idle apps** — does the same by itself every 15 minutes, for the apps you haven't opened
+  in 30 minutes to 4 hours. What's on screen and music still playing are left alone. It reads when
+  each app was last used, so it needs usage access.
 
 ## Tools
 
