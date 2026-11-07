@@ -31,6 +31,8 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     private val versions = HashMap<String, Int>()
     /** Devices whose last command Home Assistant hasn't confirmed yet: plain reads leave them alone. */
     private val unconfirmed = HashSet<String>()
+    /** Among [unconfirmed], devices whose command set a brightness, which the device must report too. */
+    private val levelPending = HashSet<String>()
     private var readAt = 0L
     private var dimmingId: String? = null
     private val sendDimming = Runnable { dimmingId?.let { send(it) } }
@@ -44,10 +46,11 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     private val finishOf = HashMap<String, String>()
     /** Appliance id to when its cycle ends, in epoch milliseconds. */
     private val finishAt = HashMap<String, Long>()
+    /** Runs every minute while [live]; redraws only while an appliance runs, whenever it started. */
     private val tick = object : Runnable {
         override fun run() {
-            if (!live || ids.none { known[it]?.let { d -> d.isAppliance && d.on } == true }) return
-            onChange()
+            if (!live) return
+            if (ids.any { known[it]?.let { d -> d.isAppliance && d.on } == true }) onChange()
             main.postDelayed(this, TICK_MS)
         }
     }
@@ -121,7 +124,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         live = on
         if (on) {
             connect()
-            main.post(tick)
+            restartTick()
         } else {
             disconnect()
             main.removeCallbacks(tick)
@@ -166,9 +169,10 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
             if (finished(d) || d.id == dimmingId) return@forEach
             val wanted = known[d.id]
             // A command not yet confirmed keeps its state until the device reports the one asked for.
-            if (d.id in unconfirmed && wanted != null && !agrees(d, wanted, checkBrightness = false)) return@forEach
+            if (d.id in unconfirmed && wanted != null && !agrees(d, wanted, checkBrightness = d.id in levelPending)) return@forEach
             known[d.id] = d
             unconfirmed -= d.id
+            levelPending -= d.id
         }
         onChange()
     }
@@ -178,7 +182,6 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         states.forEach { if (it.id in ids && it.id !in known) known[it.id] = it }
         reachable = true
         onChange()
-        restartTick()
     }
 
     private fun restartTick() {
@@ -215,6 +218,9 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val wanted = !before.on
         known[id] = before.copy(on = wanted)
         failed = null
+        // From now: an event still showing the old state must not undo the press.
+        unconfirmed += id
+        levelPending -= id
         onChange()
         val version = bump(id)
         val base = url
@@ -263,6 +269,8 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     private fun send(id: String) {
         val wanted = known[id] ?: return
         val version = bump(id)
+        unconfirmed += id
+        levelPending += id
         val base = url
         worker.execute {
             val ok = hass.brightness(base, id, wanted.brightness)
@@ -277,11 +285,12 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
             before?.let { known[id] = it }
             failed = id
             unconfirmed -= id
+            levelPending -= id
             onChange()
             return
         }
-        unconfirmed += id
-        confirm(id, version, 0, checkBrightness)
+        // Already confirmed by the socket meanwhile: nothing to check.
+        if (id in unconfirmed) confirm(id, version, 0, checkBrightness)
     }
 
     /** Reads [id] again until Home Assistant shows what the command asked for, or the checks run out. */
@@ -301,9 +310,13 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
                         after != null && (agrees || last) -> {
                             known[id] = after
                             unconfirmed -= id
+                            levelPending -= id
                             onChange()
                         }
-                        last -> unconfirmed -= id
+                        last -> {
+                            unconfirmed -= id
+                            levelPending -= id
+                        }
                         else -> confirm(id, version, attempt + 1, checkBrightness)
                     }
                 }

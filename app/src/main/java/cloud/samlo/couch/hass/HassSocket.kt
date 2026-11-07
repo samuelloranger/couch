@@ -12,6 +12,8 @@ import java.net.URI
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.Base64
+import javax.net.ssl.HttpsURLConnection
+import javax.net.ssl.SSLSocket
 import javax.net.ssl.SSLSocketFactory
 import kotlin.concurrent.thread
 
@@ -64,6 +66,14 @@ class HassSocket(
         s.connect(InetSocketAddress(uri.host, port), CONNECT_MS)
         s.soTimeout = READ_MS
         if (closed) return false
+        if (s is SSLSocket) {
+            // A bare SSL socket checks the certificate chain but not that it names this host;
+            // without this, any valid certificate could collect the token.
+            s.startHandshake()
+            if (!HttpsURLConnection.getDefaultHostnameVerifier().verify(uri.host, s.session)) {
+                throw javax.net.ssl.SSLPeerUnverifiedException("Certificate doesn't match ${uri.host}")
+            }
+        }
         val input = BufferedInputStream(s.getInputStream())
         val output = s.getOutputStream()
         handshake(uri, port, input, output)
@@ -130,8 +140,11 @@ class HassSocket(
             val opcode = b0 and 0x0F
             val fin = b0 and 0x80 != 0
             var length = (b1 and 0x7F).toLong()
-            if (length == 126L) length = ((readByte(input) shl 8) or readByte(input)).toLong()
-            if (length == 127L) length = (0 until 8).fold(0L) { acc, _ -> (acc shl 8) or readByte(input).toLong() }
+            if (length == 126L) {
+                length = ((readByte(input) shl 8) or readByte(input)).toLong()
+            } else if (length == 127L) {
+                length = (0 until 8).fold(0L) { acc, _ -> (acc shl 8) or readByte(input).toLong() }
+            }
             if (length > MAX_MESSAGE) throw java.io.IOException("Message too large")
             val mask = if (b1 and 0x80 != 0) ByteArray(4) { readByte(input).toByte() } else null
             val payload = ByteArray(length.toInt())
