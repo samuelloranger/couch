@@ -66,7 +66,7 @@ object InputItems {
             !home.reachable -> context.getString(R.string.home_state_unreachable)
             home.failed == id -> context.getString(R.string.home_failed_short)
             !d.available -> context.getString(R.string.home_state_offline)
-            d.on && d.dimmable -> context.getString(R.string.home_percent, d.brightness)
+            d.on && d.dimmable && d.brightness > 0 -> context.getString(R.string.home_percent, d.brightness)
             d.on -> context.getString(R.string.home_state_on)
             else -> context.getString(R.string.home_state_off)
         }

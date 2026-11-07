@@ -70,6 +70,9 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     /** Where focus lands coming up from the apps: the pill last used, else the first. */
     fun entry(): View? = lastFocused?.takeIf { it.parent != null } ?: pills().firstOrNull()
 
+    /** Streams changes while the Index shows; see [HassDevices.live]. */
+    fun live(on: Boolean) = devices.live(on)
+
     fun bind(config: Config) {
         if (devices.use(config.homeAssistantUrl, config.homeDevices) || config.homeNames != names) {
             names = config.homeNames
@@ -158,7 +161,8 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         devices.failed == d.id -> context.getString(R.string.home_failed_short)
         !d.available -> context.getString(R.string.home_state_offline)
         dimming === pill -> context.getString(R.string.home_dimming, d.brightness)
-        d.on && d.dimmable -> context.getString(R.string.home_percent, d.brightness)
+        // Switched on but not reported yet: no level to show.
+        d.on && d.dimmable && d.brightness > 0 -> context.getString(R.string.home_percent, d.brightness)
         d.on -> context.getString(R.string.home_state_on)
         else -> context.getString(R.string.home_state_off)
     }

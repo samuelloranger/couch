@@ -204,12 +204,14 @@ class HomeScreen(private val activity: Activity) {
     }
 
     private fun startLive() {
+        views.index.live(true)
         views.index.topBar.nowPlaying.start()
         views.index.systemLine.start()
         views.index.topBar.animateWeather(true)
     }
 
     private fun stopLive() {
+        views.index.live(false)
         views.index.topBar.nowPlaying.stop()
         views.index.systemLine.stop()
         views.index.topBar.animateWeather(false)

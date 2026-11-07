@@ -250,8 +250,14 @@ class RemoteButtons(private val context: Context) {
 
     init {
         inputs.onChosen = { Prefs.of(context).edit().putString(LAST_INPUT, it).apply() }
-        inputs.onClosed = ::loadInputs
-        inputs.onShown = { home.refresh() }
+        inputs.onClosed = {
+            home.live(false)
+            loadInputs()
+        }
+        inputs.onShown = {
+            home.live(true)
+            home.refresh()
+        }
     }
 
     companion object {

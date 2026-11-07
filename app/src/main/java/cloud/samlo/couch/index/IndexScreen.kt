@@ -179,6 +179,9 @@ class IndexScreen(
         if (activity.currentFocus === spotlight.channelButton && !spotlight.channelButton.isFocusable) target.requestFocus()
     }
 
+    /** The Home Assistant row streams changes only while the home screen is in front. */
+    fun live(on: Boolean) = homeRow.live(on)
+
     fun appTiles(): List<Tile> = data?.entries.orEmpty().map { it.app }
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */

@@ -166,7 +166,7 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         glyph.draw(canvas)
 
         // The brightness ring, while a dimmable light that is on has focus.
-        if (on && d != null && d.dimmable && (isFocused || dimming)) {
+        if (on && d != null && d.dimmable && d.brightness > 0 && (isFocused || dimming)) {
             val r = disc / 2 + context.dpf(1.5f)
             stroke.strokeWidth = context.dpf(2f)
             rect.set(cx - r, cy - r, cx + r, cy + r)

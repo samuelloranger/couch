@@ -17,6 +17,9 @@ import java.util.concurrent.Executors
  * Home Assistant accepts a command before the device reports its new state (a cloud plug takes a
  * second or two), so a read right after still shows the old one. A command's state is kept and
  * checked again a few times; only the last check may overrule it.
+ *
+ * While [live], a [HassSocket] streams every change as it happens, whoever made it, and plain
+ * reads stop; if the socket drops, it comes back with a growing delay and reads fill in meanwhile.
  */
 class HassDevices(private val hass: HomeAssistant, private val onChange: () -> Unit) {
     private val main = Handler(Looper.getMainLooper())
@@ -28,6 +31,12 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     private var readAt = 0L
     private var dimmingId: String? = null
     private val sendDimming = Runnable { dimmingId?.let { send(it) } }
+    private var socket: HassSocket? = null
+    /** The socket is subscribed and sending: reads would only repeat it. */
+    private var streaming = false
+    private var live = false
+    private var drops = 0
+    private val reconnect = Runnable { connect() }
 
     var url = ""
         private set
@@ -50,7 +59,63 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         this.url = base
         this.ids = wanted
         readAt = 0L
+        if (live) {
+            disconnect()
+            connect()
+        }
         return true
+    }
+
+    /** Streams changes while something shows the devices; [on] false lets the connection go. */
+    fun live(on: Boolean) {
+        if (live == on) return
+        live = on
+        if (on) connect() else disconnect()
+    }
+
+    private fun connect() {
+        if (!live || ids.isEmpty() || socket != null) return
+        lateinit var s: HassSocket
+        s = HassSocket(
+            url, hass.token, ids,
+            onStates = { states -> main.post { if (socket === s) streamed(states) } },
+            onDown = { rejected ->
+                main.post {
+                    if (socket !== s) return@post
+                    socket = null
+                    streaming = false
+                    // A refused token won't work on the next try either; reads still say why.
+                    if (!rejected && live) main.postDelayed(reconnect, RECONNECT_MS[drops.coerceAtMost(RECONNECT_MS.lastIndex)])
+                    drops++
+                    refresh()
+                }
+            },
+        )
+        socket = s
+        s.start()
+    }
+
+    private fun disconnect() {
+        main.removeCallbacks(reconnect)
+        socket?.close()
+        socket = null
+        streaming = false
+    }
+
+    /** States from the socket: Home Assistant's word, except for a light being dimmed right now. */
+    private fun streamed(states: List<HassDevice>) {
+        streaming = true
+        drops = 0
+        reachable = true
+        states.forEach { d ->
+            if (d.id == dimmingId) return@forEach
+            val wanted = known[d.id]
+            // A command not yet confirmed keeps its state until the device reports the one asked for.
+            if (d.id in unconfirmed && wanted != null && !agrees(d, wanted, checkBrightness = false)) return@forEach
+            known[d.id] = d
+            unconfirmed -= d.id
+        }
+        onChange()
     }
 
     /** States read elsewhere (a full list on a worker), for devices not known yet. */
@@ -62,7 +127,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
 
     /** Reads every device again unless that happened a moment ago. */
     fun refresh() {
-        if (ids.isEmpty()) return
+        if (ids.isEmpty() || streaming) return
         val now = SystemClock.elapsedRealtime()
         if (now - readAt < MIN_READ_MS) return
         readAt = now
@@ -90,7 +155,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val base = url
         worker.execute {
             val ok = hass.toggle(base, id)
-            main.post { settle(id, version, ok, before) }
+            main.post { settle(id, version, ok, before, checkBrightness = false) }
         }
         return true
     }
@@ -136,12 +201,12 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val base = url
         worker.execute {
             val ok = hass.brightness(base, id, wanted.brightness)
-            main.post { settle(id, version, ok, null) }
+            main.post { settle(id, version, ok, null, checkBrightness = true) }
         }
     }
 
     /** A command's answer; ignored when a later command has already moved the device on. */
-    private fun settle(id: String, version: Int, ok: Boolean, before: HassDevice?) {
+    private fun settle(id: String, version: Int, ok: Boolean, before: HassDevice?, checkBrightness: Boolean) {
         if (versions[id] != version) return
         if (!ok) {
             before?.let { known[id] = it }
@@ -151,22 +216,21 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
             return
         }
         unconfirmed += id
-        confirm(id, version, 0)
+        confirm(id, version, 0, checkBrightness)
     }
 
     /** Reads [id] again until Home Assistant shows what the command asked for, or the checks run out. */
-    private fun confirm(id: String, version: Int, attempt: Int) {
+    private fun confirm(id: String, version: Int, attempt: Int, checkBrightness: Boolean) {
         main.postDelayed({
-            if (versions[id] != version) return@postDelayed
+            // Already confirmed by the socket.
+            if (versions[id] != version || id !in unconfirmed) return@postDelayed
             val base = url
             worker.execute {
                 val after = hass.state(base, id)
                 main.post {
                     if (versions[id] != version) return@post
                     val wanted = known[id]
-                    // Home Assistant keeps brightness out of 255: a percent may come back one off.
-                    val agrees = after != null && wanted != null && after.on == wanted.on &&
-                        (!after.on || !after.dimmable || Math.abs(after.brightness - wanted.brightness) <= 2)
+                    val agrees = after != null && wanted != null && agrees(after, wanted, checkBrightness)
                     val last = attempt == CONFIRM_MS.lastIndex
                     when {
                         after != null && (agrees || last) -> {
@@ -175,12 +239,21 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
                             onChange()
                         }
                         last -> unconfirmed -= id
-                        else -> confirm(id, version, attempt + 1)
+                        else -> confirm(id, version, attempt + 1, checkBrightness)
                     }
                 }
             }
         }, CONFIRM_MS[attempt])
     }
+
+    /**
+     * Whether Home Assistant's [actual] state is what a command asked for. Only a brightness
+     * command cares about the level: switching on keeps whatever level the light had.
+     */
+    private fun agrees(actual: HassDevice, wanted: HassDevice, checkBrightness: Boolean): Boolean =
+        actual.on == wanted.on &&
+            // Home Assistant keeps brightness out of 255: a percent may come back one off.
+            (!checkBrightness || !actual.on || !actual.dimmable || Math.abs(actual.brightness - wanted.brightness) <= 2)
 
     private fun bump(id: String): Int = ((versions[id] ?: 0) + 1).also { versions[id] = it }
 
@@ -192,5 +265,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         const val BRIGHTNESS_SETTLE_MS = 350L
         /** When to check a command took: devices report back in well under a second to a few seconds. */
         val CONFIRM_MS = longArrayOf(1000L, 1500L, 3500L)
+        /** Waits before reconnecting a dropped socket, growing with each drop in a row. */
+        val RECONNECT_MS = longArrayOf(2000L, 5000L, 15_000L, 30_000L)
     }
 }
