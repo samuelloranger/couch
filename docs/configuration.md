@@ -21,6 +21,7 @@ is off, a line at the top says so and opens the permissions page.
 | | App channels | a switch for each channel apps publish |
 | | Show or hide apps | a switch for each app |
 | | Inputs | rename inputs, pick their icon, and a switch for each |
+| | Home Assistant | connect from the phone; up to six lights, plugs and appliances, with short names ([below](#home-assistant)) |
 | Clock and weather | 24-hour clock, Weather | On / Off |
 | | City, Units *(weather on)* | |
 | Couch | Permissions | HOME button, Notification access, Usage access, TV listings ([setup](setup.md#3-permissions)) |
@@ -52,6 +53,30 @@ bottom line shows the TV's address, network traffic, memory, storage, uptime and
   newly installed apps follow the saved manual order alphabetically. Move appears when there
   is another app in the same group.
 - The wallpaper shows in ambient mode.
+
+## Home Assistant
+
+With Home Assistant connected, a row of up to six devices sits at the top left of the Index:
+lights, then plugs, then appliances. Each pill shows an icon, a short name and its state: a light's
+brightness, on or off, an appliance's cycle with its time left, or *Offline*. While the row shows,
+the app list starts below it, Inputs and Settings move under the list, and what's playing is
+hidden.
+
+- Up from the first app reaches the row. OK switches a light or plug at once; holding OK on a
+  dimmable light sets its brightness with Left and Right (OK or Back ends). Appliances only
+  report.
+- **Customize → Home screen → Home Assistant → Connect from your phone** shows a QR code. The phone
+  opens a page the TV serves for that moment only, with Home Assistant's address filled in when
+  it announces itself on the network, and takes a long-lived access token (Home Assistant: your
+  profile, Security). The token stays in Couch's private storage, never in `config.json`.
+- The same page picks the devices (lights, plugs, and washer, dryer or dishwasher state sensors)
+  and their short names. *Disconnect* forgets the address and the token.
+- Changes stream over Home Assistant's WebSocket API while the Index or the Input panel shows, so a
+  switch flipped elsewhere shows at once. Couch sends each command and keeps the new state until
+  Home Assistant confirms it.
+
+Home Assistant on a home network usually answers over plain HTTP, so Couch allows unencrypted
+connections; its own internet requests all use HTTPS.
 
 ## Inputs turning on
 
@@ -138,6 +163,9 @@ setting changes, so edit it while the home screen is in the background.
 | `remoteButtons` | boolean | `false` | The remote's Input and Settings buttons open Couch's lists ([Remote buttons](remote-buttons.md)). |
 | `remoteInputKey` | number | `0` | The Input button's key code, as learned in Customize; `0` when not set up. |
 | `remoteSettingsKey` | number | `0` | The Settings button's key code; `0` when not set up. |
+| `homeAssistantUrl` | string | `""` | Home Assistant's address, such as `http://homeassistant.local:8123`; empty hides the row. |
+| `homeDevices` | string[] | `[]` | The row's devices, by entity id, at most six: `light.*`, `switch.*`, or an appliance's state sensor. |
+| `homeNames` | object | `{}` | Entity id → the short name its pill shows. Missing ones use Home Assistant's name. |
 | `syncAllTvs` | boolean | `true` | With sync on, Index adds the paired TVs' screen time to this one's; `false` shows this TV alone. |
 
 Back up or restore the whole setup by copying the directory:

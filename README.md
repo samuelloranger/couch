@@ -43,6 +43,8 @@ Couch instead of the stock home screen.
 - When a console or player on an input turns on, a chip offers to switch to it.
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
 - Weather (Open-Meteo, located automatically or by city), now playing.
+- Home Assistant: up to six lights, plugs and appliances on the Index, switched from the remote and
+  updated live.
 - Ambient mode after a few idle minutes: full-screen wallpaper, large clock, weather.
 - Long-press an app to pin it, move it, rename it or hide it. Pinned apps stay first.
 - Choose between an app's enabled channels from its channel name; Couch remembers your choice.
