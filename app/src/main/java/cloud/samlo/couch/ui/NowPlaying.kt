@@ -25,7 +25,7 @@ import cloud.samlo.couch.R
 
 /**
  * A pill in the top bar with what's playing (Spotify, YouTube Music...). OK plays or pauses,
- * a long press opens the app. Hidden when nothing plays or access isn't granted.
+ * a long press opens the app. Hidden when nothing plays, access isn't granted, or [suppressed].
  */
 @SuppressLint("ViewConstructor")
 class NowPlaying(context: Context) : LinearLayout(context) {
@@ -37,6 +37,14 @@ class NowPlaying(context: Context) : LinearLayout(context) {
     private val artist = text(12f, Tokens.textMuted)
     private var controller: MediaController? = null
     private val watched = HashMap<MediaController, MediaController.Callback>()
+
+    /** Kept hidden while something else needs the top of the screen (the Home Assistant row). */
+    var suppressed = false
+        set(value) {
+            if (field == value) return
+            field = value
+            pick()
+        }
 
     private val sessionsChanged = MediaSessionManager.OnActiveSessionsChangedListener { watch(it.orEmpty()) }
 
@@ -126,7 +134,7 @@ class NowPlaying(context: Context) : LinearLayout(context) {
         controller = chosen
         val meta = chosen?.metadata
         val name = meta?.getString(MediaMetadata.METADATA_KEY_TITLE)
-        if (chosen == null || name == null) {
+        if (chosen == null || name == null || suppressed) {
             if (hasFocus()) focusSearch(View.FOCUS_DOWN)?.requestFocus()
             fadeOut()
             return

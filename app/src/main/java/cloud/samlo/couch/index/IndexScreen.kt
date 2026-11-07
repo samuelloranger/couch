@@ -118,6 +118,18 @@ class IndexScreen(
         place(tools, IndexTokens.TOOLS_X, IndexTokens.TOOLS_Y, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
     }
 
+    /** The Home Assistant row takes what the top bar leaves, so the two never overlap. */
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        if (homeRow.visibility == VISIBLE) {
+            val width = MeasureSpec.getSize(widthMeasureSpec)
+            topBar.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+            val left = activity.dp(IndexTokens.LIST_X - Tokens.RING_INSET)
+            val right = activity.dp(IndexTokens.LIST_X + HOME_ROW_GAP) + topBar.measuredWidth
+            homeRow.fit(width - left - right)
+        }
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
     /** Moves the list down and Inputs and Settings under it while the Home Assistant row shows. */
     private fun layoutFor(home: Boolean) {
         if (home == homeLayout) return
@@ -132,6 +144,8 @@ class IndexScreen(
             list.fit(IndexTokens.LIST_H, IndexTokens.LIST_FADE_Y, IndexTokens.ROWS_SHOWN)
         }
         topBar.placePills(if (home) tools else null)
+        // No room for what's playing beside the row; the row's devices matter more here.
+        topBar.nowPlaying.suppressed = home
         tools.visibility = if (home) VISIBLE else GONE
         selectedRow()?.let { list.reveal(list.rows().indexOf(it), animate = false) }
     }
@@ -402,6 +416,8 @@ class IndexScreen(
         /** Where the channel row's clipping starts, left of the column: room for a focused card's ring. */
         const val STRIP_START = 16
         const val TOP_BAR_Y = 23
+        /** Between the Home Assistant row and the top bar's weather. */
+        const val HOME_ROW_GAP = 16
         const val STRIP_SETTLE_MS = 160L
         const val CARDS_PER_FRAME = 2
         const val SCREEN_W = 960

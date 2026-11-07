@@ -59,6 +59,26 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         addView(readout, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(16) })
     }
 
+    /**
+     * Fits the row in [available] pixels, padding included: the summary goes first, then the
+     * longest names are cut to a common width. Worked out from the full widths, so every layout
+     * pass lands on the same answer.
+     */
+    fun fit(available: Int) {
+        val pills = pills()
+        if (pills.isEmpty()) return
+        val dividerW = if (divider.visibility == VISIBLE) context.dp(1 + 24) else 0
+        val fixed = paddingLeft + paddingRight + dividerW + context.dp(GAP) * (lights.childCount.coerceAtLeast(1) - 1 + plugs.childCount.coerceAtLeast(1) - 1)
+        val natural = fixed + pills.sumOf { it.naturalWidth() }
+        val summary = context.dp(16) + readout.paint.measureText(readout.text.toString()).toInt().coerceAtMost(context.dp(READOUT_W))
+        val withSummary = natural + summary <= available
+        val wanted = if (withSummary) VISIBLE else GONE
+        if (readout.visibility != wanted) readout.visibility = wanted
+        val excess = natural - available
+        val cap = if (excess <= 0) Int.MAX_VALUE else labelCap(pills.map { it.labelWidth() }, excess)
+        pills.forEach { it.labelLimit = cap }
+    }
+
     fun pills(): List<HomePill> = (0 until lights.childCount).map { lights.getChildAt(it) as HomePill } +
         (0 until plugs.childCount).map { plugs.getChildAt(it) as HomePill }
 
@@ -179,6 +199,17 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
 
     private fun colored(text: String, color: Int) = SpannableStringBuilder(text).apply {
         setSpan(ForegroundColorSpan(color), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+    }
+
+    /** The widest name width that saves [excess] pixels across names of [widths]. */
+    private fun labelCap(widths: List<Int>, excess: Int): Int {
+        var lo = 0
+        var hi = widths.maxOrNull() ?: 0
+        while (lo < hi) {
+            val mid = (lo + hi + 1) / 2
+            if (widths.sumOf { (it - mid).coerceAtLeast(0) } >= excess) lo = mid else hi = mid - 1
+        }
+        return lo
     }
 
     private fun group() = LinearLayout(context).apply {

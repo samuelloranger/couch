@@ -7,6 +7,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.drawable.Drawable
+import android.text.TextPaint
+import android.text.TextUtils
 import android.util.TypedValue
 import android.view.KeyEvent
 import android.view.View
@@ -64,7 +66,7 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
     }
-    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+    private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Fonts.hanken(context, 500)
         textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, resources.displayMetrics)
     }
@@ -73,6 +75,15 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
     private val disc = context.dpf(22f)
     private val gap = context.dpf(7f)
     private val padEnd = context.dpf(12f)
+    /** Widest the name may draw, in pixels; a longer one ends in an ellipsis. */
+    var labelLimit = Int.MAX_VALUE
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+        }
+    /** The name as drawn, cut to [labelLimit]. */
+    private var shown: CharSequence = ""
     /** Set when a hold turned into dimming, so its key-up doesn't also switch the light. */
     private var held = false
 
@@ -89,8 +100,14 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         invalidate()
     }
 
+    /** Width with the whole name, whatever [labelLimit] is. */
+    fun naturalWidth(): Int = Math.ceil((padStart + disc + gap + padEnd).toDouble()).toInt() + labelWidth()
+
+    fun labelWidth(): Int = Math.ceil(text.measureText(label).toDouble()).toInt()
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val width = padStart + disc + gap + text.measureText(label) + padEnd
+        shown = if (labelWidth() <= labelLimit) label else TextUtils.ellipsize(label, text, labelLimit.toFloat(), TextUtils.TruncateAt.END)
+        val width = padStart + disc + gap + text.measureText(shown, 0, shown.length) + padEnd
         setMeasuredDimension(Math.ceil(width.toDouble()).toInt(), MeasureSpec.getSize(heightMeasureSpec))
     }
 
@@ -148,7 +165,7 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
 
         text.color = label(state)
         val baseline = cy - (text.descent() + text.ascent()) / 2
-        canvas.drawText(label, padStart + disc + gap, baseline, text)
+        canvas.drawText(shown, 0, shown.length, padStart + disc + gap, baseline, text)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
