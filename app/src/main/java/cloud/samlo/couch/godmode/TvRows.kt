@@ -10,7 +10,7 @@ import kotlin.concurrent.thread
 
 /**
  * The TV's own settings: put everything back, animation speed, TV-wide ad blocking through
- * Android's private DNS, and closing background apps. Writing needs the shell's grant; without it,
+ * Android's private DNS, and closing background apps, now or once they sit idle. Writing needs the shell's grant; without it,
  * a row connects first and then applies the change.
  */
 internal fun GodmodePage.tvRows() {
@@ -46,6 +46,8 @@ internal fun GodmodePage.tvRows() {
         if (name.isNotEmpty()) writing { TvSettings.setDns(c, "custom", name) }
     }
     o.link(ctx.str(R.string.kill_bg), ctx.str(R.string.kill_bg_help)) { closeBackground() }
+    val limits = listOf(0, 30, 60, 120, 240).map { Option(if (it == 0) ctx.str(R.string.idle_close_off) else c.getString(R.string.idle_close_minutes, it), "$it") }
+    o.choice(ctx.str(R.string.idle_close), ctx.str(R.string.idle_close_help), limits, { "${IdleClose.minutes(c)}" }) { IdleClose.set(c, it.toInt()) }
 }
 
 private fun GodmodePage.putBackValue(): String {

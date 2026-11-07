@@ -372,6 +372,10 @@
     <string name="kill_bg_help">Closes apps left running in the background, as Android would when memory runs low. They open again normally.</string>
     <string name="kill_bg_done">Freed %1$s of memory</string>
     <string name="kill_bg_none">Nothing to close right now.</string>
+    <string name="idle_close">Close idle apps</string>
+    <string name="idle_close_help">Every 15 minutes, closes the apps you haven’t opened for this long. What’s on screen and music still playing are left alone. Needs usage access.</string>
+    <string name="idle_close_off">Off</string>
+    <string name="idle_close_minutes">After %1$d min</string>
     <string name="couch_group">Couch</string>
     <string name="prerelease">Pre-releases</string>
     <string name="prerelease_help">Also offers Couch’s test versions when they come out. Couch never goes back to an older version, even if you turn this off.</string>

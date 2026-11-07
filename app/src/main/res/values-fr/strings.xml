@@ -377,6 +377,10 @@
     <string name="kill_bg_help">Ferme les applis restées ouvertes en arrière-plan, comme Android le ferait quand la mémoire manque. Elles se rouvrent normalement.</string>
     <string name="kill_bg_done">%1$s de mémoire libérés</string>
     <string name="kill_bg_none">Rien à fermer pour l’instant.</string>
+    <string name="idle_close">Fermer les applis inactives</string>
+    <string name="idle_close_help">Toutes les 15 minutes, ferme les applis que tu n’as pas ouvertes depuis ce délai. Ce qui est à l’écran et la musique en cours ne sont pas touchés. Demande l’accès aux données d’utilisation.</string>
+    <string name="idle_close_off">Désactivé</string>
+    <string name="idle_close_minutes">Après %1$d min</string>
     <string name="couch_group">Couch</string>
     <string name="prerelease">Préversions</string>
     <string name="prerelease_help">Propose aussi les versions de test de Couch dès leur sortie. Couch ne revient jamais à une version plus ancienne, même si tu désactives ceci.</string>
