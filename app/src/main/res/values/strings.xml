@@ -628,4 +628,51 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="move_app_title">Move %1$s to position</string>
     <string name="choose_channel">Choose channel</string>
     <string name="choose_channel_label">%1$s. Choose channel</string>
+
+    <!-- Home Assistant -->
+    <string name="home_all_off">Everything is off</string>
+    <plurals name="home_on">
+        <item quantity="one">%1$d on</item>
+        <item quantity="other">%1$d on</item>
+    </plurals>
+    <plurals name="home_offline">
+        <item quantity="one">%1$d offline</item>
+        <item quantity="other">%1$d offline</item>
+    </plurals>
+    <string name="home_unreachable">Home Assistant unreachable</string>
+    <string name="home_state_on">On</string>
+    <string name="home_state_off">Off</string>
+    <string name="home_state_offline">Offline</string>
+    <string name="home_brightness_hint">%1$d %% · hold OK to dim</string>
+    <string name="home_dimming">◀  %1$d %%  ▶</string>
+    <string name="home_failed">Didn\'t go through</string>
+    <string name="hass_title">Home Assistant</string>
+    <string name="hass_hint">Up to six lights and plugs in a row at the top of the Index. OK switches one, holding OK dims a light.</string>
+    <string name="hass_help">Lights and plugs on the Index</string>
+    <string name="hass_connection">Connection</string>
+    <string name="hass_connect">Connect from your phone</string>
+    <string name="hass_connect_help">Scan the code with your phone and paste a long-lived access token, made in Home Assistant under your profile, Security.</string>
+    <string name="hass_not_connected">Not connected</string>
+    <string name="hass_forget">Disconnect</string>
+    <string name="hass_forget_help">Forgets the address and the token; the row leaves the Index.</string>
+    <string name="hass_loading">Reading your lights and plugs…</string>
+    <string name="hass_unreachable">Home Assistant can\'t be reached. Check that it is running, then come back to this page.</string>
+    <string name="hass_in_row">In the row (%1$d of %2$d)</string>
+    <string name="hass_in_row_count">%1$d of %2$d</string>
+    <string name="hass_in_row_none">Nothing in the row yet: pick lights and plugs below.</string>
+    <string name="hass_names">Short names</string>
+    <string name="hass_name_help">What the pill shows. Empty uses Home Assistant\'s name.</string>
+    <string name="hass_others">Lights and plugs</string>
+    <string name="hass_full">Six at most: take one out of the row first.</string>
+    <string name="hass_link_title">Connect Home Assistant</string>
+    <string name="hass_link_steps">Scan with your phone, or open this address on it:</string>
+    <string name="hass_link_wait">This window closes on its own once Couch is connected.</string>
+    <string name="hass_link_failed">Couch couldn\'t open the link. Check the TV is on the network.</string>
+    <string name="hass_linked">Home Assistant connected</string>
+    <string name="hass_page_url">Home Assistant address</string>
+    <string name="hass_page_token">Long-lived access token</string>
+    <string name="hass_page_token_help">In Home Assistant: your profile, Security, Long-lived access tokens, Create token.</string>
+    <string name="hass_page_send">Connect</string>
+    <string name="hass_page_done">Connected. You can close this page.</string>
+    <string name="hass_page_rejected">Home Assistant didn\'t accept this address or token.</string>
 </resources>

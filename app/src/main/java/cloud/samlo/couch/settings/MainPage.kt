@@ -191,6 +191,12 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
         o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) { open(SettingsActivity.PAGE_APPS) }
         o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }
+        o.page(ctx.str(R.string.hass_title), ctx.str(R.string.hass_help), { homeAssistantValue() }) { open(SettingsActivity.PAGE_HOME_ASSISTANT) }
+    }
+
+    private fun homeAssistantValue(): String = when {
+        config.homeAssistantUrl.isBlank() -> ctx.str(R.string.hass_not_connected)
+        else -> ctx.activity.getString(R.string.hass_in_row_count, config.homeDevices.size, Config.MAX_HOME_DEVICES)
     }
 
     private fun clock() {

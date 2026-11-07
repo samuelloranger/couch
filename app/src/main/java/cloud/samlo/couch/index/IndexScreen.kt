@@ -8,10 +8,13 @@ import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Images
+import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.Tile
+import cloud.samlo.couch.hass.HomeAssistant
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.FocusRow
 import cloud.samlo.couch.ui.Tokens
@@ -48,6 +51,15 @@ class IndexScreen(
     private val banner = ImageView(activity).apply { scaleType = ImageView.ScaleType.FIT_XY }
     private val stats = StatsBar(activity)
     val systemLine = SystemLine(activity)
+    /** Lights and plugs from Home Assistant, top left; gone until some are chosen. */
+    private val homeRow = HomeRow(activity, HomeAssistant(Prefs.of(activity)))
+    /** Inputs and Settings, below the list, while the Home Assistant row takes the top left. */
+    private val tools = LinearLayout(activity).apply {
+        orientation = LinearLayout.HORIZONTAL
+        visibility = GONE
+    }
+    /** The layout in place: with the Home Assistant row or without. */
+    private var homeLayout = false
 
     private var data: IndexData? = null
     private var config = Config()
@@ -98,11 +110,33 @@ class IndexScreen(
             topMargin = activity.dp(TOP_BAR_Y)
             rightMargin = activity.dp(IndexTokens.LIST_X)
         })
+        place(homeRow, IndexTokens.LIST_X, IndexTokens.HOME_ROW_Y, LayoutParams.WRAP_CONTENT, IndexTokens.HOME_ROW_H)
+        place(tools, IndexTokens.TOOLS_X, IndexTokens.TOOLS_Y, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
+    }
+
+    /** Moves the list down and Inputs and Settings under it while the Home Assistant row shows. */
+    private fun layoutFor(home: Boolean) {
+        if (home == homeLayout) return
+        homeLayout = home
+        list.layoutParams = (list.layoutParams as LayoutParams).apply {
+            topMargin = activity.dp(if (home) IndexTokens.LIST_Y_HOME else IndexTokens.LIST_Y)
+            height = activity.dp(if (home) IndexTokens.LIST_H_HOME else IndexTokens.LIST_H)
+        }
+        if (home) {
+            list.fit(IndexTokens.LIST_H_HOME, IndexTokens.LIST_FADE_Y_HOME, IndexTokens.ROWS_SHOWN_HOME)
+        } else {
+            list.fit(IndexTokens.LIST_H, IndexTokens.LIST_FADE_Y, IndexTokens.ROWS_SHOWN)
+        }
+        topBar.placePills(if (home) tools else null)
+        tools.visibility = if (home) VISIBLE else GONE
+        selectedRow()?.let { list.reveal(list.rows().indexOf(it), animate = false) }
     }
 
     fun bind(data: IndexData, config: Config) {
         this.data = data
         this.config = config
+        homeRow.bind(config)
+        layoutFor(homeRow.visibility == VISIBLE)
         // The accent is the one setting that changes how rows and cards are drawn.
         val rebuild = look != config.accent
         look = config.accent
@@ -131,15 +165,19 @@ class IndexScreen(
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */
     fun consumesKey(event: KeyEvent): Boolean {
+        if (homeRow.consumesKey(event)) return true
         if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
         val focused = activity.currentFocus ?: return false
-        if (!programs.isAncestorOf(focused) && !topBar.isAncestorOf(focused) && focused !== spotlight.channelButton) return false
+        val elsewhere = programs.isAncestorOf(focused) || topBar.isAncestorOf(focused) || homeRow.isAncestorOf(focused) ||
+            tools.isAncestorOf(focused) || focused === spotlight.channelButton
+        if (!elsewhere) return false
         if (event.action == KeyEvent.ACTION_UP) selectedRow()?.requestFocus()
         return true
     }
 
     /** HOME while home: back to the first app. */
     fun reset() {
+        homeRow.stopDimming()
         inputMenu?.dismiss()
         channelMenu?.dismiss()
         val first = list.rows().firstOrNull() ?: return
@@ -259,13 +297,15 @@ class IndexScreen(
         val row = selectedRow()
         val inStrip = focused != null && programs.isAncestorOf(focused)
         val inTop = focused != null && topBar.isAncestorOf(focused)
+        val inHome = focused != null && homeRow.isAncestorOf(focused)
+        val inTools = focused != null && tools.isAncestorOf(focused)
         return when {
             focused is AppRow -> {
                 val rows = list.rows()
                 val i = rows.indexOf(focused)
                 when (direction) {
-                    FOCUS_UP -> rows.getOrNull(i - 1) ?: firstTopTarget() ?: focused
-                    FOCUS_DOWN -> rows.getOrNull(i + 1) ?: focused
+                    FOCUS_UP -> rows.getOrNull(i - 1) ?: homeRow.takeIf { homeLayout }?.entry() ?: firstTopTarget() ?: focused
+                    FOCUS_DOWN -> rows.getOrNull(i + 1) ?: firstTool() ?: focused
                     FOCUS_RIGHT -> {
                         // Right before the row has filled: fill it now.
                         if (stripKey != focused.entry.stripKey) fill(focused.entry)
@@ -284,6 +324,16 @@ class IndexScreen(
                 FOCUS_DOWN, FOCUS_RIGHT -> programs.cards().firstOrNull() ?: row ?: focused
                 else -> row ?: focused
             }
+            inHome -> when (direction) {
+                FOCUS_DOWN -> row ?: focused
+                FOCUS_LEFT, FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: focused
+                else -> focused
+            }
+            inTools -> when (direction) {
+                FOCUS_UP -> list.rows().lastOrNull() ?: focused
+                FOCUS_LEFT, FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { tools.isAncestorOf(it) } ?: focused
+                else -> focused
+            }
             inTop -> if (direction == FOCUS_DOWN) row ?: focused else super.focusSearch(focused, direction)?.takeIf { topBar.isAncestorOf(it) } ?: focused
             else -> super.focusSearch(focused, direction)
         }
@@ -292,7 +342,9 @@ class IndexScreen(
     /** Back to the selected app; its focus listener puts the panel back on the first program. */
     private fun leaveStrip(row: AppRow?): View? = row
 
-    private fun firstTopTarget(): View? = listOf(topBar.inputs, topBar.settings).firstOrNull { it.visibility == VISIBLE }
+    private fun firstTopTarget(): View? = listOf(topBar.inputs, topBar.settings).firstOrNull { it.visibility == VISIBLE && it.parent === topBar }
+
+    private fun firstTool(): View? = if (homeLayout) listOf(topBar.inputs, topBar.settings).firstOrNull { it.visibility == VISIBLE } else null
 
     private fun View.isAncestorOf(view: View): Boolean {
         var p: View? = view

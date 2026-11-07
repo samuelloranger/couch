@@ -52,6 +52,24 @@ class ConfigTest {
     }
 
     @Test
+    fun homeRowKeepsSixLightsAndPlugs() {
+        val config = Config().apply {
+            homeAssistantUrl = "http://10.0.0.2:8123"
+            homeDevices = listOf("light.a", "switch.b")
+            homeNames = mapOf("light.a" to "Desk")
+        }
+        val copy = Config.fromJson(config.toJson())
+        assertEquals("http://10.0.0.2:8123", copy.homeAssistantUrl)
+        assertEquals(listOf("light.a", "switch.b"), copy.homeDevices)
+        assertEquals("Desk", copy.homeNames["light.a"])
+
+        val crowded = Config.fromJson(
+            """{"homeDevices":["sensor.t","light.1","light.1","light.2","light.3","switch.4","switch.5","switch.6","switch.7"]}""",
+        )
+        assertEquals(listOf("light.1", "light.2", "light.3", "switch.4", "switch.5", "switch.6"), crowded.homeDevices)
+    }
+
+    @Test
     fun aFileFromTheRowsLayoutStillLoadsAndForgetsIt() {
         val old = """{"layout":"rows","cardSize":"large","sectionOrder":["inputs","apps"],"hiddenSections":["ch:7"],""" +
             """"dim":"strong","showLabels":true,"showDescriptions":false,"showDate":false,"weatherCity":"Montréal"}"""

@@ -31,6 +31,13 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         addView(FlatView(context).apply { background = marker }, LayoutParams(context.dp(3), context.dp(IndexTokens.ROW_H - 22), Gravity.CENTER_VERTICAL))
     }
     private var selectionY = 0f
+    private val fade = FlatView(context).apply {
+        background = GradientDrawable(
+            GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(Tokens.background and 0x00FFFFFF, Tokens.background),
+        )
+    }
+    private var rowsShown = IndexTokens.ROWS_SHOWN
     /** In-row state and accent as last painted; repainting only on a change keeps a key press from redrawing it. */
     private var painted: Pair<Boolean, Int>? = null
 
@@ -39,13 +46,17 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         track.addView(selection, LayoutParams(LayoutParams.MATCH_PARENT, context.dp(IndexTokens.ROW_H)))
         track.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         addView(track, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        val fadeTop = context.dp(IndexTokens.LIST_FADE_Y)
-        addView(FlatView(context).apply {
-            background = GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                intArrayOf(Tokens.background and 0x00FFFFFF, Tokens.background),
-            )
-        }, LayoutParams(LayoutParams.MATCH_PARENT, context.dp(IndexTokens.LIST_H) - fadeTop).apply { topMargin = fadeTop })
+        addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, 0))
+        fit(IndexTokens.LIST_H, IndexTokens.LIST_FADE_Y, IndexTokens.ROWS_SHOWN)
+    }
+
+    /** The list's height in dp, where its fade starts and how many rows show before it. */
+    fun fit(height: Int, fadeY: Int, rows: Int) {
+        rowsShown = rows
+        fade.layoutParams = (fade.layoutParams as LayoutParams).apply {
+            topMargin = context.dp(fadeY)
+            this.height = context.dp(height) - context.dp(fadeY)
+        }
     }
 
     /** The track keeps its full height, like a scroll view's content; this view clips it. */
@@ -99,7 +110,7 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
     /** Glides so row [index] sits where the list wants it. Without [animate], the selection lands at once too. */
     fun reveal(index: Int, animate: Boolean = true) {
         val count = column.childCount
-        val first = (index - IndexTokens.ROWS_ABOVE).coerceAtMost(count - IndexTokens.ROWS_SHOWN).coerceAtLeast(0)
+        val first = (index - IndexTokens.ROWS_ABOVE).coerceAtMost(count - rowsShown).coerceAtLeast(0)
         val target = -(first * context.dp(IndexTokens.ROW_PITCH)).toFloat()
         track.animate().cancel()
         if (!animate) {

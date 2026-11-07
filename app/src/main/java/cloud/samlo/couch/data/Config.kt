@@ -73,6 +73,15 @@ class Config {
     /** Linux key code of the remote's Settings button; 0 when not set up. */
     var remoteSettingsKey = 0
 
+    /** Home Assistant's base URL, such as `http://homeassistant.local:8123`; empty hides the row. */
+    var homeAssistantUrl = ""
+
+    /** The lights and plugs in the Index's row, in order; at most [MAX_HOME_DEVICES]. */
+    var homeDevices: List<String> = emptyList()
+
+    /** Short names for the row's pills, by entity id; a missing one uses Home Assistant's name. */
+    var homeNames: Map<String, String> = emptyMap()
+
     /** Godmode's frame HUD on the home screen: [HUD_OFF], [HUD_MS] or [HUD_FPS]. */
     var hud = HUD_OFF
 
@@ -90,6 +99,9 @@ class Config {
         private const val FILE = "config.json"
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
         const val HUD_OFF = "off"
+
+        /** The row is one line at the top of the Index: six pills always fit beside the weather. */
+        const val MAX_HOME_DEVICES = 6
 
         /** How long each frame took: slow frames stand out, and fast ones still show their headroom. */
         const val HUD_MS = "ms"

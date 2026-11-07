@@ -637,4 +637,53 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="move_app_title">Déplacer %1$s à la position</string>
     <string name="choose_channel">Choisir une chaîne</string>
     <string name="choose_channel_label">%1$s. Choisir une chaîne</string>
+
+    <!-- Home Assistant -->
+    <string name="home_all_off">Tout est éteint</string>
+    <plurals name="home_on">
+        <item quantity="one">%1$d allumée</item>
+        <item quantity="many">%1$d allumées</item>
+        <item quantity="other">%1$d allumées</item>
+    </plurals>
+    <plurals name="home_offline">
+        <item quantity="one">%1$d hors ligne</item>
+        <item quantity="many">%1$d hors ligne</item>
+        <item quantity="other">%1$d hors ligne</item>
+    </plurals>
+    <string name="home_unreachable">Home Assistant injoignable</string>
+    <string name="home_state_on">Allumée</string>
+    <string name="home_state_off">Éteinte</string>
+    <string name="home_state_offline">Hors ligne</string>
+    <string name="home_brightness_hint">%1$d %% · maintenez OK pour l\'intensité</string>
+    <string name="home_dimming">◀  %1$d %%  ▶</string>
+    <string name="home_failed">La commande n\'est pas passée</string>
+    <string name="hass_title">Home Assistant</string>
+    <string name="hass_hint">Jusqu\'à six lumières et prises sur une ligne, en haut de l\'Index. OK allume ou éteint, maintenir OK règle l\'intensité.</string>
+    <string name="hass_help">Lumières et prises dans l\'Index</string>
+    <string name="hass_connection">Connexion</string>
+    <string name="hass_connect">Connecter depuis le téléphone</string>
+    <string name="hass_connect_help">Scannez le code avec votre téléphone et collez un jeton d\'accès longue durée, créé dans Home Assistant sous votre profil, Sécurité.</string>
+    <string name="hass_not_connected">Non connecté</string>
+    <string name="hass_forget">Déconnecter</string>
+    <string name="hass_forget_help">Oublie l\'adresse et le jeton; la rangée quitte l\'Index.</string>
+    <string name="hass_loading">Lecture de vos lumières et prises…</string>
+    <string name="hass_unreachable">Home Assistant est injoignable. Vérifiez qu\'il fonctionne, puis revenez sur cette page.</string>
+    <string name="hass_in_row">Dans la rangée (%1$d sur %2$d)</string>
+    <string name="hass_in_row_count">%1$d sur %2$d</string>
+    <string name="hass_in_row_none">Rien dans la rangée pour l\'instant : choisissez des lumières et des prises plus bas.</string>
+    <string name="hass_names">Noms courts</string>
+    <string name="hass_name_help">Ce que la pastille affiche. Vide, elle prend le nom de Home Assistant.</string>
+    <string name="hass_others">Lumières et prises</string>
+    <string name="hass_full">Six au maximum : retirez d\'abord un appareil de la rangée.</string>
+    <string name="hass_link_title">Connecter Home Assistant</string>
+    <string name="hass_link_steps">Scannez avec votre téléphone, ou ouvrez-y cette adresse :</string>
+    <string name="hass_link_wait">Cette fenêtre se ferme toute seule une fois Couch connecté.</string>
+    <string name="hass_link_failed">Couch n\'a pas pu ouvrir le lien. Vérifiez que le téléviseur est sur le réseau.</string>
+    <string name="hass_linked">Home Assistant connecté</string>
+    <string name="hass_page_url">Adresse de Home Assistant</string>
+    <string name="hass_page_token">Jeton d\'accès longue durée</string>
+    <string name="hass_page_token_help">Dans Home Assistant : votre profil, Sécurité, Jetons d\'accès longue durée, Créer un jeton.</string>
+    <string name="hass_page_send">Connecter</string>
+    <string name="hass_page_done">Connecté. Vous pouvez fermer cette page.</string>
+    <string name="hass_page_rejected">Home Assistant n\'a pas accepté cette adresse ou ce jeton.</string>
 </resources>
