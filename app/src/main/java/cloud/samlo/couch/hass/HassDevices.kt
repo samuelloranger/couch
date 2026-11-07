@@ -13,12 +13,18 @@ import java.util.concurrent.Executors
  * Commands are optimistic: the state changes at once and Home Assistant is told behind it; if it
  * refuses, the state goes back. Each device carries a version bumped by every command, so a read
  * that left before a press can't undo it.
+ *
+ * Home Assistant accepts a command before the device reports its new state (a cloud plug takes a
+ * second or two), so a read right after still shows the old one. A command's state is kept and
+ * checked again a few times; only the last check may overrule it.
  */
 class HassDevices(private val hass: HomeAssistant, private val onChange: () -> Unit) {
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "couch-hass").apply { isDaemon = true } }
     private val known = HashMap<String, HassDevice>()
     private val versions = HashMap<String, Int>()
+    /** Devices whose last command Home Assistant hasn't confirmed yet: plain reads leave them alone. */
+    private val unconfirmed = HashSet<String>()
     private var readAt = 0L
     private var dimmingId: String? = null
     private val sendDimming = Runnable { dimmingId?.let { send(it) } }
@@ -66,7 +72,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
             val read = asked.keys.associateWith { hass.state(base, it) }
             main.post {
                 reachable = read.values.any { it != null }
-                read.forEach { (id, d) -> if (d != null && (versions[id] ?: 0) == asked[id]) known[id] = d }
+                read.forEach { (id, d) -> if (d != null && (versions[id] ?: 0) == asked[id] && id !in unconfirmed) known[id] = d }
                 failed = null
                 onChange()
             }
@@ -84,8 +90,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val base = url
         worker.execute {
             val ok = hass.toggle(base, id)
-            val after = hass.state(base, id)
-            main.post { settle(id, version, ok, before, after) }
+            main.post { settle(id, version, ok, before) }
         }
         return true
     }
@@ -131,17 +136,50 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val base = url
         worker.execute {
             val ok = hass.brightness(base, id, wanted.brightness)
-            val after = hass.state(base, id)
-            main.post { settle(id, version, ok, null, after) }
+            main.post { settle(id, version, ok, null) }
         }
     }
 
     /** A command's answer; ignored when a later command has already moved the device on. */
-    private fun settle(id: String, version: Int, ok: Boolean, before: HassDevice?, after: HassDevice?) {
+    private fun settle(id: String, version: Int, ok: Boolean, before: HassDevice?) {
         if (versions[id] != version) return
-        if (after != null) known[id] = after else if (!ok) before?.let { known[id] = it }
-        if (!ok) failed = id
-        onChange()
+        if (!ok) {
+            before?.let { known[id] = it }
+            failed = id
+            unconfirmed -= id
+            onChange()
+            return
+        }
+        unconfirmed += id
+        confirm(id, version, 0)
+    }
+
+    /** Reads [id] again until Home Assistant shows what the command asked for, or the checks run out. */
+    private fun confirm(id: String, version: Int, attempt: Int) {
+        main.postDelayed({
+            if (versions[id] != version) return@postDelayed
+            val base = url
+            worker.execute {
+                val after = hass.state(base, id)
+                main.post {
+                    if (versions[id] != version) return@post
+                    val wanted = known[id]
+                    // Home Assistant keeps brightness out of 255: a percent may come back one off.
+                    val agrees = after != null && wanted != null && after.on == wanted.on &&
+                        (!after.on || !after.dimmable || Math.abs(after.brightness - wanted.brightness) <= 2)
+                    val last = attempt == CONFIRM_MS.lastIndex
+                    when {
+                        after != null && (agrees || last) -> {
+                            known[id] = after
+                            unconfirmed -= id
+                            onChange()
+                        }
+                        last -> unconfirmed -= id
+                        else -> confirm(id, version, attempt + 1)
+                    }
+                }
+            }
+        }, CONFIRM_MS[attempt])
     }
 
     private fun bump(id: String): Int = ((versions[id] ?: 0) + 1).also { versions[id] = it }
@@ -152,5 +190,7 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         const val MIN_READ_MS = 1500L
         /** Brightness goes out once the presses rest, not at every step. */
         const val BRIGHTNESS_SETTLE_MS = 350L
+        /** When to check a command took: devices report back in well under a second to a few seconds. */
+        val CONFIRM_MS = longArrayOf(1000L, 1500L, 3500L)
     }
 }
