@@ -110,7 +110,11 @@ class IndexScreen(
             topMargin = activity.dp(TOP_BAR_Y)
             rightMargin = activity.dp(IndexTokens.LIST_X)
         })
-        place(homeRow, IndexTokens.LIST_X, IndexTokens.HOME_ROW_Y, LayoutParams.WRAP_CONTENT, IndexTokens.HOME_ROW_H)
+        // The row carries a ring-sized margin of its own, so it sits that much up and left.
+        place(
+            homeRow, IndexTokens.LIST_X - Tokens.RING_INSET, IndexTokens.HOME_ROW_Y - Tokens.RING_INSET,
+            LayoutParams.WRAP_CONTENT, IndexTokens.HOME_ROW_H + 2 * Tokens.RING_INSET,
+        )
         place(tools, IndexTokens.TOOLS_X, IndexTokens.TOOLS_Y, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
     }
 

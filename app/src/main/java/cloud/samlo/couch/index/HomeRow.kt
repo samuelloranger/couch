@@ -45,6 +45,11 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         visibility = GONE
+        // Room for a focused pill's scale and ring: drawn past the pill, never cut by this row.
+        val inset = context.dp(Tokens.RING_INSET)
+        setPadding(inset, inset, inset, inset)
+        clipChildren = false
+        clipToPadding = false
         addView(lights, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
         addView(divider, LayoutParams(context.dp(1), context.dp(16)).apply {
             marginStart = context.dp(12)
