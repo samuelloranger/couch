@@ -31,8 +31,12 @@ class HomeAssistant(private val prefs: SharedPreferences) {
     fun all(url: String): List<HassDevice>? =
         request("GET", "$url/api/states", token)?.takeIf { it.first == 200 }?.let { HassJson.devices(it.second) }
 
-    fun toggle(url: String, id: String): Boolean =
-        call(url, id.substringBefore('.'), "toggle", JSONObject().put("entity_id", id))
+    /**
+     * Turns [id] on or off. Never Home Assistant's toggle: it flips what Home Assistant last
+     * heard, so a second press sent before the device reported the first would undo the wrong way.
+     */
+    fun switch(url: String, id: String, on: Boolean): Boolean =
+        call(url, id.substringBefore('.'), if (on) "turn_on" else "turn_off", JSONObject().put("entity_id", id))
 
     /** Sets a light's brightness, which also turns it on. */
     fun brightness(url: String, id: String, percent: Int): Boolean =

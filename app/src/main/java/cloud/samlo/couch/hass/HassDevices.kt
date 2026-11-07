@@ -212,13 +212,14 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
     fun toggle(id: String): Boolean {
         val before = known[id] ?: return false.also { refresh() }
         if (!reachable || !before.available || !before.switchable) return false
-        known[id] = before.copy(on = !before.on)
+        val wanted = !before.on
+        known[id] = before.copy(on = wanted)
         failed = null
         onChange()
         val version = bump(id)
         val base = url
         worker.execute {
-            val ok = hass.toggle(base, id)
+            val ok = hass.switch(base, id, wanted)
             main.post { settle(id, version, ok, before, checkBrightness = false) }
         }
         return true
