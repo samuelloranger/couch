@@ -99,6 +99,8 @@ class OverlayPanel(
         restartIdle()
     }
 
+    operator fun contains(key: String): Boolean = key in keys
+
     /** The key of the selected item, for a second press to step from. */
     val current: String? get() = rows.getOrNull(selected)?.item?.key
 

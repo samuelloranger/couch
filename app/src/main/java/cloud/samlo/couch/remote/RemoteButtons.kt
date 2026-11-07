@@ -8,6 +8,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.adb.AdbShell
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Prefs
+import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.hass.HassDevices
 import cloud.samlo.couch.hass.HomeAssistant
@@ -193,7 +194,7 @@ class RemoteButtons(private val context: Context) {
             config.remoteInputKey -> {
                 quick.close()
                 // A second press steps to the next input, as the TV's own list does.
-                inputs.show(if (inputs.isOpen) nextInput() else Prefs.of(context).getString(LAST_INPUT, null))
+                inputs.show(if (inputs.isOpen) nextInput() else onScreen())
             }
             config.remoteSettingsKey -> {
                 inputs.close()
@@ -209,6 +210,19 @@ class RemoteButtons(private val context: Context) {
                 }
             }
         }
+    }
+
+    /**
+     * What is on screen, for the panel to open on: the app in front, else (an input's picture
+     * belongs to the TV's own player, which isn't listed) the input last chosen here, else the first
+     * input. Couch's own home screen counts as nothing on screen.
+     */
+    private fun onScreen(): String? {
+        val front = Usage.front(context)
+        if (front != null && front != context.packageName && front in inputs) return front
+        val keys = inputs.inputKeys
+        if (front != context.packageName) Prefs.of(context).getString(LAST_INPUT, null)?.takeIf { it in keys }?.let { return it }
+        return keys.firstOrNull()
     }
 
     private fun nextInput(): String? {

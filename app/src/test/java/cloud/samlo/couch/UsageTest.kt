@@ -74,4 +74,12 @@ class UsageTest {
         const val MINUTE = 60_000L
         const val HOUR = 60 * MINUTE
     }
+
+    @Test
+    fun theAppInFrontIsTheLastToResume() {
+        val resumed = Usage.Tally.RESUMED
+        val paused = Usage.Tally.PAUSED
+        assertEquals("b", Usage.lastResumed(sequenceOf(resumed to "a", paused to "a", resumed to "b", paused to null)))
+        assertEquals(null, Usage.lastResumed(sequenceOf(paused to "a")))
+    }
 }
