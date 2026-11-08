@@ -162,6 +162,14 @@ final class MessageTests: XCTestCase {
         XCTAssertFalse(g[0].rows[2].isVisible(in: ["fahrenheit": .bool(false)]))
     }
 
+    func testKeysTakeThePriorityPath() {
+        XCTAssertTrue(OutgoingMessage.key(.ok, .tap).isPriority)
+        XCTAssertTrue(OutgoingMessage.streamStart(.low).isPriority)
+        XCTAssertFalse(OutgoingMessage.icon(key: "a").isPriority)
+        XCTAssertFalse(OutgoingMessage.usage.isPriority)
+        XCTAssertFalse(OutgoingMessage.configSet([:]).isPriority)
+    }
+
     func testOutgoingShapes() throws {
         func obj(_ m: OutgoingMessage) throws -> [String: JSONValue] {
             try XCTUnwrap(JSONDecoder().decode(JSONValue.self, from: m.encoded()).objectValue)
