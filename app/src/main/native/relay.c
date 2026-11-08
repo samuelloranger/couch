@@ -7,7 +7,7 @@
 // Usage: couch-relay <port> <token>. It connects to Couch on 127.0.0.1:<port> and exits when that
 // connection ends; the kernel then lets go of the grabs, and the remote works as before.
 //
-// Couch sends, one per line:   keys <code,code|->   learn <0|1>   emit <code>
+// Couch sends, one per line:   keys <code,code|->   learn <0|1>   emit <code>   press <code> <1 down|0 up>
 // The relay sends:             key <code> <1 down|0 up>   seen <code>  (learning: every key down)
 #include <arpa/inet.h>
 #include <dirent.h>
@@ -193,14 +193,49 @@ static void press(int fd, int code, int value) {
     write(fd, e, sizeof e);
 }
 
-// Presses a key as the remote that has it, for Couch to hand the TV its own menu.
-static void emit(int code) {
-    for (int i = 0; i < ndevices; i++) {
-        if (code < 0 || code > KEY_MAX || !HAS(devices[i].keys, code)) continue;
-        press(devices[i].clone, code, 1);
-        press(devices[i].clone, code, 0);
+// A keyboard of the relay's own, for the keys no grabbed remote has (and for a relay that grabs
+// none, started only to inject keys for the phone app). Created once at start so Android has
+// registered it before the first key.
+static int vkbd = -1;
+
+static void make_vkbd(void) {
+    int u = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (u < 0) return;
+    ioctl(u, UI_SET_EVBIT, EV_SYN);
+    ioctl(u, UI_SET_EVBIT, EV_KEY);
+    for (int k = 1; k < 256; k++) ioctl(u, UI_SET_KEYBIT, k);
+    ioctl(u, UI_SET_KEYBIT, KEY_OK);
+    ioctl(u, UI_SET_KEYBIT, KEY_CHANNELUP);
+    ioctl(u, UI_SET_KEYBIT, KEY_CHANNELDOWN);
+    ioctl(u, UI_SET_PHYS, PHYS);
+    struct uinput_user_dev d;
+    memset(&d, 0, sizeof d);
+    snprintf(d.name, sizeof d.name, "couch-remote");
+    d.id.bustype = BUS_VIRTUAL;
+    d.id.vendor = 0x1;
+    d.id.product = 0x1;
+    if (write(u, &d, sizeof d) != sizeof d || ioctl(u, UI_DEV_CREATE) < 0) {
+        close(u);
         return;
     }
+    vkbd = u;
+}
+
+// Sends a key event as the remote that has the key, else as the relay's own keyboard.
+static void send_key(int code, int value) {
+    if (code <= 0 || code > KEY_MAX) return;
+    for (int i = 0; i < ndevices; i++) {
+        if (!HAS(devices[i].keys, code)) continue;
+        press(devices[i].clone, code, value);
+        return;
+    }
+    if (vkbd >= 0) press(vkbd, code, value);
+}
+
+// Presses and releases a key, for Couch to hand the TV its own menu, or for a phone's tap.
+static void emit(int code) {
+    send_key(code, 1);
+    send_key(code, 0);
 }
 
 static void command(char *line) {
@@ -218,6 +253,9 @@ static void command(char *line) {
         regrab();
     } else if (!strncmp(line, "emit ", 5)) {
         emit(atoi(line + 5));
+    } else if (!strncmp(line, "press ", 6)) {
+        int code = 0, value = 0;
+        if (sscanf(line + 6, "%d %d", &code, &value) == 2 && (value == 0 || value == 1)) send_key(code, value);
     }
 }
 
@@ -297,6 +335,7 @@ int main(int argc, char **argv) {
     detach();
     link_fd = connect_couch(atoi(argv[1]), argv[2]);
     if (link_fd < 0) return 1;
+    make_vkbd();
     int watch = inotify_init1(IN_NONBLOCK);
     inotify_add_watch(watch, "/dev/input", IN_CREATE | IN_ATTRIB);
     for (;;) {
