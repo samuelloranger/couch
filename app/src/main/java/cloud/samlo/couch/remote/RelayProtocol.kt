@@ -40,6 +40,9 @@ object RelayProtocol {
 
     fun emit(code: Int) = "emit $code"
 
+    /** One half of a key press, for a key held down and let go later. */
+    fun press(code: Int, down: Boolean) = "press $code ${if (down) 1 else 0}"
+
     /**
      * The shell command that installs the relay from the app's unpacked libraries and starts it.
      * The relay detaches itself, so it outlives the ADB stream. An older relay is stopped first; by its process

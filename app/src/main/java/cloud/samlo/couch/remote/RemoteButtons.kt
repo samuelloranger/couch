@@ -75,6 +75,13 @@ class RemoteButtons(private val context: Context) {
         live.send(RelayProtocol.learn(true))
     }
 
+    /** Sends [line] to the relay when one is running; false when not. For the phone app's keys. */
+    fun relay(line: String): Boolean {
+        val live = link ?: return false
+        live.send(line)
+        return true
+    }
+
     /** Stops waiting for a button, when the screen that asked goes away. */
     fun cancelLearn() {
         if (learner == null) return

@@ -50,7 +50,7 @@ enum class Group(val title: Int, val icon: Int) {
             SettingsActivity.PAGE_CHANNELS, SettingsActivity.PAGE_APPS, SettingsActivity.PAGE_INPUTS,
             SettingsActivity.PAGE_HOME_ASSISTANT,
             -> HOME
-            SettingsActivity.PAGE_ACCESS, SettingsActivity.PAGE_TVS, RemotePage.PAGE -> COUCH
+            SettingsActivity.PAGE_ACCESS, SettingsActivity.PAGE_TVS, SettingsActivity.PAGE_PHONE, RemotePage.PAGE -> COUCH
             else -> null
         }
     }

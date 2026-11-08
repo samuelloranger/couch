@@ -27,6 +27,7 @@ import cloud.samlo.couch.godmode.TvSettings
 import cloud.samlo.couch.measure.Benchmark
 import cloud.samlo.couch.measure.BenchmarkCard
 import cloud.samlo.couch.measure.FrameHud
+import cloud.samlo.couch.phone.HomeReload
 import cloud.samlo.couch.settings.SettingsActivity
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.update.Installer
@@ -91,6 +92,8 @@ class HomeScreen(private val activity: Activity) {
             main.postDelayed(reloadForRecommendations, RECOMMENDATIONS_SETTLE_MS)
         }
         HomeAccessibilityService.restore(activity)
+        // A phone changed the config while this is showing: read it again.
+        HomeReload.listener = { main.post { if (resumed) load() } }
         // Watch progress moves while you're in an app; unchanged rows are not rebuilt.
         load()
         startLive()
@@ -99,6 +102,7 @@ class HomeScreen(private val activity: Activity) {
 
     fun onPause() {
         resumed = false
+        HomeReload.listener = null
         MediaListener.onRecommendationsChanged = null
         main.removeCallbacks(reloadForRecommendations)
         hud.enable(Config.HUD_OFF)
