@@ -686,19 +686,19 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="hass_page_done">Connecté. Vous pouvez fermer cette page.</string>
     <string name="hass_page_rejected">Home Assistant n\'a pas accepté cette adresse ou ce jeton.</string>
     <string name="settings_phone">Téléphone</string>
-    <string name="settings_phone_help">Jumelez l\'appli Couch, sur votre réseau local seulement.</string>
+    <string name="settings_phone_help">Jumelez l\'appli Couch : télécommande, réglages et écran, sur votre réseau local seulement.</string>
     <string name="phone_title">Téléphone</string>
-    <string name="phone_hint">L\'appli Couch pour iPhone. Chiffré, du téléphone au téléviseur.</string>
+    <string name="phone_hint">L\'appli Couch pour iPhone. Chiffré, directement entre téléphone et téléviseur.</string>
     <string name="phone_paired">Téléphones jumelés</string>
     <string name="phone_none">Aucun pour l\'instant</string>
-    <string name="phone_peer_help">Appuyez deux fois sur OK pour oublier ce téléphone.</string>
+    <string name="phone_peer_help">Appuyez deux fois sur OK pour oublier ce téléphone. Il est coupé aussitôt.</string>
     <string name="phone_connected">Connecté</string>
     <string name="phone_not_connected">Non connecté</string>
     <string name="phone_add">Jumeler un téléphone</string>
-    <string name="phone_add_help">Ouvrez Couch sur votre téléphone et choisissez ce téléviseur. Les deux écrans affichent six chiffres.</string>
+    <string name="phone_add_help">Ouvrez Couch sur votre téléphone et choisissez ce téléviseur. Les deux écrans affichent six chiffres; OK sur chacun confirme.</string>
     <string name="phone_wait_group">En attente de votre téléphone</string>
-    <string name="phone_wait_help">Dans l\'appli Couch, choisissez ce téléviseur.</string>
-    <string name="phone_code_help">Le téléphone doit afficher les mêmes chiffres.</string>
-    <string name="pair_aborted_differ">Les codes diffèrent</string>
+    <string name="phone_wait_help">Dans l\'appli Couch, choisissez ce téléviseur ou saisissez son adresse.</string>
+    <string name="phone_code_help">Le téléphone doit afficher ces six mêmes chiffres.</string>
+    <string name="pair_aborted_differ">L\'autre côté dit que les codes diffèrent</string>
     <string name="pair_aborted_gone">L\'autre côté est parti</string>
 </resources>

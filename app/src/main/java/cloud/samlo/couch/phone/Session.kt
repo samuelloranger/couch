@@ -43,7 +43,7 @@ class Session(
     private var writer: Thread? = null
 
     /** Keys this phone holds down; let go of when the session ends. */
-    val held: MutableSet<Int> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+    val held = HeldKeys()
 
     /** Whether this phone asked for the picture; set by the stream messages. */
     @Volatile var wantsVideo = false

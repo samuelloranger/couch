@@ -183,7 +183,7 @@ class Video(private val context: Context) {
         if (logAt == 0L) logAt = now
         if (now - logAt < 1_000_000_000L) return
         val tenths = logNanos / 100_000 / logUnits
-        Log.d("couch-phone", "au=$logUnits avgMs=${tenths / 10}.${tenths % 10} queue=$logDepth")
+        Log.i("couch-phone", "au=$logUnits avgMs=${tenths / 10}.${tenths % 10} queue=$logDepth")
         logAt = now
         logUnits = 0
         logNanos = 0
