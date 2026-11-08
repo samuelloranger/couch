@@ -42,6 +42,23 @@ first, which deletes Couch's settings. Back them up first (see
 The version comes from the latest `vX.Y.Z` tag: `versionName` is `X.Y.Z` and `versionCode` is
 `X·10000 + Y·100 + Z`. Without tags it is `0.1.0`.
 
+## iPhone app
+
+The iPhone app lives in `ios/`: a SwiftUI app with no third-party packages, iOS 26 or later, and
+`CouchKit`, a Swift package holding the protocol, crypto and models with its unit tests. The Xcode
+project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen) and isn't committed:
+
+```sh
+cd ios
+xcodegen generate
+xcodebuild -project Couch.xcodeproj -scheme Couch -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
+
+To run it on a phone, pass your own team when building (`xcodebuild … DEVELOPMENT_TEAM=<your team>`) or pick it in Xcode's Signing settings; `ios/project.yml` carries none. In a Debug build,
+`COUCH_DEMO=1` fills every screen with sample TVs, so the screens can be checked without a TV.
+The protocol both sides speak is described in [Phone](phone.md) and `docs/architecture.md`; the
+crypto test vectors in `ios/CouchTests` are shared with the TV's JVM tests.
+
 ## Running on a TV emulator
 
 An Android 12 TV image at 1080p and 320 dpi matches a typical 2020 TV:
@@ -91,7 +108,9 @@ The `Docs` workflow builds it on every push to `main` that touches `docs/` and p
 - **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: build,
   unit tests, lint, an 800 KB APK size budget, and the APK as an artifact.
 - **Release** (`.github/workflows/release.yml`) runs on `v*` tags: it builds and signs the APK and
-  publishes a GitHub release with the APK and its SHA-256.
+  publishes a GitHub release with the APK and its SHA-256. When `ios/` changed since the previous
+  tag, a macOS job also attaches an unsigned iPhone build (`couch-ios-vX.Y.Z-unsigned.ipa`) for
+  sideloading tools that sign it themselves.
 - **Docs** (`.github/workflows/docs.yml`) builds the documentation site and pushes it to the
   repository that serves it. Android CI skips pushes that only change documentation.
 

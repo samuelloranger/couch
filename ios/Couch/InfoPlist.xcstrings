@@ -1,0 +1,23 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couch finds your TV on your home network and controls it from here."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couch trouve ta télé sur ton réseau maison et la contrôle d’ici."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

@@ -1,0 +1,74 @@
+name: Couch
+options:
+  bundleIdPrefix: cloud.samlo
+  developmentLanguage: en
+  knownRegions: [en, fr]
+  deploymentTarget:
+    iOS: "26.0"
+settings:
+  base:
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  CouchKit:
+    path: CouchKit
+targets:
+  Couch:
+    type: application
+    platform: iOS
+    sources:
+      - Couch
+    dependencies:
+      - package: CouchKit
+    info:
+      path: Couch/Info.plist
+      properties:
+        CFBundleDisplayName: Couch
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        ITSAppUsesNonExemptEncryption: false
+        NSLocalNetworkUsageDescription: Couch finds your TV on your home network and controls it from here.
+        NSBonjourServices:
+          - _couch._tcp
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        CFBundleLocalizations: [en, fr]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: cloud.samlo.couch
+        SWIFT_VERSION: "6.0"
+        SWIFT_EMIT_LOC_STRINGS: "YES"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+  CouchTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - CouchTests
+    dependencies:
+      - target: Couch
+      - package: CouchKit
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        GENERATE_INFOPLIST_FILE: true
+        PRODUCT_BUNDLE_IDENTIFIER: cloud.samlo.couch.tests
+schemes:
+  Couch:
+    build:
+      targets:
+        Couch: all
+    test:
+      targets:
+        - CouchTests
+    run: {}
+    profile: {}
+    analyze: {}
+    archive: {}
