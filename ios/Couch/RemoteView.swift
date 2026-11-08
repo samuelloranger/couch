@@ -3,6 +3,7 @@ import SwiftUI
 import UIKit
 
 struct RemoteView: View {
+    @Environment(AppModel.self) private var model
     let controller: TVController
     @State private var typed = ""
     @State private var fullScreen = false
@@ -22,6 +23,7 @@ struct RemoteView: View {
             .padding(.bottom, 24)
         }
         .scrollDismissesKeyboard(.interactively)
+        .task { if model.demoMode && model.demoScreen == "full" { fullScreen = true } }
         .fullScreenCover(isPresented: $fullScreen) { FullScreenLive(controller: controller) }
     }
 
