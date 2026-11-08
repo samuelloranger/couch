@@ -37,6 +37,7 @@ final class TVController: Identifiable {
     @ObservationIgnored private var noReplyCount = 0
     @ObservationIgnored private var pending = PendingQueue()
     @ObservationIgnored private var closed = false
+    @ObservationIgnored private var lastAttempt: ContinuousClock.Instant?
     @ObservationIgnored private var backoff: Task<Void, Never>?
     @ObservationIgnored private var nudged = false
     @ObservationIgnored private var keyChain: Task<Void, Never>?
@@ -106,6 +107,13 @@ final class TVController: Identifiable {
     private func run() async {
         var attempt = 0
         while !Task.isCancelled {
+            // At least 500 ms between attempts, however often a press nudges the loop.
+            if let last = lastAttempt {
+                let gap = ContinuousClock.now - last
+                if gap < .milliseconds(500) { try? await Task.sleep(for: .milliseconds(500) - gap) }
+                if Task.isCancelled { return }
+            }
+            lastAttempt = .now
             link = .connecting
             let ok = await runOnce(attempt: attempt)
             if Task.isCancelled { return }
@@ -158,10 +166,14 @@ final class TVController: Identifiable {
         // that arrives afterwards can never overtake an older one.
         dispatch(session, .hello(app: version), priorityPath: true)
         for message in pending.drain() { dispatch(session, message, priorityPath: true) }
-        dispatch(session, .usage, priorityPath: true)
+        // Bulk requests keep their own order, but only start once hello and the flushed presses are out;
+        // a live key pressed afterwards never waits behind them.
+        let keysSoFar = keyChain
+        sendChain = Task { [previous = sendChain] in await previous?.value; await keysSoFar?.value }
+        dispatch(session, .usage, priorityPath: false)
         for key in wantedIcons.subtracting(icons.keys) {
             requestedIcons.insert(key)
-            dispatch(session, .icon(key: key), priorityPath: true)
+            dispatch(session, .icon(key: key), priorityPath: false)
         }
         wantedIcons.removeAll()
         if wantsStream { dispatch(session, .streamStart(quality), priorityPath: true) }
@@ -215,7 +227,9 @@ final class TVController: Identifiable {
         guard !isDemo, !closed else { return }
         guard let s = session else {
             // Not connected: hold what the person pressed and reconnect now, not at the next retry.
-            if pending.append(message) { reconnectNow() }
+            // Only the first press of a burst asks for a reconnect; repeats of queued keys don't re-nudge.
+            let first = pending.liveCount() == 0
+            if pending.append(message), first { reconnectNow() }
             return
         }
         // Keys and stream control never wait behind icon, usage or config traffic.

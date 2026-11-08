@@ -304,6 +304,14 @@ final class PendingQueueTests: XCTestCase {
         XCTAssertEqual(q.drain(now: t0 + PendingQueue.lifetime + .milliseconds(1)).count, 0)
     }
 
+    func testLiveCountIgnoresExpiredEntries() {
+        var q = PendingQueue()
+        XCTAssertEqual(q.liveCount(now: t0), 0)
+        q.append(.key(.power, .tap), now: t0)
+        XCTAssertEqual(q.liveCount(now: t0 + .seconds(1)), 1)
+        XCTAssertEqual(q.liveCount(now: t0 + .seconds(6)), 0)
+    }
+
     func testStreamControlAndBulkRequestsAreNeverQueued() {
         var q = PendingQueue()
         for m: OutgoingMessage in [.streamStart(.low), .streamStop, .usage, .icon(key: "a"), .configSet([:]), .ping, .hello(app: "1")] {

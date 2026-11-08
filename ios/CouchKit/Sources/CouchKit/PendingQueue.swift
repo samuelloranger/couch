@@ -30,6 +30,12 @@ public struct PendingQueue: Sendable {
         return entries.map(\.message)
     }
 
+    /// How many fresh entries are waiting (expired ones are dropped first).
+    public mutating func liveCount(now: ContinuousClock.Instant = .now) -> Int {
+        dropExpired(now: now)
+        return entries.count
+    }
+
     public mutating func clear() { entries.removeAll() }
 
     private mutating func dropExpired(now: ContinuousClock.Instant) {
