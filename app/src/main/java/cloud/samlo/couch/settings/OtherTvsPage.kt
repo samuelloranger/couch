@@ -30,6 +30,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     private val asking = java.util.concurrent.atomic.AtomicBoolean()
     private var confirm: Confirm? = null
     private var forgetting: String? = null
+    private var pairingOpen = false
 
     override fun build() {
         ctx.layout.title.text = ctx.str(R.string.tvs_title)
@@ -82,7 +83,8 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         }
         o.page(ctx.str(R.string.tvs_add), ctx.str(R.string.tvs_add_help)) {
             mode = Mode.ADD
-            Sync.openPairing(ctx.activity, Peer.TV, ::askFromOutside)
+            pairingOpen = true
+            Sync.openPairing(ctx.activity, Peer.TV, ::aborted, ::askFromOutside)
             rebuild()
         }
     }
@@ -126,7 +128,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         mode = Mode.LIST
         confirm = null
         // Whichever side this was, the pairing is over: stop advertising and stop listening for it.
-        Sync.closePairing()
+        closePairing()
         rebuild()
     }
 
@@ -167,7 +169,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     }
 
     private fun leavePairing() {
-        Sync.closePairing()
+        closePairing()
         confirm?.answer?.offer(false)
         confirm = null
         mode = Mode.LIST
@@ -177,6 +179,24 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     private fun toast(id: Int) = toast(ctx.str(id))
 
     private fun toast(text: String) = Toast.makeText(ctx.activity, text, Toast.LENGTH_LONG).show()
+
+    /** Closes pairing once, however many ways out (Back, answering, leaving) get here. */
+    private fun closePairing() {
+        if (!pairingOpen) return
+        pairingOpen = false
+        Sync.closePairing()
+    }
+
+    /** The other side ended the pairing while the question was up: drop it and wait for the next try. */
+    private fun aborted(declined: Boolean) = ctx.activity.runOnUiThread {
+        val c = confirm ?: return@runOnUiThread
+        if (mode != Mode.CONFIRM || ctx.activity.isFinishing) return@runOnUiThread
+        c.answer.offer(false)
+        confirm = null
+        mode = Mode.ADD
+        toast(if (declined) R.string.pair_aborted_differ else R.string.pair_aborted_gone)
+        rebuild()
+    }
 
     private fun rebuild() {
         forgetting = if (mode == Mode.LIST) forgetting else null
@@ -195,7 +215,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     override fun onDestroy() {
         Sync.listen(null)
         // Always: a pairing left open would keep this TV announced as waiting, with no page to answer it.
-        Sync.closePairing()
+        closePairing()
         confirm?.answer?.offer(false)
     }
 

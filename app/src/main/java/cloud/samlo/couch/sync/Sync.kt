@@ -57,7 +57,7 @@ object Sync {
     }
 
     @Synchronized private fun reconcile(context: Context) {
-        if (sharing || peers(context).phones().isNotEmpty() || server?.onPair != null) up(context) else down()
+        if (sharing || peers(context).phones().isNotEmpty() || wantedAsk != null) up(context) else down()
     }
 
     @Synchronized private fun up(context: Context) {
@@ -70,9 +70,10 @@ object Sync {
             it.shares = { sharing }
             server = it
         }
+        applyPairing()
         val port = srv.start()
         val disc = discovery ?: Discovery(context).also { discovery = it }
-        disc.announce(me.id, me.name, port, srv.onPair != null)
+        disc.announce(me.id, me.name, port, wantedAsk != null)
         disc.start { listener?.invoke(); pullStale() }
     }
 
@@ -122,24 +123,40 @@ object Sync {
         Thread(r, "couch-sync-pairing").apply { isDaemon = true }
     }
 
+    /** What the page that wants pairing asked for; the server follows the latest request, whatever order the work runs in. */
+    @Volatile private var wantedAsk: ((String, String) -> Boolean)? = null
+    @Volatile private var wantedKind = Peer.TV
+    @Volatile private var wantedAborted: ((Boolean) -> Unit)? = null
+
+    private fun applyPairing() {
+        server?.pairKind = wantedKind
+        server?.onAborted = wantedAborted
+        server?.onPair = wantedAsk
+    }
+
     /**
-     * Opens this TV for pairing until [closePairing]; [ask] is called with the other TV's name and
-     * the code to compare, and blocks until the user answers.
+     * Opens this TV for [kind] pairing until [closePairing]; [ask] is called with the other side's
+     * name and the code to compare, and blocks until the user answers. [aborted] hears when the
+     * other side ended it first (true: it said the codes differ).
      */
-    fun openPairing(context: Context, kind: String, ask: (String, String) -> Boolean) {
+    fun openPairing(context: Context, kind: String, aborted: (Boolean) -> Unit, ask: (String, String) -> Boolean) {
         val context = context.applicationContext
+        wantedKind = kind
+        wantedAborted = aborted
+        wantedAsk = ask
         pairingOps.execute {
             up(context)
-            server?.pairKind = kind
-            server?.onPair = ask
+            applyPairing()
             announceAgain()
         }
     }
 
     fun closePairing() {
+        wantedAsk = null
+        wantedAborted = null
         server?.onPair = null
         pairingOps.execute {
-            server?.onPair = null
+            applyPairing()
             announceAgain()
             // With sharing off and no phone paired, nothing else wants the server any more.
             app?.let { reconcile(it) }
@@ -157,7 +174,7 @@ object Sync {
     @Synchronized private fun announceAgain() {
         val me = peers ?: return
         val port = server?.start() ?: return
-        discovery?.announce(me.id, me.name, port, server?.onPair != null)
+        discovery?.announce(me.id, me.name, port, wantedAsk != null)
     }
 
     /** Pairs with a TV found on the network, or one typed in by address. */

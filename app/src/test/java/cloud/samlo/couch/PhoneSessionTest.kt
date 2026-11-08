@@ -216,4 +216,59 @@ class PhoneSessionTest {
         )
         assertTrue(Wire.read(ok.input).has("pub"))
     }
+
+    private fun pair1(line: Line, pub: ByteArray) = Wire.write(
+        line.output,
+        JSONObject().put("op", "pair1").put("id", "p2").put("name", "Phone").put("commit", Wire.b64(Crypto.commit(pub))).put("kind", "phone"),
+    )
+
+    @Test
+    fun aSecondPairingGetsNotPairingBeforeAnyKey() {
+        val (server, _, _) = tvWithPhone()
+        val release = java.util.concurrent.CountDownLatch(1)
+        server.pairKind = Peer.PHONE
+        server.onPair = { _, _ -> release.await(5, java.util.concurrent.TimeUnit.SECONDS); false }
+        val port = server.start()
+        val mine = Crypto.keyPair()
+        val one = connect(port)
+        pair1(one, mine.publicKey)
+        assertTrue(Wire.read(one.input).has("pub"))
+        val two = connect(port)
+        pair1(two, Crypto.keyPair().publicKey)
+        val reply = Wire.read(two.input)
+        assertEquals("not-pairing", reply.getString("error"))
+        assertFalse(reply.has("pub"))
+        release.countDown()
+    }
+
+    @Test
+    fun aPhoneThatSaysNoClosesTheQuestionAndFreesTheSlot() {
+        val (server, _, _) = tvWithPhone()
+        val release = java.util.concurrent.CountDownLatch(1)
+        val aborted = java.util.concurrent.atomic.AtomicReference<Boolean>()
+        server.pairKind = Peer.PHONE
+        server.onAborted = { aborted.set(it); release.countDown() }
+        // Like the settings page: the question ends when the abort says so.
+        server.onPair = { _, _ -> release.await(5, java.util.concurrent.TimeUnit.SECONDS); false }
+        val port = server.start()
+        val mine = Crypto.keyPair()
+        val one = connect(port)
+        pair1(one, mine.publicKey)
+        assertTrue(Wire.read(one.input).has("pub"))
+        Wire.write(one.output, JSONObject().put("pub", Wire.b64(mine.publicKey)))
+        Wire.write(one.output, JSONObject().put("ok", false))
+        assertFalse(Wire.read(one.input).getBoolean("done"))
+        assertTrue(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
+        assertEquals(true, aborted.get())
+        // The slot is free again: a new attempt is answered with a key.
+        var again: JSONObject? = null
+        for (i in 0 until 20) {
+            val two = connect(port)
+            pair1(two, Crypto.keyPair().publicKey)
+            again = Wire.read(two.input)
+            if (again.has("pub")) break
+            Thread.sleep(100)
+        }
+        assertTrue(again!!.has("pub"))
+    }
 }

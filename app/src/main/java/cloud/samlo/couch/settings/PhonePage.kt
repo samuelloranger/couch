@@ -24,6 +24,7 @@ class PhonePage(private val ctx: SettingsContext) : SettingsPage {
     private val asking = java.util.concurrent.atomic.AtomicBoolean()
     private var confirm: Confirm? = null
     private var forgetting: String? = null
+    private var pairingOpen = false
 
     override fun build() {
         ctx.layout.title.text = ctx.str(R.string.phone_title)
@@ -54,7 +55,8 @@ class PhonePage(private val ctx: SettingsContext) : SettingsPage {
         }
         o.page(ctx.str(R.string.phone_add), ctx.str(R.string.phone_add_help)) {
             mode = Mode.WAIT
-            Sync.openPairing(ctx.activity, Peer.PHONE, ::askFromOutside)
+            pairingOpen = true
+            Sync.openPairing(ctx.activity, Peer.PHONE, ::aborted, ::askFromOutside)
             rebuild()
         }
     }
@@ -83,7 +85,7 @@ class PhonePage(private val ctx: SettingsContext) : SettingsPage {
         c.answer.offer(matched)
         mode = Mode.LIST
         confirm = null
-        Sync.closePairing()
+        closePairing()
         rebuild()
     }
 
@@ -107,12 +109,32 @@ class PhonePage(private val ctx: SettingsContext) : SettingsPage {
     }
 
     private fun leavePairing() {
-        Sync.closePairing()
+        closePairing()
         confirm?.answer?.offer(false)
         confirm = null
         mode = Mode.LIST
         rebuild()
     }
+
+    /** Closes pairing once, however many ways out (Back, answering, leaving) get here. */
+    private fun closePairing() {
+        if (!pairingOpen) return
+        pairingOpen = false
+        Sync.closePairing()
+    }
+
+    /** The other side ended the pairing while the question was up: drop it and wait for the next try. */
+    private fun aborted(declined: Boolean) = ctx.activity.runOnUiThread {
+        val c = confirm ?: return@runOnUiThread
+        if (mode != Mode.CONFIRM || ctx.activity.isFinishing) return@runOnUiThread
+        c.answer.offer(false)
+        confirm = null
+        mode = Mode.WAIT
+        toast(if (declined) R.string.pair_aborted_differ else R.string.pair_aborted_gone)
+        rebuild()
+    }
+
+    private fun toast(id: Int) = android.widget.Toast.makeText(ctx.activity, ctx.str(id), android.widget.Toast.LENGTH_LONG).show()
 
     private fun rebuild() {
         forgetting = if (mode == Mode.LIST) forgetting else null
@@ -131,7 +153,7 @@ class PhonePage(private val ctx: SettingsContext) : SettingsPage {
     override fun onDestroy() {
         Sync.listen(null)
         // Always: a pairing left open would keep this TV announced as waiting, with no page to answer it.
-        Sync.closePairing()
+        closePairing()
         confirm?.answer?.offer(false)
     }
 

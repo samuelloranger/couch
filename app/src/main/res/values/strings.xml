@@ -690,4 +690,6 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="phone_wait_group">Waiting for your phone</string>
     <string name="phone_wait_help">In the Couch app, pick this TV or type its address.</string>
     <string name="phone_code_help">The phone must show these same six digits.</string>
+    <string name="pair_aborted_differ">The other side said the codes differ</string>
+    <string name="pair_aborted_gone">The other side went away</string>
 </resources>

@@ -211,12 +211,19 @@ class SyncProtocolTest {
         val (_, bServer) = tv("B")
         val port = bServer.start()
         bServer.onPair = { _, _ -> true }
-        // Knocks and says nothing more; the one pairing slot is only taken once a handshake is real.
+        // Knocks and says nothing more: it holds the one pairing slot only until its exchange times out.
         val staller = Socket("127.0.0.1", port)
         try {
             val out = DataOutputStream(staller.getOutputStream())
             Wire.write(out, org.json.JSONObject().put("op", "pair1").put("id", "x").put("name", "x").put("commit", Wire.b64(Crypto.random(32))))
-            assertTrue(Client.pair("127.0.0.1", port, tv("A").first) { _, _ -> true } is Client.Pairing.Paired)
+            val a = tv("A").first
+            var result: Client.Pairing = Client.Pairing.Unavailable
+            val until = System.currentTimeMillis() + 8_000
+            while (result !is Client.Pairing.Paired && System.currentTimeMillis() < until) {
+                result = Client.pair("127.0.0.1", port, a) { _, _ -> true }
+                if (result !is Client.Pairing.Paired) Thread.sleep(300)
+            }
+            assertTrue(result is Client.Pairing.Paired)
         } finally {
             staller.close()
         }

@@ -699,4 +699,6 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="phone_wait_group">En attente de votre téléphone</string>
     <string name="phone_wait_help">Dans l\'appli Couch, choisissez ce téléviseur ou saisissez son adresse.</string>
     <string name="phone_code_help">Le téléphone doit afficher ces six mêmes chiffres.</string>
+    <string name="pair_aborted_differ">L\'autre côté dit que les codes diffèrent</string>
+    <string name="pair_aborted_gone">L\'autre côté est parti</string>
 </resources>
