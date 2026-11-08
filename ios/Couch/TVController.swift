@@ -35,6 +35,9 @@ final class TVController: Identifiable {
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var wantedIcons: Set<String> = []
     @ObservationIgnored private var noReplyCount = 0
+    @ObservationIgnored private var pending = PendingQueue()
+    @ObservationIgnored private var backoff: Task<Void, Never>?
+    @ObservationIgnored private var nudged = false
     @ObservationIgnored private var keyChain: Task<Void, Never>?
     @ObservationIgnored private var sendChain: Task<Void, Never>?
     @ObservationIgnored private var requestedIcons: Set<String> = []
@@ -99,7 +102,11 @@ final class TVController: Identifiable {
             link = .offline
             attempt = ok ? 0 : attempt + 1
             let delay = min(15.0, ok ? 1.0 : pow(2.0, Double(min(attempt, 4))))
-            try? await Task.sleep(for: .seconds(delay))
+            let nap = Task { try? await Task.sleep(for: .seconds(delay)) }
+            backoff = nap
+            await nap.value
+            backoff = nil
+            if nudged { nudged = false; attempt = 0 }
         }
     }
 
@@ -134,6 +141,8 @@ final class TVController: Identifiable {
         }
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
         try? await session.send(.hello(app: version))
+        // Whatever was pressed while connecting goes out first, in order, before bulk requests.
+        for message in pending.drain() { try? await session.send(message) }
         try? await session.send(.usage)
         for key in wantedIcons.subtracting(icons.keys) {
             requestedIcons.insert(key)
@@ -188,7 +197,12 @@ final class TVController: Identifiable {
     // MARK: sending
 
     func send(_ message: OutgoingMessage) {
-        guard !isDemo, let s = session else { return }
+        guard !isDemo else { return }
+        guard let s = session else {
+            // Not connected: hold what the person pressed and reconnect now, not at the next retry.
+            if pending.append(message) { reconnectNow() }
+            return
+        }
         // Keys and stream control never wait behind icon, usage or config traffic.
         if message.isPriority {
             let previous = keyChain
@@ -197,6 +211,13 @@ final class TVController: Identifiable {
             let previous = sendChain
             sendChain = Task { await previous?.value; try? await s.send(message) }
         }
+    }
+
+    /// Cancels the current backoff wait so the next attempt starts immediately.
+    func reconnectNow() {
+        if loop == nil { connect(); return }
+        nudged = true
+        backoff?.cancel()
     }
 
     func press(_ key: RemoteKey, action: KeyAction = .tap) {

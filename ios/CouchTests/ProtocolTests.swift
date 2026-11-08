@@ -262,6 +262,49 @@ final class CopyTests: XCTestCase {
     }
 }
 
+final class PendingQueueTests: XCTestCase {
+    private let t0 = Date(timeIntervalSince1970: 1_000)
+
+    func testKeepsOrderAndEmptiesOnDrain() {
+        var q = PendingQueue()
+        q.append(.key(.power, .tap), now: t0)
+        q.append(.text("hi"), now: t0.addingTimeInterval(1))
+        q.append(.launch(packageName: "com.a"), now: t0.addingTimeInterval(2))
+        q.append(.input(id: "hdmi1"), now: t0.addingTimeInterval(2))
+        XCTAssertEqual(q.drain(now: t0.addingTimeInterval(3)),
+                       [.key(.power, .tap), .text("hi"), .launch(packageName: "com.a"), .input(id: "hdmi1")])
+        XCTAssertEqual(q.count, 0)
+        XCTAssertEqual(q.drain(now: t0.addingTimeInterval(3)), [])
+    }
+
+    func testCapDropsTheOldest() {
+        var q = PendingQueue()
+        for i in 0..<(PendingQueue.capacity + 3) { q.append(.text("\(i)"), now: t0) }
+        let out = q.drain(now: t0)
+        XCTAssertEqual(out.count, PendingQueue.capacity)
+        XCTAssertEqual(out.first, .text("3"))
+        XCTAssertEqual(out.last, .text("\(PendingQueue.capacity + 2)"))
+    }
+
+    func testExpiredEntriesAreDroppedSilently() {
+        var q = PendingQueue()
+        q.append(.key(.power, .tap), now: t0)
+        q.append(.key(.home, .tap), now: t0.addingTimeInterval(4))
+        XCTAssertEqual(q.drain(now: t0.addingTimeInterval(6)), [.key(.home, .tap)])
+        q.append(.key(.back, .tap), now: t0)
+        q.append(.key(.ok, .tap), now: t0.addingTimeInterval(PendingQueue.lifetime + 1))  // expires the first on append
+        XCTAssertEqual(q.count, 1)
+    }
+
+    func testStreamControlAndBulkRequestsAreNeverQueued() {
+        var q = PendingQueue()
+        for m: OutgoingMessage in [.streamStart(.low), .streamStop, .usage, .icon(key: "a"), .configSet([:]), .ping, .hello(app: "1")] {
+            XCTAssertFalse(q.append(m, now: t0))
+        }
+        XCTAssertEqual(q.count, 0)
+    }
+}
+
 private final class FakePending: PendingPairing, @unchecked Sendable {
     let tvName = "TV"
     let code: String

@@ -15,7 +15,16 @@ struct RemoteView: View {
                 LiveCard(controller: controller, fullScreen: $fullScreen)
                 AdbNotice(status: controller.state?.adb ?? .unknown)
                 if let playing = controller.state?.nowPlaying { NowPlayingStrip(playing: playing) }
+                if controller.link != .connected {
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Connecting…").font(.footnote.weight(.medium))
+                        Text("Presses are sent as soon as the TV answers.").font(.footnote).foregroundStyle(.secondary).lineLimit(1).minimumScaleFactor(0.8)
+                    }
+                    .transition(.opacity)
+                }
                 DPad(controller: controller)
+                    .opacity(controller.link == .connected ? 1 : 0.6)
                 RemoteButtons(controller: controller)
                 keyboard
             }

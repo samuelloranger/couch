@@ -1529,6 +1529,17 @@
           }
         }
       }
+    },
+    "Presses are sent as soon as the TV answers.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tes touches sont envoyées dès que la télé répond."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
