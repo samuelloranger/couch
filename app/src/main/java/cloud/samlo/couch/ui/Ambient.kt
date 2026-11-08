@@ -1,6 +1,9 @@
 package cloud.samlo.couch.ui
 
 import android.annotation.SuppressLint
+import android.animation.ObjectAnimator
+import android.animation.PropertyValuesHolder
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Typeface
@@ -9,7 +12,7 @@ import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
 import android.view.View
-import android.view.animation.LinearInterpolator
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -27,6 +30,8 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
     private val main = Handler(Looper.getMainLooper())
     private val below = picture()
     private val above = picture().apply { alpha = 0f }
+    private val belowDrift = drift(below)
+    private val aboveDrift = drift(above)
     private val weather = TextView(context).apply {
         textSize = 20f
         setTextColor(0xE6FFFFFF.toInt())
@@ -117,27 +122,43 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
             visibility = View.GONE
             below.animate().cancel()
             above.animate().cancel()
+            belowDrift.cancel()
+            aboveDrift.cancel()
         }.start()
     }
 
     private fun showPicture(url: String) {
         wanted = url
-        images.load(url, context.dp(640), context.dp(360), 0f, opaque = true, isCurrent = { wanted == url }) { bitmap ->
+        images.load(url, 1920, 1080, 0f, opaque = true, isCurrent = { wanted == url }) { bitmap ->
             crossfade(bitmap)
         }
     }
 
     private fun crossfade(bitmap: Bitmap) {
         val incoming = if (above.alpha > 0.5f) below else above
+        val zoom = if (incoming === above) aboveDrift else belowDrift
+        zoom.cancel()
         incoming.setImageBitmap(bitmap)
         incoming.scaleX = 1f
         incoming.scaleY = 1f
-        // A slow drift over the whole interval; linear so it never visibly speeds up or stops.
-        incoming.animate().scaleX(DRIFT).scaleY(DRIFT).setDuration(ROTATE_MS).setInterpolator(LinearInterpolator()).start()
+        // Separate from the alpha animator: a crossfade must never shorten the zoom.
+        // Reverse gently for a single wallpaper instead of snapping back to its initial scale.
+        zoom.start()
         above.animate().alpha(if (incoming === above) 1f else 0f).setDuration(1500).setInterpolator(Tokens.ease).start()
     }
 
     private fun picture() = ImageView(context).apply { scaleType = ImageView.ScaleType.CENTER_CROP }
+
+    private fun drift(view: ImageView) = ObjectAnimator.ofPropertyValuesHolder(
+        view,
+        PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, DRIFT),
+        PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, DRIFT),
+    ).apply {
+        duration = ROTATE_MS
+        interpolator = AccelerateDecelerateInterpolator()
+        repeatCount = ValueAnimator.INFINITE
+        repeatMode = ValueAnimator.REVERSE
+    }
 
     private companion object {
         const val ROTATE_MS = 120_000L

@@ -29,6 +29,8 @@ class AmbientMode(
 
     /** Arms the timer; [activity] means the user just did something. */
     fun schedule(activity: Boolean = false) {
+        // A key may have armed the next idle entry while the overlay is still fading out.
+        if (!activity && ambient.showing) return
         val now = SystemClock.uptimeMillis()
         if (activity || idleSince == 0L) idleSince = now
         main.removeCallbacks(enter)
