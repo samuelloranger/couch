@@ -88,7 +88,7 @@ final class AppModel {
     func add(_ tv: PairedTV) throws {
         try store.save(tv)
         if let existing = controller(id: tv.id) {
-            existing.disconnect()
+            existing.close()
             controllers.removeAll { $0.id == tv.id }
         }
         let c = makeController(tv)
@@ -98,7 +98,7 @@ final class AppModel {
     }
 
     func forget(_ c: TVController) {
-        c.disconnect()
+        c.close()
         store.remove(id: c.id)
         controllers.removeAll { $0.id == c.id }
     }

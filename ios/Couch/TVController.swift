@@ -36,6 +36,7 @@ final class TVController: Identifiable {
     @ObservationIgnored private var wantedIcons: Set<String> = []
     @ObservationIgnored private var noReplyCount = 0
     @ObservationIgnored private var pending = PendingQueue()
+    @ObservationIgnored private var closed = false
     @ObservationIgnored private var backoff: Task<Void, Never>?
     @ObservationIgnored private var nudged = false
     @ObservationIgnored private var keyChain: Task<Void, Never>?
@@ -76,19 +77,28 @@ final class TVController: Identifiable {
     // MARK: lifecycle
 
     func connect() {
-        guard !isDemo, loop == nil else { return }
+        guard !isDemo, !closed, loop == nil else { return }
         loop = Task { [weak self] in await self?.run() }
     }
 
     func disconnect() {
         guard !isDemo else { return }
         loop?.cancel(); loop = nil
+        backoff?.cancel(); backoff = nil
+        pending.clear()
+        nudged = false
         let s = session; session = nil
         Task { await s?.close() }
         link = .offline
         stream = nil
         video.reset()
         hasPicture = false
+    }
+
+    /// The controller was replaced or forgotten: stop for good, so a stale reference can't reconnect.
+    func close() {
+        closed = true
+        disconnect()
     }
 
     func update(_ tv: PairedTV) { self.tv = tv }
@@ -101,11 +111,13 @@ final class TVController: Identifiable {
             if Task.isCancelled { return }
             link = .offline
             attempt = ok ? 0 : attempt + 1
+            // A press during the attempt asked for an immediate retry; honour it before any wait.
+            if nudged { nudged = false; attempt = 0; continue }
             let delay = min(15.0, ok ? 1.0 : pow(2.0, Double(min(attempt, 4))))
             let nap = Task<Void, Never> { try? await Task.sleep(for: .seconds(delay)) }
             backoff = nap
-            await nap.value
-            backoff = nil
+            await withTaskCancellationHandler { await nap.value } onCancel: { nap.cancel() }
+            if backoff == nap { backoff = nil }
             if nudged { nudged = false; attempt = 0 }
         }
     }
@@ -134,22 +146,25 @@ final class TVController: Identifiable {
         if Task.isCancelled { await session.close(); return false }
         self.session = session
         requestedIcons.removeAll()
+        nudged = false
         link = .connected
         if let ip = session.remoteIPv4, ip != tv.lastHost {
             tv.lastHost = ip
             remember(tv)
         }
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        try? await session.send(.hello(app: version))
-        // Whatever was pressed while connecting goes out first, in order, before bulk requests.
-        for message in pending.drain() { try? await session.send(message) }
-        try? await session.send(.usage)
+        // No suspension from here to the end of this block: everything goes through one serial path,
+        // hello first, then what was pressed while connecting, then bulk requests, so a live press
+        // that arrives afterwards can never overtake an older one.
+        dispatch(session, .hello(app: version), priorityPath: true)
+        for message in pending.drain() { dispatch(session, message, priorityPath: true) }
+        dispatch(session, .usage, priorityPath: true)
         for key in wantedIcons.subtracting(icons.keys) {
             requestedIcons.insert(key)
-            try? await session.send(.icon(key: key))
+            dispatch(session, .icon(key: key), priorityPath: true)
         }
         wantedIcons.removeAll()
-        if wantsStream { try? await session.send(.streamStart(quality)) }
+        if wantsStream { dispatch(session, .streamStart(quality), priorityPath: true) }
         for await event in session.events { handle(event, from: session) }
         // A newer session may already own the controller; only clear what is ours.
         if self.session === session {
@@ -197,14 +212,18 @@ final class TVController: Identifiable {
     // MARK: sending
 
     func send(_ message: OutgoingMessage) {
-        guard !isDemo else { return }
+        guard !isDemo, !closed else { return }
         guard let s = session else {
             // Not connected: hold what the person pressed and reconnect now, not at the next retry.
             if pending.append(message) { reconnectNow() }
             return
         }
         // Keys and stream control never wait behind icon, usage or config traffic.
-        if message.isPriority {
+        dispatch(s, message, priorityPath: message.isPriority)
+    }
+
+    private func dispatch(_ s: PhoneSession, _ message: OutgoingMessage, priorityPath: Bool) {
+        if priorityPath {
             let previous = keyChain
             keyChain = Task { await previous?.value; try? await s.send(message) }
         } else {
@@ -215,6 +234,7 @@ final class TVController: Identifiable {
 
     /// Cancels the current backoff wait so the next attempt starts immediately.
     func reconnectNow() {
+        guard !closed else { return }
         if loop == nil { connect(); return }
         nudged = true
         backoff?.cancel()

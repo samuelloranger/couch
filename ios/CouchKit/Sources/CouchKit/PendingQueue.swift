@@ -1,12 +1,13 @@
 import Foundation
 
-/// Input waiting for a connection: at most `capacity` entries, each good for `lifetime` seconds.
+/// Input waiting for a connection: at most `capacity` entries, each good for `lifetime` (on a monotonic clock,
+/// so a wall-clock change cannot revive or kill an entry).
 /// Only messages that make sense a moment late (keys, text, launch, input switch) are accepted.
 public struct PendingQueue: Sendable {
     public static let capacity = 8
-    public static let lifetime: TimeInterval = 5
+    public static let lifetime: Duration = .seconds(5)
 
-    private var entries: [(message: OutgoingMessage, at: Date)] = []
+    private var entries: [(message: OutgoingMessage, at: ContinuousClock.Instant)] = []
 
     public init() {}
 
@@ -14,7 +15,7 @@ public struct PendingQueue: Sendable {
 
     /// False (and nothing stored) for stream control and bulk requests.
     @discardableResult
-    public mutating func append(_ message: OutgoingMessage, now: Date = Date()) -> Bool {
+    public mutating func append(_ message: OutgoingMessage, now: ContinuousClock.Instant = .now) -> Bool {
         guard message.isQueueable else { return false }
         dropExpired(now: now)
         if entries.count >= Self.capacity { entries.removeFirst() }
@@ -23,7 +24,7 @@ public struct PendingQueue: Sendable {
     }
 
     /// Everything still fresh, oldest first; the queue is empty afterwards.
-    public mutating func drain(now: Date = Date()) -> [OutgoingMessage] {
+    public mutating func drain(now: ContinuousClock.Instant = .now) -> [OutgoingMessage] {
         dropExpired(now: now)
         defer { entries.removeAll() }
         return entries.map(\.message)
@@ -31,8 +32,8 @@ public struct PendingQueue: Sendable {
 
     public mutating func clear() { entries.removeAll() }
 
-    private mutating func dropExpired(now: Date) {
-        entries.removeAll { now.timeIntervalSince($0.at) > Self.lifetime }
+    private mutating func dropExpired(now: ContinuousClock.Instant) {
+        entries.removeAll { now - $0.at > Self.lifetime }
     }
 }
 
