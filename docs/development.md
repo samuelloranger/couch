@@ -42,6 +42,23 @@ first, which deletes Couch's settings. Back them up first (see
 The version comes from the latest `vX.Y.Z` tag: `versionName` is `X.Y.Z` and `versionCode` is
 `X·10000 + Y·100 + Z`. Without tags it is `0.1.0`.
 
+## iPhone app
+
+The iPhone app lives in `ios/`: a SwiftUI app with no third-party packages, iOS 26 or later, and
+`CouchKit`, a Swift package holding the protocol, crypto and models with its unit tests. The Xcode
+project is generated with [XcodeGen](https://github.com/yonaskolb/XcodeGen) and isn't committed:
+
+```sh
+cd ios
+xcodegen generate
+xcodebuild -project Couch.xcodeproj -scheme Couch -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
+
+Set `DEVELOPMENT_TEAM` in `ios/project.yml` to your own team to run it on a phone. In a Debug build,
+`COUCH_DEMO=1` fills every screen with sample TVs, so the screens can be checked without a TV.
+The protocol both sides speak is described in [Phone](phone.md) and `docs/architecture.md`; the
+crypto test vectors in `ios/CouchTests` are shared with the TV's JVM tests.
+
 ## Running on a TV emulator
 
 An Android 12 TV image at 1080p and 320 dpi matches a typical 2020 TV:

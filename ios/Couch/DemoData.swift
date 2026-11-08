@@ -14,8 +14,8 @@ struct DemoData {
 
     static var discovered: [DiscoveredTV] {
         [
-            DiscoveredTV(id: "demo-bedroom", name: "Bedroom TV", pairing: true, endpoint: .hostPort(host: "192.168.50.41", port: 47820)),
-            DiscoveredTV(id: "demo-office", name: "Office", pairing: false, endpoint: .hostPort(host: "192.168.50.42", port: 47820)),
+            DiscoveredTV(id: "demo-bedroom", name: "Bedroom TV", pairing: true, endpoint: .hostPort(host: "192.168.1.41", port: 47820)),
+            DiscoveredTV(id: "demo-office", name: "Office", pairing: false, endpoint: .hostPort(host: "192.168.1.42", port: 47820)),
         ]
     }
 
@@ -44,7 +44,7 @@ struct DemoData {
     static var living: DemoData {
         let usage = UsageReport(own: snapshot(id: "demo-living", name: "Living room", scale: 10), peers: [snapshot(id: "demo-den", name: "Den", scale: 4)])
         return DemoData(
-            tv: PairedTV(id: "demo-living", name: "Living room", linkKey: Data(count: 32), lastHost: "192.168.50.40"),
+            tv: PairedTV(id: "demo-living", name: "Living room", linkKey: Data(count: 32), lastHost: "192.168.1.40"),
             state: TVState(id: "demo-living", name: "Living room", model: "Chromecast with Google TV", android: "14", version: "1.8.0",
                            adb: .ready, foreground: "com.netflix.ninja", nowPlaying: NowPlaying(title: "Severance", artist: "Season 2", app: "Netflix")),
             config: [
@@ -63,7 +63,7 @@ struct DemoData {
 
     static var den: DemoData {
         var d = living
-        d.tv = PairedTV(id: "demo-den", name: "Den", linkKey: Data(count: 32), lastHost: "192.168.50.43")
+        d.tv = PairedTV(id: "demo-den", name: "Den", linkKey: Data(count: 32), lastHost: "192.168.1.43")
         d.state = TVState(id: "demo-den", name: "Den", model: "Fire TV Stick 4K", android: "9", version: "1.8.0", adb: .blocked)
         return d
     }
