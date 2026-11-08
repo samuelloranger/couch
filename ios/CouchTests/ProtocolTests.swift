@@ -98,7 +98,7 @@ final class MessageTests: XCTestCase {
     }
 
     func testSettingsSchema() throws {
-        let json = #"{"t":"settings","groups":[{"id":"look","title":"Look","rows":[{"key":"accent","title":"Accent","kind":"swatches","options":[{"value":"mint","label":"Mint","color":"#34D399"}]},{"key":"subreddit","title":"Sub","kind":"text","visibleWhen":{"key":"wallpaper","equals":"reddit"}},{"key":"ambientMinutes","title":"Ambient","kind":"choice","options":[{"value":0,"label":"Off"},{"value":5,"label":"5 min"}]},{"key":"z","title":"Z","kind":"hologram"}]}]}"#
+        let json = ##"{"t":"settings","groups":[{"id":"look","title":"Look","rows":[{"key":"accent","title":"Accent","kind":"swatches","options":[{"value":"mint","label":"Mint","color":"#34D399"}]},{"key":"subreddit","title":"Sub","kind":"text","visibleWhen":{"key":"wallpaper","equals":"reddit"}},{"key":"ambientMinutes","title":"Ambient","kind":"choice","options":[{"value":0,"label":"Off"},{"value":5,"label":"5 min"}]},{"key":"z","title":"Z","kind":"hologram"}]}]}"##
         guard case .settings(let g) = try decode(json) else { return XCTFail() }
         let rows = g[0].rows
         XCTAssertEqual(rows[0].options[0].color, "#34D399")
