@@ -48,11 +48,7 @@ object Catalog {
     }
 
     private fun hasBanner(context: Context, pkg: String, icons: java.io.File?) = icons?.let { java.io.File(it, "$pkg.png").isFile } == true ||
-        runCatching {
-            val pm = context.packageManager
-            val launcher = pm.getLeanbackLaunchIntentForPackage(pkg)?.component
-            (launcher?.let { pm.getActivityInfo(it, 0).loadBanner(pm) } ?: pm.getApplicationInfo(pkg, 0).loadBanner(pm)) != null
-        }.getOrDefault(false)
+        runCatching { context.packageManager.getApplicationInfo(pkg, 0).loadBanner(context.packageManager) != null }.getOrDefault(false)
 
     /** Every input, hidden ones too, with the icon id the phone can offer to change. */
     fun inputs(context: Context, config: Config): JSONArray = JSONArray(

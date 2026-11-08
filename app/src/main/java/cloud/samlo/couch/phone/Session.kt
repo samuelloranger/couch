@@ -22,7 +22,9 @@ class Session(
     val peer: Peer,
     private val socket: Socket,
     private val input: DataInputStream,
-    keys: SessionKeys,
+    private val opener: FrameCipher,
+    private val sealer: FrameCipher,
+    private val first: ByteArray,
     private val listener: Listener,
 ) {
     interface Listener {
@@ -32,8 +34,6 @@ class Session(
 
     private class Item(val bytes: ByteArray, val video: Boolean, val at: Long = System.nanoTime())
 
-    private val opener = FrameCipher(keys.clientToServer)
-    private val sealer = FrameCipher(keys.serverToClient)
     private val out = DataOutputStream(BufferedOutputStream(socket.getOutputStream()))
     private val queue = LinkedBlockingQueue<Item>()
     private val queuedVideo = AtomicInteger()
@@ -41,6 +41,9 @@ class Session(
     @Volatile private var dropping = false
     @Volatile private var closed = false
     private var writer: Thread? = null
+
+    /** Keys this phone holds down; let go of when the session ends. */
+    val held = HeldKeys()
 
     /** Whether this phone asked for the picture; set by the stream messages. */
     @Volatile var wantsVideo = false
@@ -53,7 +56,15 @@ class Session(
         Thread(::read, "couch-phone-read").apply { isDaemon = true; start() }
     }
 
-    fun send(message: JSONObject) = sendBytes(byteArrayOf(Wire.JSON.toByte()) + message.toString().toByteArray())
+    /** A message too large for one frame is replaced by an `error` naming what it answered. */
+    fun send(message: JSONObject) {
+        val body = message.toString().toByteArray()
+        if (body.size + 17 > Frames.MAX) {
+            val about = message.optString("t")
+            return send(JSONObject().put("t", "error").put("about", about).put("message", "Too large"))
+        }
+        sendBytes(byteArrayOf(Wire.JSON.toByte()) + body)
+    }
 
     private fun sendBytes(bytes: ByteArray) {
         if (closed) return
@@ -66,22 +77,26 @@ class Session(
      * too long or old is dropped and so is everything after it until a keyframe finds the queue
      * drained. [force] skips that, for the catch-up a joining phone gets.
      */
-    fun sendVideo(frame: ByteArray, key: Boolean, force: Boolean = false) {
-        if (closed) return
+    fun sendVideo(frame: ByteArray, key: Boolean, force: Boolean = false): Boolean {
+        if (closed) return true
+        // A frame that can never fit one sealed frame: the caller has to do something about it.
+        if (frame.size + 16 > Frames.MAX) return false
         if (!force) {
             val head = queue.peek()
             val late = head != null && (System.nanoTime() - head.at) / 1_000_000 > MAX_VIDEO_MS && queuedVideo.get() > 0
-            if (late || queuedVideo.get() + frame.size > MAX_VIDEO_BYTES) {
+            // An empty queue takes any frame that fits, so one big keyframe is never lost to the cap.
+            if (late || (queuedVideo.get() > 0 && queuedVideo.get() + frame.size > MAX_VIDEO_BYTES)) {
                 dropping = true
-                return
+                return true
             }
             if (dropping) {
-                if (!key) return
+                if (!key) return true
                 dropping = false
             }
         }
         queuedVideo.addAndGet(frame.size)
         queue.add(Item(frame, true))
+        return true
     }
 
     /** A phone that joins mid-stream starts clean, from the config and keyframe it is about to be sent. */
@@ -107,15 +122,10 @@ class Session(
 
     private fun read() {
         try {
+            var plain = first
             while (!closed) {
-                val plain = Frames.read(input, opener)
-                if (plain[0].toInt() != Wire.JSON) continue
-                val message = try {
-                    JSONObject(String(plain, 1, plain.size - 1, Charsets.UTF_8))
-                } catch (e: JSONException) {
-                    continue
-                }
-                if (message.optString("t").isNotEmpty()) listener.onMessage(this, message)
+                deliver(plain)
+                plain = Frames.read(input, opener)
             }
         } catch (e: IOException) {
             // A closed socket, a quiet phone (the read times out) or a frame that doesn't open.
@@ -123,6 +133,16 @@ class Session(
             // A handler that broke on one message must not leave the session half alive.
         }
         close()
+    }
+
+    private fun deliver(plain: ByteArray) {
+        if (plain[0].toInt() != Wire.JSON) return
+        val message = try {
+            JSONObject(String(plain, 1, plain.size - 1, Charsets.UTF_8))
+        } catch (e: JSONException) {
+            return
+        }
+        if (message.optString("t").isNotEmpty()) listener.onMessage(this, message)
     }
 
     fun close() {

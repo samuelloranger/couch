@@ -15,7 +15,13 @@ object ConfigPatch {
     fun apply(current: Config, patch: JSONObject): Config {
         val merged = ConfigJson.encode(current)
         val known = ConfigJson.encode(current)
-        for (key in patch.keys()) if (known.has(key)) merged.put(key, patch.get(key))
+        for (key in patch.keys()) {
+            if (!known.has(key)) continue
+            val value = patch.get(key)
+            // optBoolean and friends would quietly turn "nope" into the old value: say so instead.
+            if (!sameType(known.get(key), value)) throw JSONException("$key has the wrong type")
+            merged.put(key, value)
+        }
         val out = Config()
         ConfigJson.decode(merged, out)
         // The TV shows the subreddit as r/name and takes either; an empty one means the default.
@@ -23,6 +29,15 @@ object ConfigPatch {
         out.ambientMinutes = out.ambientMinutes.coerceIn(0, MAX_AMBIENT_MINUTES)
         out.wallpaperHours = out.wallpaperHours.coerceIn(1, MAX_WALLPAPER_HOURS)
         return out
+    }
+
+    private fun sameType(current: Any, value: Any) = when (current) {
+        is Boolean -> value is Boolean
+        is Number -> value is Number
+        is String -> value is String
+        is org.json.JSONArray -> value is org.json.JSONArray
+        is JSONObject -> value is JSONObject
+        else -> true
     }
 
     private const val MAX_AMBIENT_MINUTES = 240

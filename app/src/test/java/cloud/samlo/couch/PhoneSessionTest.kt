@@ -5,7 +5,6 @@ import cloud.samlo.couch.phone.Frames
 import cloud.samlo.couch.phone.Handshake
 import cloud.samlo.couch.phone.PhoneHost
 import cloud.samlo.couch.phone.Session
-import cloud.samlo.couch.phone.SessionKeys
 import cloud.samlo.couch.sync.Crypto
 import cloud.samlo.couch.sync.Peer
 import cloud.samlo.couch.sync.Peers
@@ -36,8 +35,9 @@ class PhoneSessionTest {
 
     /** Echoes every message back with `t` = "echo". */
     private val host = object : PhoneHost, Session.Listener {
-        override fun adopt(peer: Peer, client: Socket, input: DataInputStream, keys: SessionKeys): Boolean {
-            val session = Session(peer, client, input, keys, this)
+        override fun adopt(peer: Peer, client: Socket, input: DataInputStream, opener: FrameCipher, sealer: FrameCipher, first: ByteArray): Boolean {
+            val session = Session(peer, client, input, opener, sealer, first, this)
+            // The first frame is a message like any other.
             adopted.add(session)
             session.start()
             return true
@@ -170,5 +170,50 @@ class PhoneSessionTest {
         val on = connect(server.start())
         Wire.write(on.output, JSONObject().put("op", "snapshot").put("id", "tv-2").put("nonce", Wire.b64(n2)).put("proof", Wire.b64(Crypto.requestProof(tvLink, n2, "tv-2"))))
         assertTrue(Wire.read(on.input).has("data"))
+    }
+
+    @Test
+    fun aReplayedHandshakeWithoutAFrameThatOpensTakesNoSlot() {
+        val (server, _, link) = tvWithPhone()
+        val line = connect(server.start())
+        val (toTv, _) = open(line, link)!!
+        // Junk of a plausible length, sealed by nobody.
+        line.output.writeInt(40)
+        line.output.write(ByteArray(40))
+        line.output.flush()
+        try {
+            line.input.readInt()
+            assertFalse("the TV kept the line open", true)
+        } catch (e: IOException) {
+            assertNotNull(e)
+        }
+        assertTrue(adopted.isEmpty())
+        // The real phone, with the real first frame, is adopted.
+        val real = connect(server.start())
+        val (c2s, s2c) = open(real, link)!!
+        send(real, c2s, JSONObject().put("t", "hello").put("n", 7))
+        assertEquals(7, receive(real, s2c).getInt("n"))
+        assertEquals(1, adopted.size)
+        assertNotNull(toTv)
+    }
+
+    @Test
+    fun pairingTurnsAwayAKindThePageDidNotOpenFor() {
+        val (server, _, _) = tvWithPhone()
+        server.onPair = { _, _ -> true }
+        server.pairKind = Peer.TV
+        val line = connect(server.start())
+        Wire.write(
+            line.output,
+            JSONObject().put("op", "pair1").put("id", "x").put("name", "x").put("commit", Wire.b64(Crypto.commit(Crypto.keyPair().publicKey))).put("kind", "phone"),
+        )
+        assertEquals("not-pairing", Wire.read(line.input).getString("error"))
+        val ok = connect(server.start())
+        server.pairKind = Peer.PHONE
+        Wire.write(
+            ok.output,
+            JSONObject().put("op", "pair1").put("id", "x").put("name", "x").put("commit", Wire.b64(Crypto.commit(Crypto.keyPair().publicKey))).put("kind", "phone"),
+        )
+        assertTrue(Wire.read(ok.input).has("pub"))
     }
 }

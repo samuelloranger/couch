@@ -1,5 +1,7 @@
 package cloud.samlo.couch.sync
 
+import cloud.samlo.couch.phone.FrameCipher
+import cloud.samlo.couch.phone.Frames
 import cloud.samlo.couch.phone.Handshake
 import cloud.samlo.couch.phone.PhoneHost
 import org.json.JSONObject
@@ -29,6 +31,9 @@ class Server(
      * blocks until the user answers, and returns whether the codes matched.
      */
     @Volatile var onPair: ((String, String) -> Boolean)? = null
+
+    /** The kind of peer the page that opened pairing wants; any other kind that knocks is turned away. */
+    @Volatile var pairKind: String = Peer.TV
 
     /** Called after a pairing this TV answered went through. */
     @Volatile var onPaired: ((Peer) -> Unit)? = null
@@ -151,7 +156,17 @@ class Server(
         if (!MessageDigest.isEqual(proof, Handshake.requestProof(peer.key, cn, id))) return false
         val sn = Crypto.random(Handshake.NONCE_BYTES)
         Wire.write(output, JSONObject().put("nonce", Wire.b64(sn)).put("proof", Wire.b64(Handshake.replyProof(peer.key, cn, sn))))
-        return host.adopt(peer, client, input, Handshake.keys(peer.key, cn, sn))
+        // The proof above doesn't cover sn, so a replayed request would get this far: only a phone
+        // that holds the key can send a first frame that opens, and only then does it take a slot.
+        val keys = Handshake.keys(peer.key, cn, sn)
+        val opener = FrameCipher(keys.clientToServer)
+        client.soTimeout = FIRST_FRAME_MS
+        val first = try {
+            Frames.read(input, opener)
+        } catch (e: IOException) {
+            return false
+        }
+        return host.adopt(peer, client, input, opener, FrameCipher(keys.serverToClient), first)
     }
 
     /** Building the snapshot reads the usage log, so paired TVs asking in a burst share one. */
@@ -170,6 +185,10 @@ class Server(
         val theirId = first.getString("id").take(Snapshot.MAX_NAME)
         val theirName = first.getString("name").take(Snapshot.MAX_NAME)
         val kind = Peer.kindOf(first.optString("kind"))
+        if (kind != pairKind) {
+            Wire.write(output, JSONObject().put("error", "not-pairing"))
+            return
+        }
         val mine = Crypto.keyPair()
         Wire.write(output, JSONObject().put("pub", Wire.b64(mine.publicKey)).put("id", peers.id).put("name", peers.name))
         val theirs = Wire.unb64(Wire.read(input, Wire.MAX_REQUEST).getString("pub"))
@@ -207,6 +226,8 @@ class Server(
         private const val MAX_CONNECTIONS = 6
         private const val READ_MS = 10_000
         private const val HANDSHAKE_MS = 15_000L
+        /** A phone sends `hello` straight after the handshake. */
+        private const val FIRST_FRAME_MS = 5_000
         private const val CACHE_MS = 30_000L
         /** Long enough for two people to look at two screens. */
         const val ANSWER_MS = 130_000

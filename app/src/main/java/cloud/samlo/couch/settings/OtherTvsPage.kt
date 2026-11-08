@@ -4,6 +4,7 @@ import android.view.KeyEvent
 import android.widget.Toast
 import cloud.samlo.couch.R
 import cloud.samlo.couch.sync.Client
+import cloud.samlo.couch.sync.Peer
 import cloud.samlo.couch.sync.Server
 import cloud.samlo.couch.sync.Sync
 import java.util.concurrent.ArrayBlockingQueue
@@ -81,7 +82,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         }
         o.page(ctx.str(R.string.tvs_add), ctx.str(R.string.tvs_add_help)) {
             mode = Mode.ADD
-            Sync.openPairing(ctx.activity, ::askFromOutside)
+            Sync.openPairing(ctx.activity, Peer.TV, ::askFromOutside)
             rebuild()
         }
     }

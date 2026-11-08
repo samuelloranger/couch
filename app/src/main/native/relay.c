@@ -194,19 +194,22 @@ static void press(int fd, int code, int value) {
 }
 
 // A keyboard of the relay's own, for the keys no grabbed remote has (and for a relay that grabs
-// none, started only to inject keys for the phone app). Created once at start so Android has
-// registered it before the first key.
+// none, started only to inject keys for the phone app). Created on the first key that needs it,
+// and declaring only the keys the phone app can press: a keyboard with every key looks like a
+// hardware keyboard to Android, which can then hide the on-screen one.
 static int vkbd = -1;
+static const int VKBD_KEYS[] = {
+    KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_OK, KEY_BACK, KEY_HOME, KEY_MENU, KEY_PLAYPAUSE,
+    KEY_REWIND, KEY_FASTFORWARD, KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_MUTE, KEY_POWER, KEY_CHANNELUP,
+    KEY_CHANNELDOWN,
+};
 
 static void make_vkbd(void) {
     int u = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
     if (u < 0) return;
     ioctl(u, UI_SET_EVBIT, EV_SYN);
     ioctl(u, UI_SET_EVBIT, EV_KEY);
-    for (int k = 1; k < 256; k++) ioctl(u, UI_SET_KEYBIT, k);
-    ioctl(u, UI_SET_KEYBIT, KEY_OK);
-    ioctl(u, UI_SET_KEYBIT, KEY_CHANNELUP);
-    ioctl(u, UI_SET_KEYBIT, KEY_CHANNELDOWN);
+    for (unsigned i = 0; i < sizeof VKBD_KEYS / sizeof VKBD_KEYS[0]; i++) ioctl(u, UI_SET_KEYBIT, VKBD_KEYS[i]);
     ioctl(u, UI_SET_PHYS, PHYS);
     struct uinput_user_dev d;
     memset(&d, 0, sizeof d);
@@ -218,7 +221,14 @@ static void make_vkbd(void) {
         close(u);
         return;
     }
+    // Android takes a moment to register a new input device; keys sent before are lost.
+    usleep(150 * 1000);
     vkbd = u;
+}
+
+static int vkbd_has(int code) {
+    for (unsigned i = 0; i < sizeof VKBD_KEYS / sizeof VKBD_KEYS[0]; i++) if (VKBD_KEYS[i] == code) return 1;
+    return 0;
 }
 
 // Sends a key event as the remote that has the key, else as the relay's own keyboard.
@@ -229,6 +239,8 @@ static void send_key(int code, int value) {
         press(devices[i].clone, code, value);
         return;
     }
+    if (!vkbd_has(code)) return;
+    if (vkbd < 0) make_vkbd();
     if (vkbd >= 0) press(vkbd, code, value);
 }
 
@@ -335,7 +347,6 @@ int main(int argc, char **argv) {
     detach();
     link_fd = connect_couch(atoi(argv[1]), argv[2]);
     if (link_fd < 0) return 1;
-    make_vkbd();
     int watch = inotify_init1(IN_NONBLOCK);
     inotify_add_watch(watch, "/dev/input", IN_CREATE | IN_ATTRIB);
     for (;;) {

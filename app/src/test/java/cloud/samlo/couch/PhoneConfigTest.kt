@@ -82,4 +82,35 @@ class PhoneConfigTest {
         assertEquals(2, old.tvs().size)
         assertTrue(old.phones().isEmpty())
     }
+
+    @Test
+    fun aStringForABooleanIsRejectedNotIgnored() {
+        for (patch in listOf("""{"clock24h":"nope"}""", """{"ambientMinutes":"5"}""", """{"accent":3}""", """{"hiddenApps":"x"}""")) {
+            try {
+                ConfigPatch.apply(Config(), JSONObject(patch))
+                org.junit.Assert.fail("accepted $patch")
+            } catch (e: JSONException) {
+                assertTrue(e.message!!.isNotEmpty())
+            }
+        }
+    }
+
+    @Test
+    fun heldKeysAreDrainedOnce() {
+        val held = cloud.samlo.couch.phone.HeldKeys()
+        held.down(103)
+        held.down(105)
+        held.up(105)
+        held.down(103)
+        assertEquals(listOf(103), held.drain())
+        assertTrue(held.drain().isEmpty())
+    }
+
+    @Test
+    fun aPhoneKeepsAtMostTwoSessions() {
+        assertTrue(cloud.samlo.couch.phone.Phones.oldestToEvict(emptyList<Int>(), 2).isEmpty())
+        assertTrue(cloud.samlo.couch.phone.Phones.oldestToEvict(listOf(1), 2).isEmpty())
+        assertEquals(listOf(1), cloud.samlo.couch.phone.Phones.oldestToEvict(listOf(1, 2), 2))
+        assertEquals(listOf(1, 2), cloud.samlo.couch.phone.Phones.oldestToEvict(listOf(1, 2, 3), 2))
+    }
 }

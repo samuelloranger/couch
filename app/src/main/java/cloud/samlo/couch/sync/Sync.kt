@@ -126,10 +126,11 @@ object Sync {
      * Opens this TV for pairing until [closePairing]; [ask] is called with the other TV's name and
      * the code to compare, and blocks until the user answers.
      */
-    fun openPairing(context: Context, ask: (String, String) -> Boolean) {
+    fun openPairing(context: Context, kind: String, ask: (String, String) -> Boolean) {
         val context = context.applicationContext
         pairingOps.execute {
             up(context)
+            server?.pairKind = kind
             server?.onPair = ask
             announceAgain()
         }

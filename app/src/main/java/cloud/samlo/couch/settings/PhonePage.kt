@@ -3,6 +3,7 @@ package cloud.samlo.couch.settings
 import android.view.KeyEvent
 import cloud.samlo.couch.R
 import cloud.samlo.couch.phone.Phones
+import cloud.samlo.couch.sync.Peer
 import cloud.samlo.couch.sync.Sync
 import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -53,7 +54,7 @@ class PhonePage(private val ctx: SettingsContext) : SettingsPage {
         }
         o.page(ctx.str(R.string.phone_add), ctx.str(R.string.phone_add_help)) {
             mode = Mode.WAIT
-            Sync.openPairing(ctx.activity, ::askFromOutside)
+            Sync.openPairing(ctx.activity, Peer.PHONE, ::askFromOutside)
             rebuild()
         }
     }

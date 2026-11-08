@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit
  */
 object Phones : PhoneHost, Session.Listener {
     private const val MAX_SESSIONS = 4
+    private const val MAX_PER_PHONE = 2
     private const val PULSE_MS = 2_000L
 
     private var app: Context? = null
@@ -43,10 +44,14 @@ object Phones : PhoneHost, Session.Listener {
         PhoneAdb.onChange = { nudge() }
     }
 
-    override fun adopt(peer: Peer, client: Socket, input: DataInputStream, keys: SessionKeys): Boolean {
+    override fun adopt(peer: Peer, client: Socket, input: DataInputStream, opener: FrameCipher, sealer: FrameCipher, first: ByteArray): Boolean {
+        val evicted = ArrayList<Session>()
         synchronized(this) {
-            if (app == null || sessions.size >= MAX_SESSIONS) return false
-            val session = Session(peer, client, input, keys, this)
+            if (app == null) return false
+            // A phone has at most two sessions: a newer one replaces its oldest.
+            evicted += oldestToEvict(sessions.filter { it.peer.id == peer.id }, MAX_PER_PHONE)
+            if (sessions.size - evicted.size >= MAX_SESSIONS) return false
+            val session = Session(peer, client, input, opener, sealer, first, this)
             sessions.add(session)
             if (pulse == null) {
                 lastState = null
@@ -55,8 +60,12 @@ object Phones : PhoneHost, Session.Listener {
             }
             session.start()
         }
+        evicted.forEach(Session::close)
         return true
     }
+
+    /** The oldest of [same] (oldest first) that must go so that, with one more joining, at most [max] remain. */
+    internal fun <T> oldestToEvict(same: List<T>, max: Int): List<T> = same.take((same.size - max + 1).coerceAtLeast(0))
 
     override fun onMessage(session: Session, message: JSONObject) {
         messages?.handle(session, message)
@@ -64,6 +73,8 @@ object Phones : PhoneHost, Session.Listener {
 
     override fun onClosed(session: Session) {
         video?.stop(session)
+        // Keys the phone still held come up, or the TV would see them repeat until the next press.
+        session.held.drain().forEach { control?.letGo(it) }
         synchronized(this) {
             sessions.remove(session)
             if (sessions.isNotEmpty()) return

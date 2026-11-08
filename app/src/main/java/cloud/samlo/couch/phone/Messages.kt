@@ -28,7 +28,10 @@ class Messages(private val context: Context, private val control: Control, priva
             "ping" -> session.send(JSONObject().put("t", "pong"))
             "key" -> key(session, message)
             "text" -> control.text(message.optString("text").take(Keys.MAX_TEXT)) { it?.let { m -> fail(session, "text", m) } }
-            "stream.start" -> video.start(session, Video.Quality.of(message.optString("quality")))
+            "stream.start" -> {
+                control.probe()
+                video.start(session, Video.Quality.of(message.optString("quality")))
+            }
             "stream.stop" -> video.stop(session)
             "hello", "config.set", "launch", "input", "usage", "icon" -> slow(session, t) { run(session, t, message) }
             else -> fail(session, t, "Unknown message")
@@ -38,6 +41,7 @@ class Messages(private val context: Context, private val control: Control, priva
     private fun key(session: Session, message: JSONObject) {
         val key = Keys.named(message.optString("key")) ?: return fail(session, "key", "Unknown key")
         val action = message.optString("action", "tap").takeIf { it == "down" || it == "up" } ?: "tap"
+        key.linux?.let { if (action == "down") session.held.down(it) else if (action == "up") session.held.up(it) }
         control.key(key, action) { it?.let { m -> fail(session, "key", m) } }
     }
 
@@ -49,7 +53,7 @@ class Messages(private val context: Context, private val control: Control, priva
                 } catch (e: JSONException) {
                     fail(session, t, "Malformed message")
                 } catch (e: Exception) {
-                    fail(session, t, "The TV couldn't do that")
+                    fail(session, t, "Failed")
                 }
             }
         } catch (e: RejectedExecutionException) {
@@ -70,7 +74,7 @@ class Messages(private val context: Context, private val control: Control, priva
                 session.send(JSONObject().put("t", "inputs").put("inputs", Catalog.inputs(context, config)))
             }
             "config.set" -> set(session, message.getJSONObject("patch"), config)
-            "launch" -> if (!Catalog.launch(context, message.getString("package"))) fail(session, t, "That app can't be started")
+            "launch" -> if (!Catalog.launch(context, message.getString("package"))) fail(session, t, "Can't start that app")
             "input" -> if (!Catalog.switchInput(context, config, message.getString("id"))) fail(session, t, "No such input")
             "usage" -> session.send(State.usage(context))
             "icon" -> {

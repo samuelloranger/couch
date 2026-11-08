@@ -30,7 +30,11 @@ object PhoneAdb {
 
     /** A shell that, when [prompt] is off, fails instead of asking. Connects on first use. */
     fun create(context: Context, prompt: Boolean): AdbShell = AdbShell.create(context, prompt) { phase ->
-        if (phase == AdbShell.Phase.DIALOG) set(State.DIALOG)
+        when (phase) {
+            AdbShell.Phase.DIALOG -> set(State.DIALOG)
+            AdbShell.Phase.READY -> set(State.READY)
+            else -> Unit
+        }
     }
 
     fun ready() = set(State.READY)
@@ -52,9 +56,9 @@ object PhoneAdb {
 
     /** What the phone shows when a key, text or the picture can't go through. */
     fun message(): String = when (state) {
-        State.DIALOG -> "Allow debugging on the TV: accept the question on its screen."
-        State.OFF -> "Turn on USB debugging in the TV's developer options."
-        State.BLOCKED -> "This TV doesn't let Couch reach its own debugging."
-        else -> "Couch can't reach the TV's debugging yet."
+        State.DIALOG -> "Allow debugging on the TV."
+        State.OFF -> "Turn on debugging on the TV."
+        State.BLOCKED -> "This TV blocks debugging."
+        else -> "Debugging isn't ready."
     }
 }

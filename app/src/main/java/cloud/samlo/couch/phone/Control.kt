@@ -8,6 +8,7 @@ import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.remote.RelayLink
 import cloud.samlo.couch.remote.RelayProtocol
 import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
@@ -22,14 +23,22 @@ class Control(private val context: Context) {
     private val worker = ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(QUEUE),
         { r -> Thread(r, "couch-phone-control").apply { isDaemon = true } },
-        ThreadPoolExecutor.DiscardPolicy(),
     )
-    private var shell: AdbShell? = null
-    private var own: RelayLink? = null
+    @Volatile private var shell: AdbShell? = null
+    @Volatile private var own: RelayLink? = null
     private var relayRetryAt = 0L
 
+    /** Runs [task] in order; a full queue answers [reply] with an error rather than dropping the request silently. */
+    private fun submit(reply: (String?) -> Unit, task: () -> Unit) {
+        try {
+            worker.execute(task)
+        } catch (e: RejectedExecutionException) {
+            reply("The TV is busy")
+        }
+    }
+
     /** [reply] gets null when the key went out, else the message for the phone. */
-    fun key(key: Keys.Key, action: String, reply: (String?) -> Unit) = worker.execute {
+    fun key(key: Keys.Key, action: String, reply: (String?) -> Unit) = submit(reply) {
         val code = key.linux
         val line = when {
             code == null -> null
@@ -37,34 +46,53 @@ class Control(private val context: Context) {
             action == "up" -> RelayProtocol.press(code, false)
             else -> RelayProtocol.emit(code)
         }
-        if (line != null && relay(line)) return@execute reply(null)
+        if (line != null && relay(line)) return@submit reply(null)
         // The relay can't carry this one (yet): a key-up has nothing to release, a key-down taps.
-        if (action == "up") return@execute reply(null)
+        if (action == "up") return@submit reply(null)
         val sent = shell { it.run("input keyevent ${key.android}") }
         reply(if (sent != null) null else PhoneAdb.message())
         if (sent != null && line != null) ensureRelay()
     }
 
-    fun text(text: String, reply: (String?) -> Unit) = worker.execute {
-        val command = Keys.textCommand(text) ?: return@execute reply(null)
+    fun text(text: String, reply: (String?) -> Unit) = submit(reply) {
+        val command = Keys.textCommand(text) ?: return@submit reply(null)
         reply(if (shell { it.run(command) } != null) null else PhoneAdb.message())
     }
 
-    /** Learns whether ADB is usable, without ever asking the TV to show its question. */
-    fun probe() = worker.execute {
-        if (PhoneAdb.state == PhoneAdb.State.READY || !PhoneAdb.enabled(context)) {
-            if (!PhoneAdb.enabled(context)) shell = null
-            return@execute
+    /**
+     * Learns whether ADB is usable, without ever asking the TV to show its question: a question the
+     * user has since accepted turns the state to ready. Called when a phone says hello or asks for
+     * the picture; a full queue skips it, since the next request tries again anyway.
+     */
+    fun probe() {
+        if (PhoneAdb.state == PhoneAdb.State.READY) return
+        try {
+            worker.execute {
+                if (!PhoneAdb.enabled(context)) {
+                    shell = null
+                    PhoneAdb.failed(AdbShell.Failed.Off(null))
+                } else {
+                    shell(allowPrompt = false) { it.run("true") }
+                }
+            }
+        } catch (e: RejectedExecutionException) {
+            // Busy with real requests, which retry the connection themselves.
         }
-        shell(allowPrompt = false) { it.run("true") }
     }
 
-    /** The last phone has gone: the connection and any relay of ours are let go. */
-    fun release() = worker.execute {
-        shell?.close()
+    /** Lets go of a key a phone held when its session ended. Through the relay only: nothing else holds keys. */
+    fun letGo(linux: Int) {
+        relay(RelayProtocol.press(linux, false))
+    }
+
+    /** The last phone has gone. Not through the request queue, which may be full: closing is quick and never blocks. */
+    fun release() {
+        val sh = shell
         shell = null
-        own?.close()
+        sh?.close()
+        val link = own
         own = null
+        link?.close()
     }
 
     private fun relay(line: String): Boolean {
@@ -100,13 +128,16 @@ class Control(private val context: Context) {
             PhoneAdb.failed(AdbShell.Failed.Off(null))
             return null
         }
+        val sh = shell ?: PhoneAdb.create(context, allowPrompt && PhoneAdb.state != PhoneAdb.State.READY && PhoneAdb.claimPrompt()).also { shell = it }
         try {
-            val sh = shell ?: PhoneAdb.create(context, allowPrompt && PhoneAdb.state != PhoneAdb.State.READY && PhoneAdb.claimPrompt()).also { shell = it }
             return block(sh).also { PhoneAdb.ready() }
         } catch (e: AdbShell.Failed) {
-            shell?.close()
-            shell = null
-            PhoneAdb.failed(e)
+            sh.close()
+            // A connection closed by release() failing says nothing about ADB.
+            if (shell === sh) {
+                shell = null
+                PhoneAdb.failed(e)
+            }
         }
         return null
     }

@@ -129,7 +129,7 @@ class Video(private val context: Context) {
             // A run that gave nothing at once (a size the encoder refuses) is not worth repeating forever.
             quick = if (frames == 0 && System.currentTimeMillis() - began < QUICK_MS) quick + 1 else 0
             if (quick >= MAX_QUICK) {
-                synchronized(lock) { if (current(mine)) halt("error", "The TV's screen recorder stopped right away.") }
+                synchronized(lock) { if (current(mine)) halt("error", "Screen recorder failed.") }
                 return
             }
         }
@@ -139,7 +139,7 @@ class Video(private val context: Context) {
         if (!current(mine)) return
         val frame = Wire.config(sps, pps)
         config = frame
-        wanting.forEach { it.sendVideo(frame, false, force = true) }
+        wanting.toList().forEach { it.sendVideo(frame, false, force = true) }
     }
 
     private fun publish(mine: Int, unit: AccessUnit) = synchronized(lock) {
@@ -150,7 +150,9 @@ class Video(private val context: Context) {
             broadcast()
         }
         val frame = unit.frame()
-        wanting.forEach { it.sendVideo(frame, unit.key) }
+        val oversized = wanting.toList().filter { !it.sendVideo(frame, unit.key) }
+        // A frame that can't fit a sealed frame can't be sent at any quality setting this phone is on.
+        if (oversized.isNotEmpty() && unit.key) halt("error", "Picture too large. Lower the quality.")
     }
 
     private fun status(): JSONObject {
@@ -161,7 +163,8 @@ class Video(private val context: Context) {
 
     private fun broadcast() {
         val status = status()
-        wanting.forEach { it.send(status) }
+        // A copy: sending can close a session, which stops it, which edits the set.
+        wanting.toList().forEach { it.send(status) }
     }
 
     private companion object {
