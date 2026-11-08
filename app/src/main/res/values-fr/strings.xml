@@ -701,4 +701,19 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="phone_code_help">Le téléphone doit afficher ces six mêmes chiffres.</string>
     <string name="pair_aborted_differ">L\'autre côté dit que les codes diffèrent</string>
     <string name="pair_aborted_gone">L\'autre côté est parti</string>
+
+    <!-- Ambient image gallery -->
+    <string name="gallery_title">Images de veille</string>
+    <string name="gallery_help">Aperçu, ajout et suppression de photos. Les images alternent toutes les deux minutes.</string>
+    <string name="gallery_add">Ajouter une image</string>
+    <string name="gallery_use">Utiliser en veille</string>
+    <string name="gallery_refresh">Actualiser</string>
+    <string name="gallery_selected">Mes images est sélectionné pour la veille.</string>
+    <string name="gallery_empty">Aucune image. Ajoutez un fichier ou envoyez des photos depuis Couch sur iPhone.</string>
+    <string name="gallery_failed">Impossible de terminer cette action. Réessayez avec une image JPEG, PNG ou WebP de 20 Mo et 16 mégapixels maximum.</string>
+    <string name="gallery_close">Fermer</string>
+    <string name="gallery_delete">Supprimer l’image</string>
+    <string name="gallery_delete_confirm">Supprimer cette image de la TV ?</string>
+    <string name="gallery_phone_import">Aucun sélecteur de fichiers disponible. Ajoutez des photos depuis Couch sur iPhone.</string>
+    <string name="gallery_importing">Ajout de l’image…</string>
 </resources>

@@ -166,6 +166,9 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 if (was != (it == REDDIT)) rebuild(ctx.str(R.string.wallpaper_source))
             },
         )
+        o.link(ctx.str(R.string.gallery_title), ctx.str(R.string.gallery_help)) {
+            ctx.activity.startActivity(android.content.Intent(ctx.activity, WallpaperGalleryActivity::class.java))
+        }
         if (config.wallpaper != REDDIT) return
         o.text(
             ctx.str(R.string.subreddit), ctx.str(R.string.subreddit_help), Config.DEFAULT_SUBREDDIT,

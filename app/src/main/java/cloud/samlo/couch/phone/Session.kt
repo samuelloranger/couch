@@ -1,6 +1,7 @@
 package cloud.samlo.couch.phone
 
 import cloud.samlo.couch.sync.Peer
+import cloud.samlo.couch.data.WallpaperUpload
 import org.json.JSONException
 import org.json.JSONObject
 import java.io.BufferedOutputStream
@@ -44,6 +45,7 @@ class Session(
 
     /** Keys this phone holds down; let go of when the session ends. */
     val held = HeldKeys()
+    val wallpaperUpload = WallpaperUpload()
 
     /** Whether this phone asked for the picture; set by the stream messages. */
     @Volatile var wantsVideo = false
@@ -153,6 +155,7 @@ class Session(
     fun close() {
         if (closed) return
         closed = true
+        wallpaperUpload.close()
         queue.clear()
         queue.add(Item(ByteArray(0), false))
         writer?.interrupt()

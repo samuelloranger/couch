@@ -12,6 +12,10 @@ public enum IncomingMessage: Sendable, Equatable {
     case streamStatus(StreamStatus)
     case error(about: String?, message: String)
     case pong
+    case wallpapers([WallpaperEntry])
+    case wallpapersChanged
+    case wallpaperImage(id: String, preview: Bool, jpeg: Data?)
+    case wallpaperUpload(WallpaperUploadAck)
     case unknown(String)
 
     private struct Envelope: Decodable { var t: String }
@@ -21,12 +25,20 @@ public enum IncomingMessage: Sendable, Equatable {
     private struct InputsBody: Decodable { var inputs: [InputEntry] }
     private struct IconBody: Decodable { var key: String; var png: String? }
     private struct ErrorBody: Decodable { var about: String?; var message: String? }
+    private struct WallpapersBody: Decodable { var images: [WallpaperEntry] }
+    private struct WallpaperImageBody: Decodable { var id: String; var preview: Bool; var jpeg: String? }
 
     /// Throws on text that is not a message with a string `t`; unknown types decode to `.unknown`.
     public static func decode(_ json: Data) throws -> IncomingMessage {
         let d = JSONDecoder()
         let t = try d.decode(Envelope.self, from: json).t
         switch t {
+        case "wallpapers": return .wallpapers(try d.decode(WallpapersBody.self, from: json).images)
+        case "wallpapers.changed": return .wallpapersChanged
+        case "wallpapers.upload": return .wallpaperUpload(try d.decode(WallpaperUploadAck.self, from: json))
+        case "wallpapers.image":
+            let b = try d.decode(WallpaperImageBody.self, from: json)
+            return .wallpaperImage(id: b.id, preview: b.preview, jpeg: b.jpeg.flatMap { Data(base64Encoded: $0) })
         case "state": return .state(try d.decode(TVState.self, from: json))
         case "config": return .config(try d.decode(ConfigBody.self, from: json).config)
         case "settings": return .settings(try d.decode(SettingsBody.self, from: json).groups)
@@ -59,6 +71,7 @@ public enum OutgoingMessage: Sendable, Equatable {
     case streamStart(StreamQuality)
     case streamStop
     case ping
+    case wallpaper(action: String, fields: [String: JSONValue])
 
     public static let maxText = 500
 
@@ -72,6 +85,8 @@ public enum OutgoingMessage: Sendable, Equatable {
 
     public var object: [String: JSONValue] {
         switch self {
+        case .wallpaper(let action, let fields):
+            return fields.merging(["t": .string("wallpapers." + action)]) { _, new in new }
         case .hello(let app): return ["t": .string("hello"), "app": .string(app)]
         case .configSet(let patch): return ["t": .string("config.set"), "patch": .object(patch)]
         case .key(let k, let a): return ["t": .string("key"), "key": .string(k.rawValue), "action": .string(a.rawValue)]

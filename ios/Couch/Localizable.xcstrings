@@ -1540,6 +1540,236 @@
           }
         }
       }
+    },
+    "Ambient images": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images de veille"
+          }
+        }
+      }
+    },
+    "Images alternate every two minutes during ambient mode.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les images alternent toutes les deux minutes pendant la veille."
+          }
+        }
+      }
+    },
+    "JPEG, PNG or WebP. Up to 200 images; 20 MB per image.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JPEG, PNG ou WebP. Jusqu’à 200 images ; 20 Mo par image."
+          }
+        }
+      }
+    },
+    "Update Couch on the TV": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mets Couch à jour sur la TV"
+          }
+        }
+      }
+    },
+    "This TV needs a newer version of Couch to manage ambient images.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette TV nécessite une version plus récente de Couch pour gérer les images de veille."
+          }
+        }
+      }
+    },
+    "Use my images for ambient mode": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser mes images en veille"
+          }
+        }
+      }
+    },
+    "Uploading image %lld of %lld": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoi de l’image %1$lld sur %2$lld"
+          }
+        }
+      }
+    },
+    "Cancel upload": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler l’envoi"
+          }
+        }
+      }
+    },
+    "Connect to the TV to see and upload images.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecte-toi à la TV pour consulter et envoyer des images."
+          }
+        }
+      }
+    },
+    "No ambient images": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune image de veille"
+          }
+        }
+      }
+    },
+    "Add photos from your iPhone to start a slideshow on the TV.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoute des photos depuis ton iPhone pour créer un diaporama sur la TV."
+          }
+        }
+      }
+    },
+    "Preview %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aperçu de %@"
+          }
+        }
+      }
+    },
+    "Add photos": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter des photos"
+          }
+        }
+      }
+    },
+    "This photo could not be opened.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’ouvrir cette photo."
+          }
+        }
+      }
+    },
+    "This photo could not be prepared.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de préparer cette photo."
+          }
+        }
+      }
+    },
+    "Choose an image smaller than 20 MB.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis une image de moins de 20 Mo."
+          }
+        }
+      }
+    },
+    "Delete image": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer l’image"
+          }
+        }
+      }
+    },
+    "Delete this image from the TV?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer cette image de la TV ?"
+          }
+        }
+      }
+    },
+    "The TV disconnected. Try again when connected.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La TV est déconnectée. Réessaie une fois la connexion rétablie."
+          }
+        }
+      }
+    },
+    "This image could not be opened.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’ouvrir cette image."
+          }
+        }
+      }
+    },
+    "Connect to an updated TV and choose an image smaller than 20 MB.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecte-toi à une TV à jour et choisis une image de moins de 20 Mo."
+          }
+        }
+      }
+    },
+    "The upload timed out. Try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’envoi a expiré. Réessaie."
+          }
+        }
+      }
+    },
+    "The TV could not complete this action. Check the image format and size, then try again.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La TV n’a pas pu terminer cette action. Vérifie le format et la taille de l’image, puis réessaie."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

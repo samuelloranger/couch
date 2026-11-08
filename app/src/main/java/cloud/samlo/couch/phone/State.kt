@@ -20,6 +20,7 @@ object State {
         val out = JSONObject().put("t", "state").put("id", me.id).put("name", me.name)
             .put("model", Build.MODEL ?: "TV").put("android", Build.VERSION.RELEASE ?: "")
             .put("version", Versions.installed(context)).put("adb", PhoneAdb.state.wire)
+            .put("capabilities", JSONArray(listOf("wallpapers")))
         runCatching { Usage.front(context) }.getOrNull()?.takeIf { it != context.packageName }?.let { out.put("foreground", it) }
         nowPlaying(context)?.let { out.put("nowPlaying", it) }
         return out

@@ -19,6 +19,11 @@ struct SettingsView: View {
             } else {
                 Form {
                     aboutSection
+                    Section {
+                        NavigationLink { WallpaperGalleryView(controller: controller) } label: {
+                            Label("Ambient images", systemImage: "photo.on.rectangle.angled")
+                        }
+                    }
                     ForEach(controller.groups) { group in
                         let rows = group.rows.filter { $0.isVisible(in: controller.config) && $0.kind != .unknown }
                         if !rows.isEmpty {

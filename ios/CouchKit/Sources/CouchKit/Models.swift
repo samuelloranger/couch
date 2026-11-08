@@ -30,6 +30,7 @@ public struct TVState: Sendable, Codable, Equatable {
     public var adb: AdbStatus
     public var foreground: String?
     public var nowPlaying: NowPlaying?
+    public var capabilities: [String] = []
 
     public init(id: String, name: String, model: String? = nil, android: String? = nil, version: String? = nil,
                 mac: String? = nil, adb: AdbStatus = .unknown, foreground: String? = nil, nowPlaying: NowPlaying? = nil) {
@@ -37,7 +38,7 @@ public struct TVState: Sendable, Codable, Equatable {
         self.mac = mac; self.adb = adb; self.foreground = foreground; self.nowPlaying = nowPlaying
     }
 
-    enum CodingKeys: String, CodingKey { case id, name, model, android, version, mac, adb, foreground, nowPlaying }
+    enum CodingKeys: String, CodingKey { case id, name, model, android, version, mac, adb, foreground, nowPlaying, capabilities }
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -50,6 +51,7 @@ public struct TVState: Sendable, Codable, Equatable {
         adb = try c.decodeIfPresent(AdbStatus.self, forKey: .adb) ?? .unknown
         foreground = try c.decodeIfPresent(String.self, forKey: .foreground)
         nowPlaying = try c.decodeIfPresent(NowPlaying.self, forKey: .nowPlaying)
+        capabilities = try c.decodeIfPresent([String].self, forKey: .capabilities) ?? []
     }
 }
 

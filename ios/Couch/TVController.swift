@@ -24,6 +24,7 @@ final class TVController: Identifiable {
     /// Low by default (kind to weak Wi-Fi); the last choice is remembered per TV.
     var quality: StreamQuality = .low
     var banner: String?
+    let gallery = WallpaperGallery()
     /// Several connections reached the TV but it never answered the handshake.
     private(set) var mayBeForgotten = false
 
@@ -55,6 +56,7 @@ final class TVController: Identifiable {
     }
 
     private func installVideo() {
+        gallery.send = { [weak self] in self?.send($0) }
         video = VideoPipeline(
             onFirstPicture: { [weak self] in Task { @MainActor in self?.hasPicture = true } },
             onLayerChange: { [weak self] in
@@ -72,7 +74,26 @@ final class TVController: Identifiable {
         tv = demo.tv; id = demo.tv.id; phoneId = ""; resolve = { nil }; remember = { _ in }; isDemo = true
         link = .connected; state = demo.state; config = demo.config; groups = demo.groups
         apps = demo.apps; inputs = demo.inputs; usage = demo.usage; quality = .medium
+        gallery.connected = true; gallery.supported = true
         installVideo()
+        #if DEBUG
+        if let path = ProcessInfo.processInfo.environment["COUCH_DEMO_GALLERY_DIR"],
+           let files = try? FileManager.default.contentsOfDirectory(at: URL(fileURLWithPath: path), includingPropertiesForKeys: nil) {
+            for file in files.sorted(by: { $0.lastPathComponent < $1.lastPathComponent }).prefix(12) {
+                guard let data = try? Data(contentsOf: file), let thumbnail = try? prepareWallpaper(data, maxPixelSize: 320) else { continue }
+                let id = file.lastPathComponent
+                gallery.entries.append(WallpaperEntry(id: id, name: id, bytes: data.count))
+                gallery.thumbnails[id] = thumbnail
+                gallery.previews[id] = try? prepareWallpaper(data, maxPixelSize: 1280)
+            }
+        }
+        #endif
+        gallery.send = { [weak self] message in
+            if case .wallpaper(let action, _) = message, action == "list" {
+                guard let self else { return }
+                self.gallery.receive(.wallpapers(self.gallery.entries))
+            }
+        }
     }
 
     // MARK: lifecycle
@@ -91,6 +112,7 @@ final class TVController: Identifiable {
         let s = session; session = nil
         Task { await s?.close() }
         link = .offline
+        gallery.connection(false)
         stream = nil
         video.reset()
         hasPicture = false
@@ -156,6 +178,7 @@ final class TVController: Identifiable {
         requestedIcons.removeAll()
         nudged = false
         link = .connected
+        gallery.connection(true)
         if let ip = session.remoteIPv4, ip != tv.lastHost {
             tv.lastHost = ip
             remember(tv)
@@ -180,6 +203,7 @@ final class TVController: Identifiable {
         for await event in session.events { handle(event, from: session) }
         // A newer session may already own the controller; only clear what is ours.
         if self.session === session {
+            gallery.connection(false)
             self.session = nil
             stream = nil
             video.reset()
@@ -200,6 +224,9 @@ final class TVController: Identifiable {
         switch message {
         case .state(let s):
             state = s
+            let hadGallery = gallery.supported
+            gallery.supported = s.capabilities.contains("wallpapers")
+            if gallery.active && gallery.supported && !hadGallery { gallery.refresh() }
             if let mac = s.mac, mac != tv.mac { tv.mac = mac; remember(tv) }
             if !s.name.isEmpty, s.name != tv.name { tv.name = s.name; remember(tv) }
         case .config(let c):
@@ -214,10 +241,14 @@ final class TVController: Identifiable {
             stream = s
             if s.state == .ended || s.state == .error || s.state == .needsAdb { hasPicture = false; video.reset() }
         case .error(let about, let text):
+            if about?.hasPrefix("wallpapers") == true {
+                gallery.fail(String(localized: "The TV could not complete this action. Check the image format and size, then try again."))
+            }
             if about == "icon" { requestedIcons.removeAll() }
             banner = text
             Haptics.failure()
         case .pong, .unknown: break
+        case .wallpapers, .wallpapersChanged, .wallpaperImage, .wallpaperUpload: gallery.receive(message)
         }
     }
 
