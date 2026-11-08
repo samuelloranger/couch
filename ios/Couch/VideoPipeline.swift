@@ -11,13 +11,20 @@ final class VideoPipeline {
     private(set) var hasPicture = false
     var onFirstPicture: (() -> Void)?
 
+    /// Called when the picture moves to another layer while a stream is flowing, so the TV can replay config and a keyframe.
+    var onLayerChange: (() -> Void)?
+
     func attach(_ layer: AVSampleBufferDisplayLayer) {
+        guard self.layer !== layer else { return }
         self.layer = layer
         layer.videoGravity = .resizeAspect
+        needsKeyframe = true
+        layer.sampleBufferRenderer.flush(removingDisplayedImage: true, completionHandler: nil)
+        if format != nil { onLayerChange?() }
     }
 
     func detach(_ layer: AVSampleBufferDisplayLayer) {
-        if self.layer === layer { self.layer = nil }
+        if self.layer === layer { self.layer = nil; needsKeyframe = true }
     }
 
     /// New SPS/PPS: rebuild the format and start clean at the next keyframe.

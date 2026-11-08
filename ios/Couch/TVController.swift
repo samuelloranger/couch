@@ -23,6 +23,8 @@ final class TVController: Identifiable {
     private(set) var hasPicture = false
     var quality: StreamQuality = .medium
     var banner: String?
+    /// Several connections reached the TV but it never answered the handshake.
+    private(set) var mayBeForgotten = false
 
     let video = VideoPipeline()
     nonisolated let id: String
@@ -30,6 +32,8 @@ final class TVController: Identifiable {
 
     @ObservationIgnored private var session: PhoneSession?
     @ObservationIgnored private var loop: Task<Void, Never>?
+    @ObservationIgnored private var wantedIcons: Set<String> = []
+    @ObservationIgnored private var noReplyCount = 0
     @ObservationIgnored private var sendChain: Task<Void, Never>?
     @ObservationIgnored private var requestedIcons: Set<String> = []
     @ObservationIgnored private let phoneId: String
@@ -40,6 +44,12 @@ final class TVController: Identifiable {
     init(tv: PairedTV, phoneId: String, resolve: @escaping @MainActor () -> NWEndpoint?, remember: @escaping @MainActor (PairedTV) -> Void) {
         self.tv = tv; self.id = tv.id; self.phoneId = phoneId; self.resolve = resolve; self.remember = remember; self.isDemo = false
         video.onFirstPicture = { [weak self] in self?.hasPicture = true }
+        video.onLayerChange = { [weak self] in
+            // The picture moved to a new layer: have the TV replay config and a keyframe.
+            guard let self, self.wantsStream else { return }
+            self.send(.streamStop)
+            self.send(.streamStart(self.quality))
+        }
     }
 
     /// Demo controller: filled with sample data, never touches the network.
@@ -93,9 +103,18 @@ final class TVController: Identifiable {
         } else {
             return false
         }
-        do { try await session.connect() } catch { return false }
+        do {
+            try await session.connect()
+            noReplyCount = 0
+            mayBeForgotten = false
+        } catch SessionError.noReply {
+            noReplyCount += 1
+            if noReplyCount >= 3 { mayBeForgotten = true }
+            return false
+        } catch { return false }
         if Task.isCancelled { await session.close(); return false }
         self.session = session
+        requestedIcons.removeAll()
         link = .connected
         if let ip = session.remoteIPv4, ip != tv.lastHost {
             tv.lastHost = ip
@@ -104,19 +123,29 @@ final class TVController: Identifiable {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
         try? await session.send(.hello(app: version))
         try? await session.send(.usage)
+        for key in wantedIcons.subtracting(icons.keys) {
+            requestedIcons.insert(key)
+            try? await session.send(.icon(key: key))
+        }
+        wantedIcons.removeAll()
         if wantsStream { try? await session.send(.streamStart(quality)) }
-        for await event in session.events { handle(event) }
-        self.session = nil
-        stream = nil
-        video.reset()
-        hasPicture = false
+        for await event in session.events { handle(event, from: session) }
+        // A newer session may already own the controller; only clear what is ours.
+        if self.session === session {
+            self.session = nil
+            stream = nil
+            video.reset()
+            hasPicture = false
+        }
         return true
     }
 
-    private func handle(_ event: SessionEvent) {
+    private func handle(_ event: SessionEvent, from session: PhoneSession) {
         switch event {
         case .videoConfig(let sps, let pps): video.configure(sps: sps, pps: pps)
-        case .videoUnit(let key, let avcc): video.enqueue(avcc: avcc, keyframe: key)
+        case .videoUnit(let key, let avcc):
+            video.enqueue(avcc: avcc, keyframe: key)
+            session.backlog.consumed(bytes: avcc.count)
         case .closed: break
         case .message(let m): handle(m)
         }
@@ -139,7 +168,8 @@ final class TVController: Identifiable {
         case .streamStatus(let s):
             stream = s
             if s.state == .ended || s.state == .error || s.state == .needsAdb { hasPicture = false }
-        case .error(_, let text):
+        case .error(let about, let text):
+            if about == "icon" { requestedIcons.removeAll() }
             banner = text
             Haptics.failure()
         case .pong, .unknown: break
@@ -174,6 +204,7 @@ final class TVController: Identifiable {
 
     func requestIcon(_ key: String) {
         guard !isDemo, icons[key] == nil, !requestedIcons.contains(key) else { return }
+        guard session != nil else { wantedIcons.insert(key); return }
         requestedIcons.insert(key)
         send(.icon(key: key))
     }

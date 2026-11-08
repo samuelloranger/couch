@@ -46,7 +46,7 @@ struct TVDetailView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if let text = controller.banner {
+            if let text = controller.banner ?? (controller.mayBeForgotten ? String(localized: "This TV may have forgotten this phone. Pair it again.") : nil) {
                 HStack {
                     Image(systemName: "exclamationmark.circle.fill")
                     Text(text).font(.footnote)

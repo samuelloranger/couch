@@ -2,6 +2,8 @@ import Foundation
 
 public enum AdbStatus: String, Sendable, Codable {
     case ready, dialog, off, blocked, unknown
+    /// The TV uses root for keys, text and video; behaves like `ready`.
+    case root
 
     public init(from decoder: Decoder) throws {
         let raw = try decoder.singleValueContainer().decode(String.self)

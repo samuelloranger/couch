@@ -48,7 +48,7 @@ final class AppModel {
         return TVController(
             tv: tv, phoneId: phoneId,
             resolve: { [weak self] in self?.discovered.first { $0.id == id }?.endpoint },
-            remember: { [weak self] updated in self?.store.save(updated) })
+            remember: { [weak self] updated in try? self?.store.save(updated) })
     }
 
     // MARK: lifecycle
@@ -84,8 +84,8 @@ final class AppModel {
 
     // MARK: pairing
 
-    func add(_ tv: PairedTV) {
-        store.save(tv)
+    func add(_ tv: PairedTV) throws {
+        try store.save(tv)
         if let existing = controller(id: tv.id) {
             existing.disconnect()
             controllers.removeAll { $0.id == tv.id }
@@ -134,14 +134,24 @@ final class AppModel {
         do {
             try await session.connect()
             try await session.send(.configSet(safe))
-            try await session.send(.ping)
-            // Wait for the pong so the TV has handled the change before we hang up.
-            let wait = Task { for await e in session.events { if case .message(.pong) = e { return } } }
-            let timeout = Task { try? await Task.sleep(for: .seconds(5)); wait.cancel() }
-            await wait.value
+            // `usage` goes through the same worker as config.set, so its answer means the change was handled.
+            try await session.send(.usage)
+            let wait = Task { () -> Bool in
+                for await e in session.events {
+                    switch e {
+                    case .message(.usage): return true
+                    case .message(.error(let about, _)) where about == "config.set": return false
+                    case .closed: return false
+                    default: break
+                    }
+                }
+                return false
+            }
+            let timeout = Task { try? await Task.sleep(for: .seconds(8)); wait.cancel() }
+            let ok = await wait.value
             timeout.cancel()
             await session.close()
-            return true
+            return ok
         } catch {
             await session.close()
             return false

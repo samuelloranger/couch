@@ -8,6 +8,37 @@ public enum SessionEvent: Sendable {
     case closed(String?)
 }
 
+/// Bounds how much video can queue ahead of the screen: past ~60 frames or 2 MB, delta frames are
+/// dropped until the next keyframe (never JSON, never config).
+public final class VideoBacklog: @unchecked Sendable {
+    public static let maxBytes = 2 * 1024 * 1024
+    public static let maxFrames = 60
+    private let lock = NSLock()
+    private var bytes = 0
+    private var frames = 0
+    private var dropping = false
+
+    public init() {}
+
+    /// Reader side: true when the frame should be delivered.
+    public func admit(bytes size: Int, keyframe: Bool) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        if keyframe { dropping = false }
+        else if dropping { return false }
+        else if bytes + size > Self.maxBytes || frames >= Self.maxFrames { dropping = true; return false }
+        bytes += size; frames += 1
+        return true
+    }
+
+    /// Consumer side: a delivered frame has been handled.
+    public func consumed(bytes size: Int) {
+        lock.lock(); defer { lock.unlock() }
+        bytes = max(0, bytes - size); frames = max(0, frames - 1)
+    }
+
+    public func reset() { lock.lock(); bytes = 0; frames = 0; dropping = false; lock.unlock() }
+}
+
 final class Heartbeat: @unchecked Sendable {
     private let lock = NSLock()
     private var last = ContinuousClock.now
@@ -17,6 +48,8 @@ final class Heartbeat: @unchecked Sendable {
 
 public enum SessionError: Error, Equatable {
     case handshakeFailed(String)
+    /// TCP connected but the TV closed or stalled without answering: it may have forgotten this phone.
+    case noReply
     case notConnected
 }
 
@@ -32,6 +65,9 @@ public actor PhoneSession {
     private var finished = false
     private let tv: PairedTV
     private let phoneId: String
+
+    /// Video the consumer has not handled yet; the reader drops delta frames when it grows.
+    public nonisolated let backlog = VideoBacklog()
 
     public nonisolated var remoteIPv4: String? { channel.remoteIPv4 }
 
@@ -56,7 +92,8 @@ public actor PhoneSession {
                 "op": .string("phone"), "id": .string(phoneId), "nonce": .string(b64(cn)),
                 "proof": .string(b64(CouchCrypto.phoneProof(link: tv.linkKey, clientNonce: cn, phoneId: phoneId))),
             ])
-            let reply = try await channel.receivePlain()
+            let reply: [String: JSONValue]
+            do { reply = try await channel.receivePlain(timeout: 10) } catch { throw SessionError.noReply }
             guard let sn = reply["nonce"]?.stringValue.flatMap(unb64), sn.count == 16,
                   let proof = reply["proof"]?.stringValue.flatMap(unb64)
             else { throw SessionError.handshakeFailed("bad reply") }
@@ -83,6 +120,7 @@ public actor PhoneSession {
         let channel = self.channel
         let continuation = self.continuation
         let heartbeat = self.heartbeat
+        let backlog = self.backlog
         readTask = Task.detached { [weak self] in
             var cipher = cipher
             do {
@@ -97,7 +135,9 @@ public actor PhoneSession {
                     case .json(let data):
                         if let message = try? IncomingMessage.decode(data) { continuation.yield(.message(message)) }
                     case .videoConfig(let sps, let pps): continuation.yield(.videoConfig(sps: sps, pps: pps))
-                    case .videoUnit(let key, let avcc): continuation.yield(.videoUnit(keyframe: key, avcc: avcc))
+                    case .videoUnit(let key, let avcc):
+                        if backlog.admit(bytes: avcc.count, keyframe: key) { continuation.yield(.videoUnit(keyframe: key, avcc: avcc)) }
+                    case .ignored: break
                     }
                 }
                 await self?.finish("cancelled")

@@ -32,9 +32,26 @@ final class FrameTests: XCTestCase {
         XCTAssertThrowsError(try SessionFrame.parse(Data([0x03, 0x01]) + Data.be32(1) + Data([1, 2])))
     }
 
-    func testRejectsUnknownAndEmpty() {
+    func testEmptyThrowsUnknownTypesAreIgnored() throws {
         XCTAssertThrowsError(try SessionFrame.parse(Data()))
-        XCTAssertThrowsError(try SessionFrame.parse(Data([0x7F, 1])))
+        XCTAssertEqual(try SessionFrame.parse(Data([0x7F, 1])), .ignored)
+    }
+
+    func testVideoBacklogDropsDeltasUntilKeyframe() {
+        let b = VideoBacklog()
+        XCTAssertTrue(b.admit(bytes: 1_500_000, keyframe: true))
+        XCTAssertFalse(b.admit(bytes: 1_000_000, keyframe: false))   // over 2 MB: start dropping
+        b.consumed(bytes: 1_500_000)
+        XCTAssertFalse(b.admit(bytes: 10, keyframe: false))          // still waiting for a keyframe
+        XCTAssertTrue(b.admit(bytes: 10, keyframe: true))
+        XCTAssertTrue(b.admit(bytes: 10, keyframe: false))
+        for _ in 0..<VideoBacklog.maxFrames { _ = b.admit(bytes: 1, keyframe: false) }
+        XCTAssertFalse(b.admit(bytes: 1, keyframe: false))           // too many frames queued
+    }
+
+    func testRootAdbDecodes() throws {
+        guard case .state(let s) = try IncomingMessage.decode(Data(#"{"t":"state","id":"a","name":"b","adb":"root"}"#.utf8)) else { return XCTFail() }
+        XCTAssertEqual(s.adb, .root)
     }
 
     func testReaderSplitsAndBoundsFrames() throws {
@@ -226,11 +243,11 @@ final class CopyTests: XCTestCase {
         XCTAssertTrue(store.remove(id: b.id).isEmpty)
     }
 
-    func testMemoryStore() {
+    func testMemoryStore() throws {
         let s = MemoryStore()
         let tv = PairedTV(id: "t", name: "TV", linkKey: Data([1]))
-        s.save(tv)
-        s.save(PairedTV(id: "t", name: "TV2", linkKey: Data([1])))
+        try s.save(tv)
+        try s.save(PairedTV(id: "t", name: "TV2", linkKey: Data([1])))
         XCTAssertEqual(s.load().map(\.name), ["TV2"])
         s.remove(id: "t")
         XCTAssertTrue(s.load().isEmpty)

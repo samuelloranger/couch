@@ -5,6 +5,8 @@ public enum SessionFrame: Sendable, Equatable {
     case json(Data)
     case videoConfig(sps: Data, pps: Data)
     case videoUnit(keyframe: Bool, avcc: Data)
+    /// A type this version does not know; skipped for forward compatibility.
+    case ignored
 
     public static func parse(_ plain: Data) throws -> SessionFrame {
         guard let type = plain.first else { throw FrameError.malformed("empty frame") }
@@ -26,7 +28,7 @@ public enum SessionFrame: Sendable, Equatable {
             guard AVCC.isWellFormed(avcc) else { throw FrameError.malformed("video unit NALs") }
             return .videoUnit(keyframe: flags & 0x01 != 0, avcc: avcc)
         default:
-            throw FrameError.malformed("unknown frame type \(type)")
+            return .ignored
         }
     }
 

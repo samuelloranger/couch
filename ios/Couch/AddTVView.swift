@@ -190,11 +190,13 @@ struct PairingView: View {
             do {
                 var tv = try await p.finish(matched: matched)
                 if case .address(let a) = target { tv.lastHost = Self.split(a).0 }
-                model.add(tv)
+                try model.add(tv)
                 Haptics.success()
                 onDone()
             } catch PairingError.declined {
                 if matched { phase = .failed(String(localized: "The TV didn't confirm. Try pairing again.")) } else { onDone() }
+            } catch is StoreError {
+                phase = .failed(String(localized: "Couldn't save this TV on the phone. Try pairing again."))
             } catch {
                 phase = .failed(String(localized: "The connection dropped. Try pairing again."))
             }

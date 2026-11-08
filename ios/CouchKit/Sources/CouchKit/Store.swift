@@ -1,6 +1,8 @@
 import Foundation
 import Security
 
+public enum StoreError: Error, Equatable { case keychain(Int32) }
+
 public struct PairedTV: Sendable, Codable, Equatable, Identifiable {
     public var id: String
     public var name: String
@@ -16,7 +18,7 @@ public struct PairedTV: Sendable, Codable, Equatable, Identifiable {
 /// Where paired TVs and this phone's identity live.
 public protocol PairedStore: Sendable {
     func load() -> [PairedTV]
-    func save(_ tv: PairedTV)
+    func save(_ tv: PairedTV) throws
     func remove(id: String)
     /// A stable random id for this phone, created on first use.
     func phoneId() -> String
@@ -30,7 +32,7 @@ public final class MemoryStore: PairedStore, @unchecked Sendable {
     public init(tvs: [PairedTV] = [], phoneId: String = UUID().uuidString) { self.tvs = tvs; self.id = phoneId }
 
     public func load() -> [PairedTV] { lock.lock(); defer { lock.unlock() }; return tvs }
-    public func save(_ tv: PairedTV) {
+    public func save(_ tv: PairedTV) throws {
         lock.lock(); defer { lock.unlock() }
         if let i = tvs.firstIndex(where: { $0.id == tv.id }) { tvs[i] = tv } else { tvs.append(tv) }
     }
@@ -52,14 +54,15 @@ public struct KeychainStore: PairedStore {
         ]
     }
 
-    private func write(_ data: Data, account: String, kind: String) {
+    @discardableResult
+    private func write(_ data: Data, account: String, kind: String) -> OSStatus {
         var query = base(account: account, kind: kind)
         let update = [kSecValueData as String: data]
-        if SecItemUpdate(query as CFDictionary, update as CFDictionary) == errSecItemNotFound {
-            query[kSecValueData as String] = data
-            query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-            SecItemAdd(query as CFDictionary, nil)
-        }
+        let status = SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        guard status == errSecItemNotFound else { return status }
+        query[kSecValueData as String] = data
+        query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        return SecItemAdd(query as CFDictionary, nil)
     }
 
     private func read(account: String, kind: String) -> Data? {
@@ -85,9 +88,10 @@ public struct KeychainStore: PairedStore {
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
-    public func save(_ tv: PairedTV) {
-        guard let data = try? JSONEncoder().encode(tv) else { return }
-        write(data, account: tv.id, kind: "tv")
+    public func save(_ tv: PairedTV) throws {
+        let data = try JSONEncoder().encode(tv)
+        let status = write(data, account: tv.id, kind: "tv")
+        guard status == errSecSuccess else { throw StoreError.keychain(status) }
     }
 
     public func remove(id: String) {

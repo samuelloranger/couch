@@ -66,7 +66,7 @@ struct AdbNotice: View {
             notice("exclamationmark.triangle.fill", "Turn on debugging", "On the TV, open Settings, Developer options, and turn on USB debugging.")
         case .blocked:
             notice("lock.fill", "Debugging isn't available", "This TV doesn't let Couch use debugging, so keys, typing and live view won't work. Apps and settings still do.")
-        case .ready, .unknown:
+        case .ready, .root, .unknown:
             EmptyView()
         }
     }
@@ -113,7 +113,7 @@ struct LiveCard: View {
         ZStack {
             Color.black
             if controller.wantsStream {
-                VideoSurface(pipeline: controller.video)
+                VideoSurface(pipeline: controller.video, active: !fullScreen)
             }
             overlay
         }
@@ -193,7 +193,7 @@ struct FullScreenLive: View {
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VideoSurface(pipeline: controller.video).ignoresSafeArea()
+            VideoSurface(pipeline: controller.video, active: true).ignoresSafeArea()
             Color.clear.contentShape(Rectangle()).onTapGesture { withAnimation(.snappy) { showControls.toggle() } }
             if showControls {
                 VStack {

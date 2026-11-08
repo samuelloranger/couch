@@ -102,7 +102,22 @@ public final class TCPChannel: @unchecked Sendable {
     }
 
     /// Reads one plain `uint32 length | JSON` frame, bounded by `max`.
-    public func receivePlain(max: Int = PlainWire.maxFrame) async throws -> [String: JSONValue] {
+    public func receivePlain(max: Int = PlainWire.maxFrame, timeout: TimeInterval? = nil) async throws -> [String: JSONValue] {
+        guard let timeout else { return try await receivePlainUnbounded(max: max) }
+        return try await withThrowingTaskGroup(of: [String: JSONValue].self) { group in
+            group.addTask { [self] in try await receivePlainUnbounded(max: max) }
+            group.addTask { [self] in
+                try await Task.sleep(for: .seconds(timeout))
+                close()  // unblocks the read above
+                throw ChannelError.timedOut
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else { throw ChannelError.closed }
+            return first
+        }
+    }
+
+    private func receivePlainUnbounded(max: Int) async throws -> [String: JSONValue] {
         let head = try await receive(exactly: 4)
         guard let len = head.readU32(at: 0), len >= 1, Int(len) <= max else { throw FrameError.tooLarge(Int(head.readU32(at: 0) ?? 0)) }
         return try PlainWire.decode(try await receive(exactly: Int(len)))

@@ -67,7 +67,7 @@ public enum PairingClient {
                 "op": .string("pair1"), "id": .string(phoneId), "name": .string(phoneName),
                 "commit": .string(b64(CouchCrypto.commit(keys.publicDER))), "kind": .string("phone"),
             ])
-            let reply = try await channel.receivePlain()
+            let reply = try await channel.receivePlain(timeout: 10)
             if reply["error"] != nil { throw PairingError.notPairing }
             guard let pubText = reply["pub"]?.stringValue, let tvPub = unb64(pubText),
                   let tvId = reply["id"]?.stringValue, !tvId.isEmpty, tvId != phoneId

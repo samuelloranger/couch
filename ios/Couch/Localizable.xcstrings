@@ -1485,6 +1485,28 @@
           }
         }
       }
+    },
+    "Couldn't save this TV on the phone. Try pairing again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible d’enregistrer cette télé sur le téléphone. Réessaie de jumeler."
+          }
+        }
+      }
+    },
+    "This TV may have forgotten this phone. Pair it again.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette télé a peut-être oublié ce téléphone. Jumelle-la de nouveau."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
