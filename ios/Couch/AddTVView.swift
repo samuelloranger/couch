@@ -216,7 +216,7 @@ struct PairingContent: View {
     }
 
     /// "host" or "host:port"; the port defaults to 47820.
-    static func split(_ address: String) -> (String, UInt16) {
+    nonisolated static func split(_ address: String) -> (String, UInt16) {
         let parts = address.split(separator: ":", omittingEmptySubsequences: false)
         if parts.count == 2, let port = UInt16(parts[1]) { return (String(parts[0]), port) }
         return (address, PairingClient.port)
