@@ -56,7 +56,8 @@ public enum UsageMerge {
         for (_, group) in groups {
             var days = [Int64](repeating: 0, count: 7)
             for e in group {
-                for (i, v) in e.row.perDayMs.enumerated() where i + e.shift < 7 { days[i + e.shift] += v }
+                // An older snapshot's last day sits `shift` bars before the newest one.
+                for (i, v) in e.row.perDayMs.enumerated() where i - e.shift >= 0 && i < 7 { days[i - e.shift] += v }
             }
             let packages = Array(Set(group.map(\.package))).sorted()
             let name = packages.lazy.compactMap(label).first
