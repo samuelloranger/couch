@@ -139,9 +139,9 @@ class RootShell : Shell {
                     // Closed before the PID line arrived: nothing else will end it.
                     if (closed) killRoot(it)
                 }
+                // No flush when the pipe drains: a reader can wake halfway through a large write, and
+                // closing the frame there would cut it. The next frame's start, or a quiet gap, ends it.
                 if (out.isNotEmpty()) onData(out)
-                // The pipe is drained: whatever was written in this burst has been read.
-                if (chunks.isEmpty()) onIdle()
             }
         } catch (e: InterruptedException) {
             throw AdbShell.Failed.Blocked(e)

@@ -98,9 +98,9 @@ class AdbShell private constructor(
                     AdbProtocol.OKAY -> Unit
                     AdbProtocol.WRTE -> {
                         sink(m.data)
+                        // adbd waits for this OKAY before sending more, so an empty socket here says nothing
+                        // about the command's output being complete: only a quiet gap does.
                         write(socket, AdbProtocol.OKAY, local, m.arg0)
-                        // Nothing more buffered: the burst has been read.
-                        if (idleMs > 0 && socket.getInputStream().available() == 0) onIdle()
                     }
                     AdbProtocol.CLSE -> {
                         write(socket, AdbProtocol.CLSE, local, m.arg0)
