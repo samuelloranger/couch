@@ -62,7 +62,7 @@ struct WallpaperGalleryView: View {
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityLabel(Text("Preview \(image.name)"))
-                                .task { gallery.request(image.id) }
+                                .task(id: gallery.requestGeneration) { gallery.request(image.id) }
                             }
                         }
                     }
@@ -157,6 +157,7 @@ private struct WallpaperPreview: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle(image.name).navigationBarTitleDisplayMode(.inline)
+            .task(id: gallery.requestGeneration) { gallery.request(image.id, preview: true) }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Done") { dismiss() } }
                 ToolbarItem(placement: .topBarTrailing) {

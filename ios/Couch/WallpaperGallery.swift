@@ -14,6 +14,7 @@ final class WallpaperGallery {
     var connected = false
     var supported = false
     var active = false
+    var requestGeneration = 0
     @ObservationIgnored var send: (OutgoingMessage) -> Void = { _ in }
     @ObservationIgnored private var requested: Set<String> = []
     @ObservationIgnored private var waiter: CheckedContinuation<Void, Error>?
@@ -33,6 +34,7 @@ final class WallpaperGallery {
     func refresh() {
         guard connected, supported else { return }
         loading = true; error = nil
+        requestGeneration += 1
         send(.wallpaper(action: "list", fields: [:]))
     }
 
