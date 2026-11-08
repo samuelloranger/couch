@@ -22,7 +22,7 @@ it on the Phone page and press OK twice.
 
 | | Needs |
 |---|---|
-| Settings (live, both ways), apps, inputs, screen time | Nothing more |
+| Settings (live, both ways), apps, inputs, screen time, ambient image gallery | Nothing more |
 | Remote, keyboard, the TV's picture | The TV's debugging, allowed once for Couch, or a rooted TV |
 
 Couch reaches keys and the screen through the TV's own debugging port, the same way
@@ -31,6 +31,23 @@ Couch reaches keys and the screen through the TV's own debugging port, the same 
 
 Fire TV doesn't let apps reach its own debugging port, so there the remote and the picture need
 a rooted Fire TV. Settings, apps and screen time work everywhere.
+
+## Ambient images
+
+Open **Settings → Ambient images** to see the TV's custom wallpaper folder. Tap a thumbnail
+for a larger preview, or delete it after confirmation. **Add photos** selects up to 20 photos
+from the iPhone library and sends them one at a time over the existing encrypted connection.
+Progress and cancellation are shown during the upload; disconnecting or cancelling discards
+the unfinished file. Photos are oriented and resized to at most 3840 pixels on their longest
+edge, then sent as JPEG without their original metadata.
+
+The TV accepts up to 200 custom images, 20 MB per file and 16 megapixels. JPEG, PNG and WebP are
+supported. The original `wallpaper.jpg` also appears when no gallery files are present. Choose
+**Use my images for ambient mode** to enable the slideshow; uploading alone does not change
+the selected wallpaper source. New images join an active slideshow at its next transition.
+
+Both apps need the gallery update. Older TVs show an update message instead of sending
+unsupported commands. No debugging permission or ADB is needed for phone uploads.
 
 ## The picture
 
@@ -52,4 +69,4 @@ discovery a VPN doesn't carry.
 Each connection uses a fresh key derived from the one you made when pairing, and every message is
 encrypted with it. The phone sends keys, text and setting changes; the TV sends its settings, the
 apps and inputs list, screen time and, while you watch, the picture. Nothing is stored on the TV
-except the phone's name and its pairing key.
+except the phone's name, its pairing key and the ambient images you upload.

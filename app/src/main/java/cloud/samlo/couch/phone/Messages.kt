@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit
  * order, so config writes never overlap and a burst of icon requests can't hold up a key.
  */
 class Messages(private val context: Context, private val control: Control, private val video: Video, private val phones: Phones) {
+    private val wallpapers = WallpaperMessages(context)
     private val worker = ThreadPoolExecutor(
         1, 1, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(QUEUE),
         { r -> Thread(r, "couch-phone-work").apply { isDaemon = true } },
@@ -34,6 +35,10 @@ class Messages(private val context: Context, private val control: Control, priva
             }
             "stream.stop" -> video.stop(session)
             "hello", "config.set", "launch", "input", "usage", "icon" -> slow(session, t) { run(session, t, message) }
+            "wallpapers.list", "wallpapers.image", "wallpapers.delete", "wallpapers.upload.begin",
+            "wallpapers.upload.chunk", "wallpapers.upload.finish", "wallpapers.upload.cancel" -> slow(session, t) {
+                if (session.isOpen) wallpapers.handle(session, t, message)
+            }
             else -> fail(session, t, "Unknown message")
         }
     }

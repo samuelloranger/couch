@@ -12,7 +12,11 @@ struct RootView: View {
             TVListView(showAdd: $showAdd)
                 .navigationDestination(for: String.self) { id in
                     if let controller = model.controller(id: id) {
-                        TVDetailView(controller: controller, initialTab: DemoTab(rawValue: model.demoScreen == "full" ? "remote" : (model.demoScreen ?? "")) ?? .remote)
+                        if model.demoMode && model.demoScreen == "wallpapers" {
+                            WallpaperGalleryView(controller: controller)
+                        } else {
+                            TVDetailView(controller: controller, initialTab: DemoTab(rawValue: model.demoScreen == "full" ? "remote" : (model.demoScreen ?? "")) ?? .remote)
+                        }
                     }
                 }
         }
@@ -20,7 +24,8 @@ struct RootView: View {
         .task {
             guard model.demoMode, let screen = model.demoScreen else { return }
             if screen == "add" || screen == "pair" { showAdd = true }
-            else if DemoTab(rawValue: screen == "full" ? "remote" : screen) != nil, let first = model.controllers.first { path = [first.id] }
+            else if screen == "wallpapers" || DemoTab(rawValue: screen == "full" ? "remote" : screen) != nil,
+                    let first = model.controllers.first { path = [first.id] }
         }
     }
 }

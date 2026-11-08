@@ -139,6 +139,12 @@ subdirectories are ignored. Pictures alternate every two minutes with a crossfad
 zoom, at 1920 × 1080 pixels. Number filenames to choose their order; the first picture when
 ambient mode opens varies with the time, then playback follows that order and loops.
 
+**Customize → Look → Ambient images** opens a thumbnail gallery on the TV, with preview and
+confirmed deletion. **Add image** uses Android's document picker when the TV provides one;
+otherwise use **Settings → Ambient images → Add photos** in Couch for iPhone. Uploaded files
+are limited to 20 MB and 16 megapixels, with at most 200 gallery files. ADB copies remain
+available for larger libraries and original files.
+
 ```sh
 adb shell mkdir -p /sdcard/Android/data/cloud.samlo.couch/files/wallpapers
 adb push 01-landscape.jpg 02-night-sky.png /sdcard/Android/data/cloud.samlo.couch/files/wallpapers/

@@ -692,4 +692,19 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="phone_code_help">The phone must show these same six digits.</string>
     <string name="pair_aborted_differ">The other side said the codes differ</string>
     <string name="pair_aborted_gone">The other side went away</string>
+
+    <!-- Ambient image gallery -->
+    <string name="gallery_title">Ambient images</string>
+    <string name="gallery_help">Preview, add or delete photos. Images alternate every two minutes.</string>
+    <string name="gallery_add">Add image</string>
+    <string name="gallery_use">Use for ambient</string>
+    <string name="gallery_refresh">Refresh</string>
+    <string name="gallery_selected">My images is selected for ambient mode.</string>
+    <string name="gallery_empty">No images yet. Add a file or send photos from Couch on iPhone.</string>
+    <string name="gallery_failed">Unable to complete this action. Try again with a JPEG, PNG or WebP image up to 20 MB and 16 megapixels.</string>
+    <string name="gallery_close">Close</string>
+    <string name="gallery_delete">Delete image</string>
+    <string name="gallery_delete_confirm">Delete this image from the TV?</string>
+    <string name="gallery_phone_import">No file picker is available. Add photos from Couch on iPhone.</string>
+    <string name="gallery_importing">Adding image…</string>
 </resources>

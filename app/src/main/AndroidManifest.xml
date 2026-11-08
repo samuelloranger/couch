@@ -101,6 +101,12 @@
             android:exported="false"
             android:screenOrientation="landscape" />
 
+        <activity
+            android:name=".settings.WallpaperGalleryActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:screenOrientation="landscape" />
+
         <service
             android:name=".MediaListener"
             android:exported="true"
