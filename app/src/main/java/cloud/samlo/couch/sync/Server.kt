@@ -1,5 +1,9 @@
 package cloud.samlo.couch.sync
 
+import cloud.samlo.couch.phone.FrameCipher
+import cloud.samlo.couch.phone.Frames
+import cloud.samlo.couch.phone.Handshake
+import cloud.samlo.couch.phone.PhoneHost
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -28,8 +32,20 @@ class Server(
      */
     @Volatile var onPair: ((String, String) -> Boolean)? = null
 
+    /** Called when the other side ended a pairing the user was still being asked about: true if it said the codes differ, false if it went away. */
+    @Volatile var onAborted: ((Boolean) -> Unit)? = null
+
+    /** The kind of peer the page that opened pairing wants; any other kind that knocks is turned away. */
+    @Volatile var pairKind: String = Peer.TV
+
     /** Called after a pairing this TV answered went through. */
     @Volatile var onPaired: ((Peer) -> Unit)? = null
+
+    /** Where authenticated phone sessions go; null answers none. */
+    @Volatile var phones: PhoneHost? = null
+
+    /** Whether snapshots are shared right now: the server also runs for phones alone. */
+    @Volatile var shares: () -> Boolean = { true }
 
     private val watchdog = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
         Thread(r, "couch-sync-watchdog").apply { isDaemon = true }
@@ -61,12 +77,14 @@ class Server(
                     continue
                 }
                 thread(name = "couch-sync-conn", isDaemon = true) {
+                    var kept = false
                     try {
-                        handle(client)
+                        kept = handle(client)
                     } catch (e: Exception) {
                         // Anything a peer can break is that peer's problem: the connection just ends.
                     } finally {
-                        runCatching { client.close() }
+                        // A phone session owns its socket now, and no longer counts against the short-connection budget.
+                        if (!kept) runCatching { client.close() }
                         live.decrementAndGet()
                     }
                 }
@@ -80,7 +98,8 @@ class Server(
         socket = null
     }
 
-    private fun handle(client: Socket) {
+    /** True when the connection was handed to a phone session, which closes it itself. */
+    private fun handle(client: Socket): Boolean {
         client.soTimeout = READ_MS
         val limit = Limit(client)
         try {
@@ -91,7 +110,9 @@ class Server(
             when (request.getString("op")) {
                 "snapshot" -> snapshot(request, output)
                 "pair1" -> pair(client, limit, request, input, output)
+                "phone" -> return phone(client, request, input, output)
             }
+            return false
         } finally {
             limit.cancel()
         }
@@ -114,13 +135,41 @@ class Server(
     /** An unknown or unproven asker gets silence; a proven one gets the snapshot only it can read. */
     private fun snapshot(request: JSONObject, output: DataOutputStream) {
         val id = request.getString("id")
-        val peer = peers.get(id) ?: return
+        // Phones are never asked for snapshots, and nobody is while sharing is off.
+        val peer = peers.get(id)?.takeIf { !it.isPhone && shares() } ?: return
         val nonce = Wire.unb64(request.getString("nonce"))
         if (nonce.size != NONCE_BYTES) return
         val proof = Wire.unb64(request.getString("proof"))
         if (!MessageDigest.isEqual(proof, Crypto.requestProof(peer.key, nonce, id))) return
         val sealed = Crypto.seal(peer.key, current().toByteArray(), nonce)
         Wire.write(output, JSONObject().put("data", Wire.b64(sealed)))
+    }
+
+    /**
+     * A phone opening its long-lived session: it proves it holds the link key, the TV proves the
+     * same back, and the encrypted session starts. Anything wrong closes without a word.
+     */
+    private fun phone(client: Socket, request: JSONObject, input: DataInputStream, output: DataOutputStream): Boolean {
+        val host = phones ?: return false
+        val id = request.getString("id")
+        val peer = peers.get(id)?.takeIf { it.isPhone } ?: return false
+        val cn = Wire.unb64(request.getString("nonce"))
+        if (cn.size != Handshake.NONCE_BYTES) return false
+        val proof = Wire.unb64(request.getString("proof"))
+        if (!MessageDigest.isEqual(proof, Handshake.requestProof(peer.key, cn, id))) return false
+        val sn = Crypto.random(Handshake.NONCE_BYTES)
+        Wire.write(output, JSONObject().put("nonce", Wire.b64(sn)).put("proof", Wire.b64(Handshake.replyProof(peer.key, cn, sn))))
+        // The proof above doesn't cover sn, so a replayed request would get this far: only a phone
+        // that holds the key can send a first frame that opens, and only then does it take a slot.
+        val keys = Handshake.keys(peer.key, cn, sn)
+        val opener = FrameCipher(keys.clientToServer)
+        client.soTimeout = FIRST_FRAME_MS
+        val first = try {
+            Frames.read(input, opener)
+        } catch (e: IOException) {
+            return false
+        }
+        return host.adopt(peer, client, input, opener, FrameCipher(keys.serverToClient), first)
     }
 
     /** Building the snapshot reads the usage log, so paired TVs asking in a burst share one. */
@@ -130,33 +179,56 @@ class Server(
         return snapshot().toJson().also { cached = now to it }
     }
 
+    /**
+     * Pairing. The one pairing slot is taken before this TV answers with its key, so a second
+     * attempt is turned away at once instead of being shown a code the TV will never confirm. The
+     * other side's answer is read while the user is still asked, so a phone that says the codes
+     * differ, or goes away, closes the question here too ([onAborted]).
+     */
     private fun pair(client: Socket, limit: Limit, first: JSONObject, input: DataInputStream, output: DataOutputStream) {
-        if (onPair == null) {
-            Wire.write(output, JSONObject().put("error", "not-pairing"))
-            return
-        }
-        val commit = Wire.unb64(first.getString("commit"))
-        val theirId = first.getString("id").take(Snapshot.MAX_NAME)
-        val theirName = first.getString("name").take(Snapshot.MAX_NAME)
-        val mine = Crypto.keyPair()
-        Wire.write(output, JSONObject().put("pub", Wire.b64(mine.publicKey)).put("id", peers.id).put("name", peers.name))
-        val theirs = Wire.unb64(Wire.read(input, Wire.MAX_REQUEST).getString("pub"))
-        if (!Crypto.commit(theirs).contentEquals(commit)) return
-        val secret = Crypto.agree(mine, theirs)
-        val code = Crypto.sas(secret, theirs, mine.publicKey)
-        // Only a handshake that got this far can hold the one pairing slot, and only for as long as people need.
         val ask = onPair
-        if (ask == null || !pairing.compareAndSet(false, true)) {
+        val kind = Peer.kindOf(first.optString("kind"))
+        if (ask == null || kind != pairKind || !pairing.compareAndSet(false, true)) {
             Wire.write(output, JSONObject().put("error", "not-pairing"))
             return
         }
         try {
+            val commit = Wire.unb64(first.getString("commit"))
+            val theirId = first.getString("id").take(Snapshot.MAX_NAME)
+            val theirName = first.getString("name").take(Snapshot.MAX_NAME)
+            val mine = Crypto.keyPair()
+            // The slot is held from here, so a peer that stalls mid-exchange gives it back quickly.
+            client.soTimeout = EXCHANGE_MS
+            Wire.write(output, JSONObject().put("pub", Wire.b64(mine.publicKey)).put("id", peers.id).put("name", peers.name))
+            val theirs = Wire.unb64(Wire.read(input, Wire.MAX_REQUEST).getString("pub"))
+            if (!Crypto.commit(theirs).contentEquals(commit)) return
+            val secret = Crypto.agree(mine, theirs)
+            val code = Crypto.sas(secret, theirs, mine.publicKey)
             limit.set(ANSWER_MS.toLong())
             client.soTimeout = ANSWER_MS
-            val matched = ask(theirName, code)
-            val theirAnswer = Wire.read(input, Wire.MAX_REQUEST).getBoolean("ok")
-            if (matched && theirAnswer && theirId != peers.id) {
-                val peer = Peer(theirId, theirName, Crypto.linkKey(secret, theirs, mine.publicKey))
+            val local = java.util.concurrent.ArrayBlockingQueue<Boolean>(1)
+            thread(name = "couch-sync-ask", isDaemon = true) {
+                val matched = runCatching { ask(theirName, code) }.getOrDefault(false)
+                local.offer(matched)
+                // Said no here: stop waiting for the other side.
+                if (!matched) runCatching { client.shutdownInput() }
+            }
+            val theirAnswer = try {
+                Wire.read(input, Wire.MAX_REQUEST).getBoolean("ok")
+            } catch (e: IOException) {
+                null
+            } catch (e: org.json.JSONException) {
+                null
+            }
+            if (theirAnswer != true) {
+                // The other side ended it first: close the question still open on this screen.
+                if (local.peek() == null) onAborted?.invoke(theirAnswer == false)
+                runCatching { Wire.write(output, JSONObject().put("done", false)) }
+                return
+            }
+            val matched = local.poll(ANSWER_MS.toLong(), java.util.concurrent.TimeUnit.MILLISECONDS) ?: false
+            if (matched && theirId != peers.id) {
+                val peer = Peer(theirId, theirName, Crypto.linkKey(secret, theirs, mine.publicKey), kind = kind)
                 peers.add(peer)
                 Wire.write(output, JSONObject().put("done", true))
                 onPaired?.invoke(peer)
@@ -175,6 +247,9 @@ class Server(
         private const val MAX_CONNECTIONS = 6
         private const val READ_MS = 10_000
         private const val HANDSHAKE_MS = 15_000L
+        private const val EXCHANGE_MS = 3_000
+        /** A phone sends `hello` straight after the handshake. */
+        private const val FIRST_FRAME_MS = 5_000
         private const val CACHE_MS = 30_000L
         /** Long enough for two people to look at two screens. */
         const val ANSWER_MS = 130_000

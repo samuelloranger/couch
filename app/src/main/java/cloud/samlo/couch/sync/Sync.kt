@@ -6,15 +6,18 @@ import cloud.samlo.couch.data.AppUsage
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.data.UserFiles
+import cloud.samlo.couch.phone.Phones
 import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
 /**
- * Screen time shared between this TV and the ones it is paired with, on the home network only.
- * One instance of everything per process: the server answers while the launcher's process lives,
- * and a TV is asked again for its snapshot when it comes into view and the last answer is stale.
+ * Screen time shared between this TV and the ones it is paired with, on the home network only,
+ * and the server the phone app connects to. One instance of everything per process: the server
+ * answers while the launcher's process lives, and a TV is asked again for its snapshot when it
+ * comes into view and the last answer is stale. The server runs while sharing is on, a phone is
+ * paired, or pairing is open.
  */
 object Sync {
     private const val STALE_MS = 15 * 60_000L
@@ -25,6 +28,8 @@ object Sync {
     private var discovery: Discovery? = null
     private var listener: (() -> Unit)? = null
     private val pulling = ConcurrentHashMap.newKeySet<String>()
+    /** Whether screen time is shared right now; the server also runs for phones with this off. */
+    @Volatile private var sharing = false
 
     /** Called on a worker when a TV appears or goes, or a pairing needs the user. */
     @Synchronized fun listen(onChange: (() -> Unit)?) {
@@ -40,23 +45,35 @@ object Sync {
 
     fun found(): List<Discovery.Found> = discovery?.found().orEmpty().filter { it.id != peers?.id }
 
-    /** Brings sync up when it is turned on, and takes it down when it is off. Cheap to call again. */
+    /** Brings the server up while it is wanted (sharing, a phone, open pairing), and down when it isn't. Cheap to call again. */
     fun start(context: Context) {
         val context = context.applicationContext
         thread(name = "couch-sync-start") {
             val config = Config.load(UserFiles(context).dir)
-            if (config.syncEnabled) up(context) else down()
+            sharing = config.syncEnabled
+            reconcile(context)
             if (config.syncEnabled) pullStale()
         }
+    }
+
+    @Synchronized private fun reconcile(context: Context) {
+        if (sharing || peers(context).phones().isNotEmpty() || wantedAsk != null) up(context) else down()
     }
 
     @Synchronized private fun up(context: Context) {
         app = context
         val me = peers(context)
-        val srv = server ?: Server(me) { local(context, me) }.also { it.onPaired = { listener?.invoke() }; server = it }
+        Phones.attach(context)
+        val srv = server ?: Server(me) { local(context, me) }.also {
+            it.onPaired = { listener?.invoke() }
+            it.phones = Phones
+            it.shares = { sharing }
+            server = it
+        }
+        applyPairing()
         val port = srv.start()
         val disc = discovery ?: Discovery(context).also { discovery = it }
-        disc.announce(me.id, me.name, port, srv.onPair != null)
+        disc.announce(me.id, me.name, port, wantedAsk != null)
         disc.start { listener?.invoke(); pullStale() }
     }
 
@@ -66,6 +83,9 @@ object Sync {
         discovery?.stop()
         discovery = null
     }
+
+    /** This TV's own screen time as a snapshot, for the phone app. */
+    fun snapshotNow(context: Context): Snapshot = local(context, peers(context))
 
     /** This TV's own last week, labelled so another TV can match the same service under another package. */
     private fun local(context: Context, me: Peers): Snapshot {
@@ -77,7 +97,7 @@ object Sync {
     fun pullStale() {
         val me = peers ?: return
         val now = System.currentTimeMillis()
-        for (peer in me.all()) {
+        for (peer in me.tvs()) {
             if (now - peer.lastSync < STALE_MS) continue
             val at = found().firstOrNull { it.id == peer.id } ?: continue
             if (!pulling.add(peer.id)) continue
@@ -103,31 +123,58 @@ object Sync {
         Thread(r, "couch-sync-pairing").apply { isDaemon = true }
     }
 
+    /** What the page that wants pairing asked for; the server follows the latest request, whatever order the work runs in. */
+    @Volatile private var wantedAsk: ((String, String) -> Boolean)? = null
+    @Volatile private var wantedKind = Peer.TV
+    @Volatile private var wantedAborted: ((Boolean) -> Unit)? = null
+
+    private fun applyPairing() {
+        server?.pairKind = wantedKind
+        server?.onAborted = wantedAborted
+        server?.onPair = wantedAsk
+    }
+
     /**
-     * Opens this TV for pairing until [closePairing]; [ask] is called with the other TV's name and
-     * the code to compare, and blocks until the user answers.
+     * Opens this TV for [kind] pairing until [closePairing]; [ask] is called with the other side's
+     * name and the code to compare, and blocks until the user answers. [aborted] hears when the
+     * other side ended it first (true: it said the codes differ).
      */
-    fun openPairing(context: Context, ask: (String, String) -> Boolean) {
+    fun openPairing(context: Context, kind: String, aborted: (Boolean) -> Unit, ask: (String, String) -> Boolean) {
         val context = context.applicationContext
+        wantedKind = kind
+        wantedAborted = aborted
+        wantedAsk = ask
         pairingOps.execute {
             up(context)
-            server?.onPair = ask
+            applyPairing()
             announceAgain()
         }
     }
 
     fun closePairing() {
+        wantedAsk = null
+        wantedAborted = null
         server?.onPair = null
         pairingOps.execute {
-            server?.onPair = null
+            applyPairing()
             announceAgain()
+            // With sharing off and no phone paired, nothing else wants the server any more.
+            app?.let { reconcile(it) }
         }
+    }
+
+    /** Forgets a paired phone and ends its session at once; the server stops if it was the last reason to run. */
+    fun forgetPhone(context: Context, id: String) {
+        peers(context).forget(id)
+        Phones.cutOff(id)
+        val context = context.applicationContext
+        thread(name = "couch-sync-forget") { reconcile(context) }
     }
 
     @Synchronized private fun announceAgain() {
         val me = peers ?: return
         val port = server?.start() ?: return
-        discovery?.announce(me.id, me.name, port, server?.onPair != null)
+        discovery?.announce(me.id, me.name, port, wantedAsk != null)
     }
 
     /** Pairs with a TV found on the network, or one typed in by address. */

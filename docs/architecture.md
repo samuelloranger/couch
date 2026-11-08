@@ -1,6 +1,6 @@
 # Architecture
 
-Couch is one Gradle module of plain Kotlin on framework Views. Twelve packages, each with one job;
+Couch is one Gradle module of plain Kotlin on framework Views. Fourteen packages, each with one job;
 no file is longer than about 160 lines.
 
 ```
@@ -16,7 +16,9 @@ cloud.samlo.couch
 ├── debloat/   removing the apps a TV came with, measured and reversible, through the TV's own shell
 ├── adb/       a small ADB client (key, protocol, shell) for the TV's own debugging port
 ├── measure/   frame timing: the HUD, the meter and the benchmark
-└── sync/      screen time shared between TVs: snapshot and merge, pairing, a bounded socket server
+├── sync/      screen time shared between TVs: snapshot and merge, pairing, a bounded socket server
+├── phone/     the iPhone app's sessions: encrypted frames, settings, keys, text and the picture
+└── capture/   a low-latency screen capture run under app_process, with screenrecord as fallback
 ```
 
 The four classes at the root are referenced by name from the TV's settings (the launcher entry,
@@ -119,6 +121,11 @@ Both are off until the user turns them on, and neither costs the home screen any
   dates, and the merge adds peers to this TV's live figures, matching apps by package and then by
   name. `Server` and `Client` speak a small framed protocol over TCP; `Discovery` uses the
   platform's own mDNS. See [Other TVs](sync.md) for what is shared and how pairing works.
+- **Phone** (`phone/`) answers the iPhone app on the same port. A phone pairs like a TV, then each
+  session derives its own keys from the pairing key and seals every frame with AES-GCM, counting
+  frames per direction. Keys go through the relay's virtual keyboard (else `input keyevent`), and
+  the picture comes from `capture/`, a small encoder run under `app_process` through the TV's own
+  ADB or root, falling back to `screenrecord`. See [Phone](phone.md).
 
 ## HOME takeover
 

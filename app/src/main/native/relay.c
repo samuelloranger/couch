@@ -7,7 +7,7 @@
 // Usage: couch-relay <port> <token>. It connects to Couch on 127.0.0.1:<port> and exits when that
 // connection ends; the kernel then lets go of the grabs, and the remote works as before.
 //
-// Couch sends, one per line:   keys <code,code|->   learn <0|1>   emit <code>
+// Couch sends, one per line:   keys <code,code|->   learn <0|1>   emit <code>   press <code> <1 down|0 up>
 // The relay sends:             key <code> <1 down|0 up>   seen <code>  (learning: every key down)
 #include <arpa/inet.h>
 #include <dirent.h>
@@ -193,14 +193,61 @@ static void press(int fd, int code, int value) {
     write(fd, e, sizeof e);
 }
 
-// Presses a key as the remote that has it, for Couch to hand the TV its own menu.
-static void emit(int code) {
-    for (int i = 0; i < ndevices; i++) {
-        if (code < 0 || code > KEY_MAX || !HAS(devices[i].keys, code)) continue;
-        press(devices[i].clone, code, 1);
-        press(devices[i].clone, code, 0);
+// A keyboard of the relay's own, for the keys no grabbed remote has (and for a relay that grabs
+// none, started only to inject keys for the phone app). Created on the first key that needs it,
+// and declaring only the keys the phone app can press: a keyboard with every key looks like a
+// hardware keyboard to Android, which can then hide the on-screen one.
+static int vkbd = -1;
+static const int VKBD_KEYS[] = {
+    KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_OK, KEY_BACK, KEY_HOME, KEY_MENU, KEY_PLAYPAUSE,
+    KEY_REWIND, KEY_FASTFORWARD, KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_MUTE, KEY_POWER, KEY_CHANNELUP,
+    KEY_CHANNELDOWN,
+};
+
+static void make_vkbd(void) {
+    int u = open("/dev/uinput", O_WRONLY | O_NONBLOCK);
+    if (u < 0) return;
+    ioctl(u, UI_SET_EVBIT, EV_SYN);
+    ioctl(u, UI_SET_EVBIT, EV_KEY);
+    for (unsigned i = 0; i < sizeof VKBD_KEYS / sizeof VKBD_KEYS[0]; i++) ioctl(u, UI_SET_KEYBIT, VKBD_KEYS[i]);
+    ioctl(u, UI_SET_PHYS, PHYS);
+    struct uinput_user_dev d;
+    memset(&d, 0, sizeof d);
+    snprintf(d.name, sizeof d.name, "couch-remote");
+    d.id.bustype = BUS_VIRTUAL;
+    d.id.vendor = 0x1;
+    d.id.product = 0x1;
+    if (write(u, &d, sizeof d) != sizeof d || ioctl(u, UI_DEV_CREATE) < 0) {
+        close(u);
         return;
     }
+    // Android takes a moment to register a new input device; keys sent before are lost.
+    usleep(150 * 1000);
+    vkbd = u;
+}
+
+static int vkbd_has(int code) {
+    for (unsigned i = 0; i < sizeof VKBD_KEYS / sizeof VKBD_KEYS[0]; i++) if (VKBD_KEYS[i] == code) return 1;
+    return 0;
+}
+
+// Sends a key event as the remote that has the key, else as the relay's own keyboard.
+static void send_key(int code, int value) {
+    if (code <= 0 || code > KEY_MAX) return;
+    for (int i = 0; i < ndevices; i++) {
+        if (!HAS(devices[i].keys, code)) continue;
+        press(devices[i].clone, code, value);
+        return;
+    }
+    if (!vkbd_has(code)) return;
+    if (vkbd < 0) make_vkbd();
+    if (vkbd >= 0) press(vkbd, code, value);
+}
+
+// Presses and releases a key, for Couch to hand the TV its own menu, or for a phone's tap.
+static void emit(int code) {
+    send_key(code, 1);
+    send_key(code, 0);
 }
 
 static void command(char *line) {
@@ -218,6 +265,9 @@ static void command(char *line) {
         regrab();
     } else if (!strncmp(line, "emit ", 5)) {
         emit(atoi(line + 5));
+    } else if (!strncmp(line, "press ", 6)) {
+        int code = 0, value = 0;
+        if (sscanf(line + 6, "%d %d", &code, &value) == 2 && (value == 0 || value == 1)) send_key(code, value);
     }
 }
 

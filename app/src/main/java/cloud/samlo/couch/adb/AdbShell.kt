@@ -25,7 +25,7 @@ class AdbShell private constructor(
     private val key: AdbKey,
     private val prompt: Boolean,
     private val phase: (Phase) -> Unit,
-) {
+) : Shell {
     private var live: Socket? = null
     private var stream = 0
 
@@ -43,13 +43,13 @@ class AdbShell private constructor(
      * Android may ask to allow debugging; later calls reuse that connection as a new stream, so
      * one piece of work asks at most once however many commands it takes. [close] when done.
      */
-    fun run(command: String): String = stream("shell:$command").toString(Charsets.UTF_8.name())
+    override fun run(command: String): String = stream("shell:$command").toString(Charsets.UTF_8.name())
 
     /**
      * Like [run], over adbd's newer shell protocol. Anything the command leaves running in the
      * background then outlives the stream; the old protocol takes it down when the stream ends.
      */
-    fun runLasting(command: String): String {
+    override fun runLasting(command: String): String {
         val raw = stream("shell,v2,raw:$command").toByteArray()
         // Each v2 packet is an id byte, a little-endian length, and that many bytes; id 1 is stdout.
         val out = ByteArrayOutputStream()
@@ -64,25 +64,47 @@ class AdbShell private constructor(
     }
 
     private fun stream(service: String): ByteArrayOutputStream {
+        // Decoded once at the end by the caller, so a character split across two packets stays whole.
+        val out = ByteArrayOutputStream()
+        pump(service) { out.write(it) }
+        return out
+    }
+
+    /**
+     * Runs [command] through adbd's `exec:` service, which keeps binary output intact (no terminal in
+     * the way), and hands each piece of output to [onData] as it arrives instead of buffering it all.
+     * [onIdle] is called whenever [idleMs] passes with nothing to read. Returns when the command
+     * ends; [close] from another thread ends it early, as a [Failed.Blocked]. Uses this
+     * connection's stream, so give a long-running command a shell of its own.
+     */
+    override fun exec(command: String, idleMs: Int, onIdle: () -> Unit, onData: (ByteArray) -> Unit) =
+        pump("exec:$command", idleMs, onIdle, onData)
+
+    /** Opens [service] as a new stream and feeds its output to [sink] until adbd closes it. */
+    private fun pump(service: String, idleMs: Int = 0, onIdle: () -> Unit = {}, sink: (ByteArray) -> Unit) {
         val socket = open()
         val local = ++stream
         try {
             write(socket, AdbProtocol.OPEN, local, 0, "$service\u0000".toByteArray())
-            val out = ByteArrayOutputStream()
             while (true) {
-                val m = read(socket)
+                val m = if (idleMs > 0) readOrIdle(socket, idleMs) else read(socket)
+                if (m == null) {
+                    onIdle()
+                    continue
+                }
                 // Only this stream's packets; adbd answers an OPEN with arg1 set to our local id.
                 if (m.arg1 != local) continue
                 when (m.cmd) {
                     AdbProtocol.OKAY -> Unit
                     AdbProtocol.WRTE -> {
-                        out.write(m.data)
+                        sink(m.data)
                         write(socket, AdbProtocol.OKAY, local, m.arg0)
+                        // Nothing more buffered: the burst has been read.
+                        if (idleMs > 0 && socket.getInputStream().available() == 0) onIdle()
                     }
-                    // Decoded once at the end, so a character split across two packets stays whole.
                     AdbProtocol.CLSE -> {
                         write(socket, AdbProtocol.CLSE, local, m.arg0)
-                        return out
+                        return
                     }
                     else -> {
                         // Out of step with adbd: this connection can't be trusted for the next command.
@@ -104,7 +126,7 @@ class AdbShell private constructor(
     }
 
     /** Lets go of the connection; a later [run] opens a new one and may ask again. */
-    fun close() {
+    override fun close() {
         live?.let { runCatching { it.close() } }
         live = null
     }
@@ -174,10 +196,25 @@ class AdbShell private constructor(
         }
     }
 
-    private fun read(socket: Socket): AdbProtocol.Msg {
+    /** Like [read], but null when nothing arrives within [idleMs]; a message that has begun is read whole. */
+    private fun readOrIdle(socket: Socket, idleMs: Int): AdbProtocol.Msg? {
+        socket.soTimeout = idleMs
+        val first = try {
+            socket.getInputStream().read()
+        } catch (e: SocketTimeoutException) {
+            return null
+        } finally {
+            socket.soTimeout = WAIT_MS
+        }
+        if (first < 0) throw IOException("closed")
+        return read(socket, first)
+    }
+
+    private fun read(socket: Socket, first: Int = -1): AdbProtocol.Msg {
         val ins = DataInputStream(socket.getInputStream())
         val head = ByteArray(24)
-        ins.readFully(head)
+        if (first >= 0) head[0] = first.toByte()
+        ins.readFully(head, if (first >= 0) 1 else 0, if (first >= 0) 23 else 24)
         val b = ByteBuffer.wrap(head).order(ByteOrder.LITTLE_ENDIAN)
         val data = ByteArray(b.getInt(12))
         if (data.isNotEmpty()) ins.readFully(data)

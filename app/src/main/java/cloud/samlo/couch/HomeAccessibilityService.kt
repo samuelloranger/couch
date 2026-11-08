@@ -79,6 +79,9 @@ class HomeAccessibilityService : AccessibilityService() {
         /** The remote buttons of the connected service; null while the service is off. */
         fun remote(): RemoteButtons? = running?.remote
 
+        /** The running service, which may start activities while Couch is in the background. */
+        fun context(): Context? = running
+
         /** Android's own global action (screen off, screenshot), through the service; false without it. */
         fun globalAction(action: Int): Boolean = running?.performGlobalAction(action) == true
 
