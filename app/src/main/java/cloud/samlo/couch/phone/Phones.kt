@@ -81,8 +81,9 @@ object Phones : PhoneHost, Session.Listener {
             if (sessions.isNotEmpty()) return
             pulse?.cancel(false)
             pulse = null
+            // Under the lock adopt takes, so a phone connecting now can't have its shell closed under it.
+            control?.release()
         }
-        control?.release()
     }
 
     fun isConnected(id: String) = sessions.any { it.peer.id == id && it.isOpen }

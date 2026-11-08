@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 import android.os.Build
 import cloud.samlo.couch.MediaListener
 import cloud.samlo.couch.data.Usage
@@ -24,12 +25,16 @@ object State {
         return out
     }
 
+    /** The first session that is playing, else the first that is paused; stopped ones are skipped. */
     private fun nowPlaying(context: Context): JSONObject? = try {
         val manager = context.getSystemService(MediaSessionManager::class.java)
-        val controller = manager?.getActiveSessions(ComponentName(context, MediaListener::class.java))?.firstOrNull()
+        val sessions = manager?.getActiveSessions(ComponentName(context, MediaListener::class.java)).orEmpty()
+        val playing = sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        val controller = playing ?: sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PAUSED }
         val meta = controller?.metadata
         val title = meta?.getString(MediaMetadata.METADATA_KEY_TITLE)?.takeIf { it.isNotBlank() }
         if (controller == null || title == null) null else JSONObject().put("title", title).put("app", controller.packageName)
+            .put("state", if (playing != null) "playing" else "paused")
             .apply { meta.getString(MediaMetadata.METADATA_KEY_ARTIST)?.takeIf { it.isNotBlank() }?.let { put("artist", it) } }
     } catch (e: SecurityException) {
         // Notification access isn't granted: nothing to report.

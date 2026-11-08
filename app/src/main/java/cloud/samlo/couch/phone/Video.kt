@@ -115,7 +115,7 @@ class Video(private val context: Context) {
     private fun run(mine: Int) {
         var quick = 0
         while (current(mine)) {
-            val began = System.currentTimeMillis()
+            var began = System.currentTimeMillis()
             var frames = 0
             var gotConfig = false
             val q = synchronized(lock) { quality }
@@ -136,6 +136,8 @@ class Video(private val context: Context) {
                 } else {
                     "screenrecord --output-format=h264 --size ${q.width}x${q.height} --bit-rate ${q.bitRate} -"
                 }
+                // The helper's clock starts now: finding a shell (the root probe, the debugging question) doesn't count.
+                began = System.currentTimeMillis()
                 sh.exec(
                     command,
                     IDLE_MS,

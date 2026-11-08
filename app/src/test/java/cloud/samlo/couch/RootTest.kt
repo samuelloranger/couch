@@ -64,6 +64,6 @@ class PidLineTest {
     fun theWrapperReportsItsPidThenBecomesTheCommand() {
         assertEquals("echo PID:\$\$; exec screenrecord --size 1x1 -", cloud.samlo.couch.adb.PidLine.wrap("screenrecord --size 1x1 -"))
         assertTrue(cloud.samlo.couch.adb.PidLine.kill(9).startsWith("kill 9;"))
-        assertTrue(cloud.samlo.couch.adb.PidLine.kill(9).endsWith("kill -9 9 2>/dev/null"))
+        assertTrue(cloud.samlo.couch.adb.PidLine.kill(9).endsWith("kill -9 9"))
     }
 }

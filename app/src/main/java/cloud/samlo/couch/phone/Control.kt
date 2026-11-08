@@ -27,6 +27,8 @@ class Control(private val context: Context) {
     )
     @Volatile private var shell: Shell? = null
     @Volatile private var own: RelayLink? = null
+    /** Bumped by [release]: work that started before it must not leave a connection or relay behind. */
+    @Volatile private var generation = 0
     private var relayRetryAt = 0L
 
     /** Runs [task] in order; a full queue answers [reply] with an error rather than dropping the request silently. */
@@ -84,6 +86,7 @@ class Control(private val context: Context) {
 
     /** The last phone has gone. Not through the request queue, which may be full: closing is quick and never blocks. */
     fun release() {
+        generation++
         val sh = shell
         shell = null
         sh?.close()
@@ -107,11 +110,12 @@ class Control(private val context: Context) {
         if (own != null || System.currentTimeMillis() < relayRetryAt) return
         if (Config.load(UserFiles(context).dir).remoteButtons) return
         relayRetryAt = System.currentTimeMillis() + RELAY_RETRY_MS
+        val mine = generation
         val created = RelayLink({}) { closed -> if (own === closed) own = null }
         val started = shell { sh ->
             RelayProtocol.STARTED in sh.runLasting(RelayProtocol.start(context.applicationInfo.nativeLibraryDir, created.port, created.token))
         }
-        if (started == true && created.await(AWAIT_MS)) {
+        if (started == true && created.await(AWAIT_MS) && mine == generation) {
             created.send(RelayProtocol.keys(emptyList()))
             own = created
         } else {
@@ -121,13 +125,21 @@ class Control(private val context: Context) {
 
     /** Runs [block] on the persistent connection, opening it if needed; null when ADB isn't usable. */
     private fun <T> shell(allowPrompt: Boolean = true, probeRoot: Boolean = true, block: (Shell) -> T): T? {
+        val mine = generation
         val sh = shell ?: PhoneAdb.create(context, allowPrompt, probeRoot)?.also { shell = it }
         if (sh == null) {
             PhoneAdb.failed(AdbShell.Failed.Off(null))
             return null
         }
         try {
-            return block(sh).also { PhoneAdb.ready(sh) }
+            return block(sh).also {
+                PhoneAdb.ready(sh)
+                // The last phone left meanwhile: don't keep a connection open for nobody.
+                if (mine != generation && shell === sh) {
+                    shell = null
+                    sh.close()
+                }
+            }
         } catch (e: AdbShell.Failed) {
             sh.close()
             // A connection closed by release() failing says nothing about ADB.

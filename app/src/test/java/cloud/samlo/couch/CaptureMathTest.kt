@@ -50,7 +50,7 @@ class CaptureMathTest {
         assertTrue(CaptureMath.fallBack(1_500, ended = true, gotConfig = true))
         assertFalse(CaptureMath.fallBack(60_000, ended = true, gotConfig = true))
         assertFalse(CaptureMath.fallBack(2_900, ended = false, gotConfig = false))
-        assertTrue(CaptureMath.fallBack(3_000, ended = false, gotConfig = false))
+        assertTrue(CaptureMath.fallBack(5_000, ended = false, gotConfig = false))
         assertFalse(CaptureMath.fallBack(10_000, ended = false, gotConfig = true))
     }
 }

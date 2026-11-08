@@ -27,7 +27,7 @@ it on the Phone page and press OK twice.
 
 Couch reaches keys and the screen through the TV's own debugging port, the same way
 [Godmode](godmode.md) does. The first time, the TV asks **Allow debugging?**; choose
-**Always allow**. On a rooted TV Couch uses root instead and nothing is asked.
+**Always allow**. On a rooted TV Couch uses root instead; a root manager may ask once.
 
 Fire TV doesn't let apps reach its own debugging port, so there the remote and the picture need
 a rooted Fire TV. Settings, apps and screen time work everywhere.

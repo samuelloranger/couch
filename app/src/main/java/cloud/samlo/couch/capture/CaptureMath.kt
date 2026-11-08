@@ -43,5 +43,5 @@ object CaptureMath {
     }
 
     const val EARLY_MS = 2_000L
-    const val CONFIG_MS = 3_000L
+    const val CONFIG_MS = 5_000L
 }

@@ -36,8 +36,8 @@ object PhoneAdb {
 
     /**
      * A shell for keys, text and video, or null when there is no way to one. Root, where `su` gives
-     * it, comes first and asks nothing; [probeRoot] false only uses root already found, so merely
-     * saying hello never runs `su`. Otherwise ADB: with [prompt] off it fails instead of asking,
+     * it, comes first and asks nothing of the user (a root manager may ask once); [probeRoot] false
+     * only uses root already found. Otherwise ADB: with [prompt] off it fails instead of asking,
      * and a request that may ask does so at most once per process. Connects on first use.
      */
     fun create(context: Context, prompt: Boolean, probeRoot: Boolean = true): Shell? {

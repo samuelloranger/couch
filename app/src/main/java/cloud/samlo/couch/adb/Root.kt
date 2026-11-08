@@ -1,13 +1,16 @@
 package cloud.samlo.couch.adb
 
 /**
- * Whether `su` gives this process root, as on a rooted TV where ADB to itself is blocked. Asked at
- * most once per process and only when a phone feature needs a shell (a root manager may show its
- * question then), never at startup.
+ * Whether `su` gives this process root, as on a rooted TV where ADB to itself is blocked. Asked
+ * when a phone connects or needs a shell (a root manager may show its question then), never at
+ * startup. Only a definite answer is remembered: if the question isn't answered in time, `su` is
+ * asked again after a minute.
  */
 object Root {
     private const val PROBE_MS = 3_000L
+    private const val RETRY_MS = 60_000L
     @Volatile private var known: Boolean? = null
+    private var retryAt = 0L
 
     /** True when `id` printed by `su -c id` says uid 0. */
     fun parse(output: String) = Regex("""\buid=0\b""").containsMatchIn(output)
@@ -18,10 +21,17 @@ object Root {
     /** The cached answer, without asking: null while nobody has. */
     fun cached(): Boolean? = known
 
-    /** Asks once, then remembers. */
-    @Synchronized fun available(): Boolean = known ?: probe().also { known = it }
+    /** Asks, remembering a definite answer; a timed-out question counts as no for the next minute. */
+    @Synchronized fun available(): Boolean {
+        known?.let { return it }
+        if (System.currentTimeMillis() < retryAt) return false
+        val answer = probe()
+        if (answer == null) retryAt = System.currentTimeMillis() + RETRY_MS else known = answer
+        return answer == true
+    }
 
-    private fun probe(): Boolean = try {
+    /** True for uid 0, false for no `su` or a refusal, null when it didn't answer in time. */
+    private fun probe(): Boolean? = try {
         val process = ProcessBuilder(command("id")).redirectErrorStream(true).start()
         val out = StringBuilder()
         val reader = Thread({ runCatching { process.inputStream.bufferedReader().forEachLine { if (out.length < 4096) out.append(it).append('\n') } } }, "couch-root-probe")
@@ -32,7 +42,7 @@ object Root {
             parse(out.toString())
         } else {
             process.destroyForcibly()
-            false
+            null
         }
     } catch (e: Exception) {
         false
@@ -76,7 +86,7 @@ class PidLine {
         fun wrap(command: String) = "echo $PREFIX\$\$; exec $command"
 
         /** Asks it to stop, then makes sure. */
-        fun kill(pid: Int) = "kill $pid; sleep 0.5; kill -9 $pid 2>/dev/null"
+        fun kill(pid: Int) = "kill $pid; sleep 0.5; grep -qE 'app_process|screenrecord' /proc/$pid/cmdline && kill -9 $pid"
     }
 }
 
@@ -123,7 +133,12 @@ class RootShell : Shell {
                 }
                 if (chunk === END) break
                 val out = marker.feed(chunk)
-                marker.pid?.let { pids.add(it); pid = it }
+                if (pid == null) marker.pid?.let {
+                    pids.add(it)
+                    pid = it
+                    // Closed before the PID line arrived: nothing else will end it.
+                    if (closed) killRoot(it)
+                }
                 if (out.isNotEmpty()) onData(out)
                 // The pipe is drained: whatever was written in this burst has been read.
                 if (chunks.isEmpty()) onIdle()
