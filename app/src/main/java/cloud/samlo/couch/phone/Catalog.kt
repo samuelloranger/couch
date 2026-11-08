@@ -3,9 +3,6 @@ package cloud.samlo.couch.phone
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
-import android.graphics.Paint
 import android.util.Base64
 import cloud.samlo.couch.HomeAccessibilityService
 import cloud.samlo.couch.data.AppOrder
@@ -17,7 +14,6 @@ import cloud.samlo.couch.data.InputSource
 import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.sync.Sync
-import cloud.samlo.couch.ui.Tokens
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
@@ -84,7 +80,7 @@ object Catalog {
 
     /** The picture for an app or an input, as base64 PNG; null when there is none. */
     fun icon(context: Context, config: Config, key: String): String? {
-        val bitmap = appPicture(context, key) ?: inputPicture(context, config, key) ?: return null
+        val bitmap = appPicture(context, key) ?: inputPicture(context, key) ?: return null
         val out = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
@@ -101,25 +97,10 @@ object Catalog {
         return runCatching { Banners.render(pm.getApplicationIcon(pkg), ICON, ICON, 0f) }.getOrNull()
     }
 
-    /** An input as Couch draws its card: custom image, or its icon on the card colour. */
-    private fun inputPicture(context: Context, config: Config, key: String): Bitmap? {
-        val tile = InputSource.all(context, config).firstOrNull { it.key == key } ?: return null
-        Banners.custom(UserFiles(context).icons, key, BANNER_W, BANNER_H, context, 0f)?.let { return it }
-        val res = tile.iconRes.takeIf { it != 0 } ?: return null
-        val bitmap = Bitmap.createBitmap(BANNER_W, BANNER_H, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        canvas.drawRect(0f, 0f, BANNER_W.toFloat(), BANNER_H.toFloat(), Paint().apply { color = tile.cardColor ?: Tokens.surface })
-        val drawable = context.getDrawable(res)?.mutate() ?: return bitmap
-        drawable.setTint(Tokens.textPrimary.takeIf { tile.cardColor == null } ?: Color.WHITE)
-        val h = ART
-        val w = if (tile.iconWide) ART * 3 else ART
-        drawable.setBounds((BANNER_W - w) / 2, (BANNER_H - h) / 2, (BANNER_W + w) / 2, (BANNER_H + h) / 2)
-        drawable.draw(canvas)
-        return bitmap
-    }
+    /** An input's own image if the user set one; otherwise none, and the phone draws the icon named in `inputs`. */
+    private fun inputPicture(context: Context, key: String): Bitmap? = Banners.custom(UserFiles(context).icons, key, BANNER_W, BANNER_H, context, 0f)
 
     private const val BANNER_W = 320
     private const val BANNER_H = 180
     private const val ICON = 128
-    private const val ART = 72
 }

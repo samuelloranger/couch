@@ -1,6 +1,7 @@
 package cloud.samlo.couch.phone
 
 import android.content.Context
+import android.util.Log
 import cloud.samlo.couch.adb.AdbShell
 import cloud.samlo.couch.adb.RootShell
 import cloud.samlo.couch.adb.Shell
@@ -22,7 +23,7 @@ class Video(private val context: Context) {
         ;
 
         companion object {
-            fun of(name: String?) = entries.firstOrNull { it.wire == name } ?: MEDIUM
+            fun of(name: String?) = entries.firstOrNull { it.wire == name } ?: LOW
         }
     }
 
@@ -30,12 +31,18 @@ class Video(private val context: Context) {
     private val wanting = LinkedHashSet<Session>()
     private val gop = GopCache()
     private var config: ByteArray? = null
-    private var quality = Quality.MEDIUM
+    private var quality = Quality.LOW
     private var thread: Thread? = null
     private var shell: Shell? = null
     @Volatile private var generation = 0
     private var state = "ended"
     private var message: String? = null
+    /** When the first byte of the access unit being built was read, for the timing log. */
+    private var readAt = 0L
+    private var logAt = 0L
+    private var logUnits = 0
+    private var logNanos = 0L
+    private var logDepth = 0
 
     /** A phone asks for the picture, at [quality]; a different quality retunes it for everyone. */
     fun start(session: Session, requested: Quality) {
@@ -124,6 +131,7 @@ class Video(private val context: Context) {
                     { splitter.flush(); units.flush() },
                 ) {
                     PhoneAdb.ready(sh)
+                    if (readAt == 0L) readAt = System.nanoTime()
                     splitter.feed(it)
                 }
             } catch (e: AdbShell.Failed) {
@@ -160,8 +168,26 @@ class Video(private val context: Context) {
         }
         val frame = unit.frame()
         val oversized = wanting.toList().filter { !it.sendVideo(frame, unit.key) }
+        log(wanting.maxOfOrNull { it.depth } ?: 0)
         // A frame that can't fit a sealed frame can't be sent at any quality setting this phone is on.
         if (oversized.isNotEmpty() && unit.key) halt("error", "Picture too large. Lower the quality.")
+    }
+
+    /** One line a second while streaming: units, mean ms from first byte read to the writer's queue, deepest queue. */
+    private fun log(depth: Int) {
+        val now = System.nanoTime()
+        if (readAt != 0L) logNanos += now - readAt
+        readAt = 0L
+        logUnits++
+        logDepth = maxOf(logDepth, depth)
+        if (logAt == 0L) logAt = now
+        if (now - logAt < 1_000_000_000L) return
+        val tenths = logNanos / 100_000 / logUnits
+        Log.d("couch-phone", "au=$logUnits avgMs=${tenths / 10}.${tenths % 10} queue=$logDepth")
+        logAt = now
+        logUnits = 0
+        logNanos = 0
+        logDepth = 0
     }
 
     private fun status(): JSONObject {

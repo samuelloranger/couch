@@ -99,6 +99,8 @@ class AdbShell private constructor(
                     AdbProtocol.WRTE -> {
                         sink(m.data)
                         write(socket, AdbProtocol.OKAY, local, m.arg0)
+                        // Nothing more buffered: the burst has been read.
+                        if (idleMs > 0 && socket.getInputStream().available() == 0) onIdle()
                     }
                     AdbProtocol.CLSE -> {
                         write(socket, AdbProtocol.CLSE, local, m.arg0)

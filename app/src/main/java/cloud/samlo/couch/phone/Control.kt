@@ -61,14 +61,17 @@ class Control(private val context: Context) {
     }
 
     /**
-     * Learns whether ADB is usable, without ever asking the TV to show its question: a question the
-     * user has since accepted turns the state to ready. Called when a phone says hello or asks for
-     * the picture; a full queue skips it, since the next request tries again anyway.
+     * Gets ready for a phone that just connected: finds a shell (root, else ADB, silently: it never
+     * puts the "Allow debugging?" question up) and, when one works, starts the key relay so the
+     * first press is fast. Also how a question the user has since accepted turns the state to ready.
+     * A full queue skips it; real requests retry on their own.
      */
     fun probe() {
-        if (PhoneAdb.usable) return
         try {
-            worker.execute { shell(allowPrompt = false, probeRoot = false) { it.run("true") } }
+            worker.execute {
+                if (!PhoneAdb.usable) shell(allowPrompt = false) { it.run("true") }
+                if (PhoneAdb.usable) ensureRelay()
+            }
         } catch (e: RejectedExecutionException) {
             // Busy with real requests, which retry the connection themselves.
         }

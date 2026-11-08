@@ -41,7 +41,7 @@ class Messages(private val context: Context, private val control: Control, priva
     private fun key(session: Session, message: JSONObject) {
         val key = Keys.named(message.optString("key")) ?: return fail(session, "key", "Unknown key")
         val action = message.optString("action", "tap").takeIf { it == "down" || it == "up" } ?: "tap"
-        key.linux?.let { if (action == "down") session.held.down(it) else if (action == "up") session.held.up(it) }
+        key.linux?.let { if (action == "down") session.held.add(it) else if (action == "up") session.held.remove(it) }
         control.key(key, action) { it?.let { m -> fail(session, "key", m) } }
     }
 

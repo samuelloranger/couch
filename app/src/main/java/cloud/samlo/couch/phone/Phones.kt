@@ -61,6 +61,7 @@ object Phones : PhoneHost, Session.Listener {
             session.start()
         }
         evicted.forEach(Session::close)
+        control?.probe()
         return true
     }
 
@@ -74,7 +75,7 @@ object Phones : PhoneHost, Session.Listener {
     override fun onClosed(session: Session) {
         video?.stop(session)
         // Keys the phone still held come up, or the TV would see them repeat until the next press.
-        session.held.drain().forEach { control?.letGo(it) }
+        session.held.forEach { control?.letGo(it) }
         synchronized(this) {
             sessions.remove(session)
             if (sessions.isNotEmpty()) return

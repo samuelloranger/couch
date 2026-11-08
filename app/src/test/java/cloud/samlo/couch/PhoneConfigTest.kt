@@ -96,17 +96,6 @@ class PhoneConfigTest {
     }
 
     @Test
-    fun heldKeysAreDrainedOnce() {
-        val held = cloud.samlo.couch.phone.HeldKeys()
-        held.down(103)
-        held.down(105)
-        held.up(105)
-        held.down(103)
-        assertEquals(listOf(103), held.drain())
-        assertTrue(held.drain().isEmpty())
-    }
-
-    @Test
     fun aPhoneKeepsAtMostTwoSessions() {
         assertTrue(cloud.samlo.couch.phone.Phones.oldestToEvict(emptyList<Int>(), 2).isEmpty())
         assertTrue(cloud.samlo.couch.phone.Phones.oldestToEvict(listOf(1), 2).isEmpty())

@@ -98,35 +98,41 @@ class RootShell : Shell {
         val p = launch(PidLine.wrap(command))
         live = p
         val marker = PidLine()
+        // A thread of its own blocks on the pipe, so a byte is handed over the moment it arrives.
+        val chunks = java.util.concurrent.LinkedBlockingQueue<ByteArray>()
         val input = p.inputStream
-        val buffer = ByteArray(BUFFER)
-        var quiet = 0
+        Thread({
+            val buffer = ByteArray(BUFFER)
+            try {
+                while (true) {
+                    val n = input.read(buffer)
+                    if (n < 0) break
+                    chunks.put(buffer.copyOf(n))
+                }
+            } catch (e: java.io.IOException) {
+                // The process ended or was closed: the same as the end of its output.
+            }
+            chunks.put(END)
+        }, "couch-root-read").apply { isDaemon = true; start() }
         try {
             while (true) {
-                val ready = input.available()
-                if (ready > 0) {
-                    quiet = 0
-                    val n = input.read(buffer, 0, minOf(ready, buffer.size))
-                    if (n < 0) break
-                    val out = marker.feed(buffer.copyOf(n))
-                    marker.pid?.let { pids.add(it); pid = it }
-                    if (out.isNotEmpty()) onData(out)
-                } else if (!p.isAlive) {
-                    break
-                } else {
-                    Thread.sleep(POLL_MS)
-                    quiet += POLL_MS.toInt()
-                    if (quiet >= idleMs) {
-                        quiet = 0
-                        onIdle()
-                    }
+                val chunk = chunks.poll(idleMs.toLong(), java.util.concurrent.TimeUnit.MILLISECONDS)
+                if (chunk == null) {
+                    onIdle()
+                    continue
                 }
+                if (chunk === END) break
+                val out = marker.feed(chunk)
+                marker.pid?.let { pids.add(it); pid = it }
+                if (out.isNotEmpty()) onData(out)
+                // The pipe is drained: whatever was written in this burst has been read.
+                if (chunks.isEmpty()) onIdle()
             }
-        } catch (e: java.io.IOException) {
+        } catch (e: InterruptedException) {
             throw AdbShell.Failed.Blocked(e)
         } finally {
             // A command that ended by itself has nothing left to kill, and its PID may be someone else's by now.
-            val over = !p.isAlive
+            val over = !closed && p.waitFor(300, java.util.concurrent.TimeUnit.MILLISECONDS)
             p.destroy()
             pid?.let { if (over) pids.remove(it) else killRoot(it) }
         }
@@ -159,6 +165,6 @@ class RootShell : Shell {
         fun killTracked() = pids.toList().forEach(::killRoot)
 
         private const val BUFFER = 64 * 1024
-        private const val POLL_MS = 10L
+        private val END = ByteArray(0)
     }
 }

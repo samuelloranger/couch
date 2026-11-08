@@ -43,15 +43,20 @@ class Session(
     private var writer: Thread? = null
 
     /** Keys this phone holds down; let go of when the session ends. */
-    val held = HeldKeys()
+    val held: MutableSet<Int> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /** Whether this phone asked for the picture; set by the stream messages. */
     @Volatile var wantsVideo = false
 
     val isOpen get() = !closed
 
+    /** Frames waiting for the writer. */
+    val depth get() = queue.size
+
     fun start() {
         socket.soTimeout = IDLE_MS
+        // Frames are sent whole; Nagle would hold a frame's tail back waiting for an ack.
+        runCatching { socket.tcpNoDelay = true }
         writer = Thread(::write, "couch-phone-write").apply { isDaemon = true; start() }
         Thread(::read, "couch-phone-read").apply { isDaemon = true; start() }
     }
