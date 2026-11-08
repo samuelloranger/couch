@@ -83,7 +83,7 @@ public actor PhoneSession {
     public nonisolated let backlog = VideoBacklog()
     private nonisolated let sinkBox = SinkBox()
 
-    /// With a sink set, video bypasses `events` and goes to the sink on the read loop's thread.
+    /// Set before `connect()`: video goes to the sink on the read loop's thread, never through `events`.
     public nonisolated func setVideoSink(_ sink: (any VideoSink)?) { sinkBox.value = sink }
 
     public nonisolated var remoteIPv4: String? { channel.remoteIPv4 }
@@ -153,15 +153,12 @@ public actor PhoneSession {
                     case .json(let data):
                         if let message = try? IncomingMessage.decode(data) { continuation.yield(.message(message)) }
                     case .videoConfig(let sps, let pps):
-                        if let sink = sinkBox.value { sink.videoConfig(sps: sps, pps: pps) } else { continuation.yield(.videoConfig(sps: sps, pps: pps)) }
+                        sinkBox.value?.videoConfig(sps: sps, pps: pps)
                     case .videoUnit(let key, let avcc):
-                        guard backlog.admit(bytes: avcc.count, keyframe: key) else { break }
-                        if let sink = sinkBox.value {
-                            let size = avcc.count
-                            sink.videoUnit(avcc: avcc, keyframe: key) { backlog.consumed(bytes: size) }
-                        } else {
-                            continuation.yield(.videoUnit(keyframe: key, avcc: avcc))
-                        }
+                        // No sink (a short session that never asked for video): drop without counting.
+                        guard let sink = sinkBox.value, backlog.admit(bytes: avcc.count, keyframe: key) else { break }
+                        let size = avcc.count
+                        sink.videoUnit(avcc: avcc, keyframe: key) { backlog.consumed(bytes: size) }
                     case .ignored: break
                     }
                 }

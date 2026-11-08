@@ -54,7 +54,7 @@ xcodegen generate
 xcodebuild -project Couch.xcodeproj -scheme Couch -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
 
-Set `DEVELOPMENT_TEAM` in `ios/project.yml` to your own team to run it on a phone. In a Debug build,
+To run it on a phone, pass your own team when building (`xcodebuild … DEVELOPMENT_TEAM=<your team>`) or pick it in Xcode's Signing settings; `ios/project.yml` carries none. In a Debug build,
 `COUCH_DEMO=1` fills every screen with sample TVs, so the screens can be checked without a TV.
 The protocol both sides speak is described in [Phone](phone.md) and `docs/architecture.md`; the
 crypto test vectors in `ios/CouchTests` are shared with the TV's JVM tests.

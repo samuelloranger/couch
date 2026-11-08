@@ -84,6 +84,7 @@ struct AddTVView: View {
                 PairingView(target: target) { dismiss() }
             }
             .onChange(of: path) { _, new in if new.isEmpty { model.pairings.cancelAll() } }
+            .onDisappear { model.pairings.cancelAll() }
             .task {
                 if model.demoMode, model.demoScreen == "pair", let first = model.discovered.first { path = [.found(first)] }
             }

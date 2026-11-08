@@ -16,7 +16,7 @@ struct RootView: View {
                     }
                 }
         }
-        .sheet(isPresented: $showAdd) { AddTVView() }
+        .sheet(isPresented: $showAdd, onDismiss: { model.pairings.cancelAll() }) { AddTVView() }
         .task {
             guard model.demoMode, let screen = model.demoScreen else { return }
             if screen == "add" || screen == "pair" { showAdd = true }

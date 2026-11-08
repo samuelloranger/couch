@@ -289,6 +289,7 @@ struct KeyPress<Content: View>: View {
     var repeats = false
     @ViewBuilder let content: (Bool) -> Content
     @GestureState private var down = false
+    @Environment(\.scenePhase) private var scenePhase
     @State private var repeater: Task<Void, Never>?
 
     var body: some View {
@@ -301,16 +302,18 @@ struct KeyPress<Content: View>: View {
                 if isDown { begin() } else { stop() }
             }
             .onDisappear(perform: stop)
+            .onChange(of: scenePhase) { _, phase in if phase != .active { stop() } }
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { controller.press(key) }
     }
 
     private func begin() {
         controller.press(key)
+        stop()
         guard repeats else { return }
         repeater = Task {
             try? await Task.sleep(for: .milliseconds(400))
-            while !Task.isCancelled {
+            while !Task.isCancelled && controller.link == .connected {
                 controller.press(key)
                 try? await Task.sleep(for: .milliseconds(120))
             }

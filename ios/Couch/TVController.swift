@@ -114,6 +114,7 @@ final class TVController: Identifiable {
         } else {
             return false
         }
+        session.setVideoSink(video)  // before connect, so no early frame is counted and never consumed
         do {
             try await session.connect()
             noReplyCount = 0
@@ -125,7 +126,6 @@ final class TVController: Identifiable {
         } catch { return false }
         if Task.isCancelled { await session.close(); return false }
         self.session = session
-        session.setVideoSink(video)
         requestedIcons.removeAll()
         link = .connected
         if let ip = session.remoteIPv4, ip != tv.lastHost {
@@ -176,7 +176,7 @@ final class TVController: Identifiable {
             if let png { icons[key] = png; IconCache.drop(key: key) }
         case .streamStatus(let s):
             stream = s
-            if s.state == .ended || s.state == .error || s.state == .needsAdb { hasPicture = false }
+            if s.state == .ended || s.state == .error || s.state == .needsAdb { hasPicture = false; video.reset() }
         case .error(let about, let text):
             if about == "icon" { requestedIcons.removeAll() }
             banner = text

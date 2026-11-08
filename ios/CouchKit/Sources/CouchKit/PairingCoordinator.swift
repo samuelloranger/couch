@@ -112,6 +112,8 @@ public final class PairingCoordinator {
 
     /// The existing session for `key`, or a new one built from `begin`; `begin` of an existing session is never replaced.
     public func session(key: String, begin: @escaping @Sendable () async throws -> any PendingPairing) -> PairingSession {
+        // Never replaced mid-flow: a rebuilt view must reuse the pairing in flight, finished or failed.
+        // Sessions are dropped by `cancelAll()` when the Add a TV sheet goes away.
         if let s = sessions[key] { return s }
         let s = PairingSession(begin: begin)
         sessions[key] = s

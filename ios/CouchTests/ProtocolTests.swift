@@ -324,6 +324,28 @@ final class PairingCoordinatorTests: XCTestCase {
         XCTAssertEqual(session.attempts, 1)
     }
 
+    func testPairingAgainAfterDoneStartsFresh() async throws {
+        let counter = BeginCounter()
+        let coordinator = PairingCoordinator()
+        let make: @Sendable () async throws -> any PendingPairing = {
+            let n = await counter.next()
+            return FakePending(code: "00000\(n)")
+        }
+        let first = coordinator.session(key: "tv:a", begin: make)
+        first.start()
+        try await Task.sleep(for: .milliseconds(100))
+        first.finish(matched: true) { _ in }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(first.phase, .done)
+        // The sheet goes away (finished, cancelled or swiped down), then the same TV is picked again.
+        coordinator.cancelAll()
+        let second = coordinator.session(key: "tv:a", begin: make)
+        XCTAssertTrue(first !== second)
+        second.start()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(second.phase, .compare("000002"))
+    }
+
     func testStorageFailureIsSurfaced() async throws {
         let session = PairingSession { FakePending(code: "123456") }
         session.start()
