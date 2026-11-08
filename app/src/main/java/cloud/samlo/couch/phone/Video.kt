@@ -5,6 +5,7 @@ import android.util.Log
 import cloud.samlo.couch.adb.AdbShell
 import cloud.samlo.couch.adb.RootShell
 import cloud.samlo.couch.adb.Shell
+import cloud.samlo.couch.capture.CaptureMath
 import org.json.JSONObject
 
 /**
@@ -35,6 +36,8 @@ class Video(private val context: Context) {
     private var thread: Thread? = null
     private var shell: Shell? = null
     @Volatile private var generation = 0
+    /** Set once the capture helper has failed here: the rest of the process uses `screenrecord`. */
+    @Volatile private var helperFailed = false
     private var state = "ended"
     private var message: String? = null
     /** When the first byte of the access unit being built was read, for the timing log. */
@@ -114,9 +117,11 @@ class Video(private val context: Context) {
         while (current(mine)) {
             val began = System.currentTimeMillis()
             var frames = 0
+            var gotConfig = false
             val q = synchronized(lock) { quality }
-            val units = AccessUnits({ unit -> frames++; publish(mine, unit) }, { sps, pps -> newConfig(mine, sps, pps) })
+            val units = AccessUnits({ unit -> frames++; publish(mine, unit) }, { sps, pps -> gotConfig = true; newConfig(mine, sps, pps) })
             val splitter = AnnexB(units::add)
+            val helper = !helperFailed
             val sh = PhoneAdb.create(context, true)
             if (sh == null) {
                 PhoneAdb.failed(AdbShell.Failed.Off(null))
@@ -124,11 +129,23 @@ class Video(private val context: Context) {
                 return
             }
             synchronized(lock) { if (current(mine)) shell = sh else return sh.close() }
+            var gaveUp = false
             try {
+                val command = if (helper) {
+                    CaptureMath.command(context.applicationInfo.sourceDir, q.width, q.height, q.bitRate, MAX_FPS)
+                } else {
+                    "screenrecord --output-format=h264 --size ${q.width}x${q.height} --bit-rate ${q.bitRate} -"
+                }
                 sh.exec(
-                    "screenrecord --output-format=h264 --size ${q.width}x${q.height} --bit-rate ${q.bitRate} -",
+                    command,
                     IDLE_MS,
-                    { splitter.flush(); units.flush() },
+                    {
+                        splitter.flush(); units.flush()
+                        if (helper && !gaveUp && CaptureMath.fallBack(System.currentTimeMillis() - began, false, gotConfig)) {
+                            gaveUp = true
+                            sh.close()
+                        }
+                    },
                 ) {
                     PhoneAdb.ready(sh)
                     if (readAt == 0L) readAt = System.nanoTime()
@@ -136,6 +153,10 @@ class Video(private val context: Context) {
                 }
             } catch (e: AdbShell.Failed) {
                 if (!current(mine)) return
+                if (gaveUp) {
+                    helperFailed = true
+                    continue
+                }
                 PhoneAdb.failed(e)
                 synchronized(lock) { if (current(mine)) halt("needs-adb", PhoneAdb.message()) }
                 return
@@ -143,6 +164,15 @@ class Video(private val context: Context) {
                 sh.close()
             }
             if (!current(mine)) return
+            if (helper) {
+                // The helper has no time limit: ending is a failure unless it ran long with a picture.
+                if (gaveUp || CaptureMath.fallBack(System.currentTimeMillis() - began, true, gotConfig)) {
+                    Log.i("couch-phone", "capture helper unavailable, using screenrecord")
+                    helperFailed = true
+                    RootShell.killTracked()
+                }
+                continue
+            }
             // A run that gave nothing at once (a size the encoder refuses) is not worth repeating forever.
             quick = if (frames == 0 && System.currentTimeMillis() - began < QUICK_MS) quick + 1 else 0
             if (quick >= MAX_QUICK) {
@@ -207,5 +237,7 @@ class Video(private val context: Context) {
         const val IDLE_MS = 50
         const val QUICK_MS = 3_000L
         const val MAX_QUICK = 3
+        /** The most frames a second the helper's encoder is given; the TV's own refresh does the rest. */
+        const val MAX_FPS = 60
     }
 }
