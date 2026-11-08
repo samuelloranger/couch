@@ -304,7 +304,7 @@ struct TouchPad: View {
         }
         .font(.title2)
         .foregroundStyle(.tertiary)
-        .frame(height: 210)
+        .frame(height: 170)
         .glassEffect(.regular, in: .rect(cornerRadius: 28))
         .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         .gesture(
@@ -363,7 +363,7 @@ struct RemoteButtons: View {
                     Image(systemName: item.symbol)
                         .font(.title2)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 60)
+                        .frame(height: 52)
                         .foregroundStyle(item.key == .power ? Color.red : Color.primary)
                 }
                 .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))

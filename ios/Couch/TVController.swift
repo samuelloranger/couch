@@ -57,6 +57,7 @@ final class TVController: Identifiable {
     }
 
     func disconnect() {
+        guard !isDemo else { return }
         loop?.cancel(); loop = nil
         let s = session; session = nil
         Task { await s?.close() }
