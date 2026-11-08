@@ -83,3 +83,37 @@ final class CryptoVectorTests: XCTestCase {
         }
     }
 }
+
+/// Vectors produced by the TV side (JVM test, cross-checked with an independent Python run).
+final class TVSideVectorTests: XCTestCase {
+    private let link = Data((0..<32).map { UInt8($0) })
+    private let cn = Data((0..<16).map { UInt8($0) })
+    private let sn = Data((16..<32).map { UInt8($0) })
+    private let phoneId = "phone-1"
+    private let ping = Data(hex: "017b2274223a2270696e67227d")
+
+    func testProofsAndKeys() {
+        XCTAssertEqual(CouchCrypto.phoneProof(link: link, clientNonce: cn, phoneId: phoneId).hex,
+                       "b899ace203f477d84935294866679fb4fdd558d23d0364d2c7f0892c9bf9335e")
+        XCTAssertEqual(CouchCrypto.tvProof(link: link, clientNonce: cn, serverNonce: sn).hex,
+                       "85974a22f380e4af22b49c348e431d05676fa6241a4d85a0f528ca910a334e08")
+        let keys = CouchCrypto.sessionKeys(link: link, clientNonce: cn, serverNonce: sn)
+        XCTAssertEqual(keys.clientToServer.hex, "696ef403b13b52fdcf78f03c30c9b290cf5902e8b81c075464000c4a60d051ce")
+        XCTAssertEqual(keys.serverToClient.hex, "752b2efa19d5cd52d8ff345f3f0e03d704eedc7beee1ebe2dbc89f60b0ac0fc0")
+    }
+
+    func testSealedFrames() throws {
+        let keys = CouchCrypto.sessionKeys(link: link, clientNonce: cn, serverNonce: sn)
+        var c2s = FrameCipher(key: keys.clientToServer)
+        XCTAssertEqual(try c2s.seal(ping).hex, "0a0a6b0bbb0b4529b51e65b86f44dfce87c8b49dae2ec0d91888872dc1")
+        var s2c = FrameCipher(key: keys.serverToClient)
+        XCTAssertEqual(try s2c.seal(ping).hex, "c39f28299cb0f69dfee7b8e6acee1c1ba89ffba40c26f9d2f9381edf80")
+        XCTAssertEqual(try s2c.seal(ping).hex, "4ae581822bffc631240d4ef352371933d47865ec20a024ff3c7aa01aaa")
+        // And the phone opens what the TV sealed, in order.
+        var opener = FrameCipher(key: keys.serverToClient)
+        XCTAssertEqual(try opener.open(Data(hex: "c39f28299cb0f69dfee7b8e6acee1c1ba89ffba40c26f9d2f9381edf80")), ping)
+        XCTAssertEqual(try opener.open(Data(hex: "4ae581822bffc631240d4ef352371933d47865ec20a024ff3c7aa01aaa")), ping)
+        var framed = FrameCipher(key: keys.serverToClient)
+        XCTAssertEqual(try framed.frame(ping).prefix(4).hex, "0000001d")
+    }
+}

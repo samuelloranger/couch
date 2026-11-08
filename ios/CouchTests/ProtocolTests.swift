@@ -134,6 +134,17 @@ final class MessageTests: XCTestCase {
         }
     }
 
+    func testTVSettingShapes() throws {
+        let json = ##"{"t":"settings","groups":[{"id":"look","title":"Look","rows":[{"key":"accent","title":"Accent","kind":"swatches","options":[{"value":"#34D399","label":"Mint","color":"#34D399"}]},{"key":"fahrenheit","title":"Units","kind":"choice","options":[{"value":false,"label":"Celsius"},{"value":true,"label":"Fahrenheit"}]},{"key":"x","title":"X","kind":"text","visibleWhen":{"key":"fahrenheit","equals":true}}]}]}"##
+        guard case .settings(let g) = try decode(json) else { return XCTFail() }
+        XCTAssertEqual(g[0].rows[0].options[0].value, .string("#34D399"))
+        XCTAssertEqual(g[0].rows[1].options.map(\.value), [.bool(false), .bool(true)])
+        XCTAssertTrue(g[0].rows[1].options[1].value.matches(.bool(true)))
+        XCTAssertFalse(g[0].rows[1].options[1].value.matches(.int(1)))
+        XCTAssertTrue(g[0].rows[2].isVisible(in: ["fahrenheit": .bool(true)]))
+        XCTAssertFalse(g[0].rows[2].isVisible(in: ["fahrenheit": .bool(false)]))
+    }
+
     func testOutgoingShapes() throws {
         func obj(_ m: OutgoingMessage) throws -> [String: JSONValue] {
             try XCTUnwrap(JSONDecoder().decode(JSONValue.self, from: m.encoded()).objectValue)
