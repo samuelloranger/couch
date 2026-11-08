@@ -118,6 +118,11 @@ class Control(private val context: Context) {
         if (started == true && created.await(AWAIT_MS) && mine == generation) {
             created.send(RelayProtocol.keys(emptyList()))
             own = created
+            // A release between the check and the assignment saw no relay to close: close it here.
+            if (mine != generation && own === created) {
+                own = null
+                created.close()
+            }
         } else {
             created.close()
         }
