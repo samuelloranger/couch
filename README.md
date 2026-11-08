@@ -55,6 +55,9 @@ Couch instead of the stock home screen.
 - Updates itself: an Update button appears when a new release is out, one confirmation installs it.
 - **Other TVs**: share screen time between the TVs in the house, over your home network only,
   paired by comparing six digits on both screens. See [the docs](https://samlo.cloud/couch/sync).
+- **Phone**: the Couch app for iPhone, paired the same way: a remote with a keyboard, every setting
+  (live, both ways), apps and inputs, screen time across your TVs, and a live picture of the screen.
+  See [the docs](https://samlo.cloud/couch/phone).
 - **Godmode**, hidden behind seven OK presses on About: tune the TV's animations, block ads for
   every app through private DNS, remove the apps the TV came with (measured on your TV, reversible),
   free cache space, a sleep timer, screenshots, and a frame HUD with a benchmark. See
