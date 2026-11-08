@@ -4,6 +4,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -117,7 +118,15 @@ class WallpaperGalleryActivity : Activity() {
         val alive = java.util.concurrent.atomic.AtomicBoolean(true)
         dialog.setOnDismissListener { alive.set(false) }
         dialog.show()
-        images.load(entry.file.path, 1280, 720, 0f, isCurrent = { alive.get() }) { image.setImageBitmap(it) }
+        worker.execute {
+            val bitmap = runCatching {
+                WallpaperImages.jpeg(entry.file, true)?.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+            }.getOrNull()
+            runOnUiThread {
+                if (alive.get() && !isFinishing && !isDestroyed) image.setImageBitmap(bitmap)
+                else bitmap?.recycle()
+            }
+        }
     }
 
     private fun confirmDelete(entry: WallpaperLibrary.Entry) {
