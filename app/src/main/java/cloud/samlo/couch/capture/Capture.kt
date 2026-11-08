@@ -195,6 +195,7 @@ object Capture {
             }
 
             /** Newer Androids: a public, auto-mirroring virtual display made through the system context. */
+            @android.annotation.SuppressLint("WrongConstant")
             private fun displayManager(input: Surface, w: Int, h: Int): Display {
                 val thread = Reflect.cls("android.app.ActivityThread")
                 val at = Reflect.call(thread, "systemMain") ?: throw IllegalStateException("no activity thread")
