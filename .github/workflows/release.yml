@@ -44,3 +44,46 @@ jobs:
       - name: Remove signing key
         if: always()
         run: rm -f "$RUNNER_TEMP/couch.jks"
+
+  ios:
+    name: iPhone app
+    needs: release
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+      # Built only when ios/ changed since the previous release, so unchanged releases don't carry a stale copy.
+      - name: Check for iPhone app changes
+        id: changed
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          prev=$(git describe --tags --abbrev=0 --match 'v*' "$TAG^" 2>/dev/null || true)
+          if [ -z "$prev" ] || ! git diff --quiet "$prev" "$TAG" -- ios; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ios/ unchanged since $prev: no iPhone build"
+          fi
+      - name: Build unsigned IPA
+        if: steps.changed.outputs.build == 'true'
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+          xcodebuild -project Couch.xcodeproj -scheme Couch -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Couch.xcarchive" archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/Couch.xcarchive/Products/Applications/Couch.app" "$RUNNER_TEMP/ipa/Payload/"
+      - name: Attach to the release
+        if: steps.changed.outputs.build == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          ipa="couch-ios-${TAG}-unsigned.ipa"
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$GITHUB_WORKSPACE/$ipa" Payload)
+          sha256sum "$ipa" > "$ipa.sha256"
+          gh release upload "$TAG" "$ipa" "$ipa.sha256"
