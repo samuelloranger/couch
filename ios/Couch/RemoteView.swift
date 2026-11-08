@@ -11,17 +11,18 @@ struct RemoteView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 18) {
+            VStack(spacing: 14) {
                 LiveCard(controller: controller, fullScreen: $fullScreen)
                 AdbNotice(status: controller.state?.adb ?? .unknown)
                 if let playing = controller.state?.nowPlaying { NowPlayingStrip(playing: playing) }
-                TouchPad(controller: controller)
+                DPad(controller: controller)
                 RemoteButtons(controller: controller)
                 keyboard
             }
             .padding(.horizontal, 16)
-            .padding(.bottom, 24)
+            .padding(.bottom, 12)
         }
+        .contentMargins(.bottom, 8, for: .scrollContent)
         .scrollDismissesKeyboard(.interactively)
         .task { if model.demoMode && model.demoScreen == "full" { fullScreen = true } }
         .fullScreenCover(isPresented: $fullScreen) { FullScreenLive(controller: controller) }
@@ -42,7 +43,7 @@ struct RemoteView: View {
                 .disabled(typed.isEmpty)
         }
         .padding(.horizontal, 14)
-        .frame(minHeight: 52)
+        .frame(minHeight: 48)
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
     }
 
@@ -119,8 +120,11 @@ struct LiveCard: View {
             }
             overlay
         }
-        .aspectRatio(16.0 / 9.0, contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .frame(height: controller.wantsStream ? nil : 92)
+        .aspectRatio(controller.wantsStream ? 16.0 / 9.0 : nil, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .animation(.snappy, value: controller.wantsStream)
         .overlay(alignment: .topTrailing) { controls }
         .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .onTapGesture { toggle() }
@@ -138,8 +142,8 @@ struct LiveCard: View {
 
     @ViewBuilder private var overlay: some View {
         if !controller.wantsStream {
-            VStack(spacing: 8) {
-                Image(systemName: "play.fill").font(.system(size: 34))
+            HStack(spacing: 12) {
+                Image(systemName: "play.fill").font(.system(size: 26))
                 Text("Tap to watch the TV").font(.subheadline)
             }
             .foregroundStyle(.white.opacity(0.85))
@@ -275,64 +279,90 @@ enum Orientation {
     }
 }
 
-// MARK: - Touch pad
+// MARK: - Press and hold
 
-struct TouchPad: View {
+/// Fires on touch-down, so it feels instant. While `repeats` is on, holding past 400 ms sends a `tap`
+/// every 120 ms until release (taps, not key down/up: the TV only truly holds keys through its relay).
+struct KeyPress<Content: View>: View {
     let controller: TVController
-    @State private var origin: CGPoint?
-    @State private var moved = false
-    private let step: CGFloat = 38
+    let key: RemoteKey
+    var repeats = false
+    @ViewBuilder let content: (Bool) -> Content
+    @GestureState private var down = false
+    @State private var repeater: Task<Void, Never>?
+
+    var body: some View {
+        content(down)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .updating($down) { _, state, _ in state = true }
+            )
+            .onChange(of: down) { _, isDown in
+                if isDown { begin() } else { stop() }
+            }
+            .onDisappear(perform: stop)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { controller.press(key) }
+    }
+
+    private func begin() {
+        controller.press(key)
+        guard repeats else { return }
+        repeater = Task {
+            try? await Task.sleep(for: .milliseconds(400))
+            while !Task.isCancelled {
+                controller.press(key)
+                try? await Task.sleep(for: .milliseconds(120))
+            }
+        }
+    }
+
+    private func stop() {
+        repeater?.cancel()
+        repeater = nil
+    }
+}
+
+// MARK: - D-pad
+
+struct DPad: View {
+    let controller: TVController
+    private let outer: CGFloat = 204
+    private let arm: CGFloat = 64
+    private let center: CGFloat = 84
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Theme.card)
-            VStack {
-                Image(systemName: "chevron.compact.up")
-                Spacer()
-                Image(systemName: "chevron.compact.down")
+            Circle().fill(Theme.card).glassEffect(.regular, in: .circle)
+            arrow("chevron.up", .up, label: "Up").offset(y: -70)
+            arrow("chevron.down", .down, label: "Down").offset(y: 70)
+            arrow("chevron.left", .left, label: "Left").offset(x: -70)
+            arrow("chevron.right", .right, label: "Right").offset(x: 70)
+            KeyPress(controller: controller, key: .ok) { pressed in
+                Circle()
+                    .fill(Theme.accent.opacity(pressed ? 0.95 : 0.8))
+                    .overlay(Text("OK").font(.title3.weight(.bold)).foregroundStyle(.black.opacity(0.75)))
+                    .frame(width: center, height: center)
+                    .scaleEffect(pressed ? 0.94 : 1)
+                    .animation(.snappy(duration: 0.12), value: pressed)
+                    .contentShape(Circle())
             }
-            .padding(.vertical, 10)
-            HStack {
-                Image(systemName: "chevron.compact.left")
-                Spacer()
-                Image(systemName: "chevron.compact.right")
-            }
-            .padding(.horizontal, 10)
-            VStack(spacing: 6) {
-                Image(systemName: "hand.tap").font(.title2)
-                Text("Swipe to move, tap to select").font(.footnote)
-            }
-            .foregroundStyle(.secondary)
+            .accessibilityLabel(Text("OK"))
         }
-        .font(.title2)
-        .foregroundStyle(.tertiary)
-        .frame(height: 170)
-        .glassEffect(.regular, in: .rect(cornerRadius: 28))
-        .contentShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    let start = origin ?? value.startLocation
-                    if origin == nil { origin = start }
-                    let dx = value.location.x - start.x, dy = value.location.y - start.y
-                    guard max(abs(dx), abs(dy)) >= step else { return }
-                    let key: RemoteKey = abs(dx) > abs(dy) ? (dx > 0 ? .right : .left) : (dy > 0 ? .down : .up)
-                    controller.press(key)
-                    moved = true
-                    origin = value.location
-                }
-                .onEnded { _ in
-                    if !moved { controller.press(.ok); Haptics.press() }
-                    origin = nil
-                    moved = false
-                }
-        )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Touch pad"))
-        .accessibilityHint(Text("Swipe to move, double tap to select"))
-        .accessibilityAdjustableAction { direction in
-            controller.press(direction == .increment ? .down : .up)
+        .frame(width: outer, height: outer)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func arrow(_ symbol: String, _ key: RemoteKey, label: LocalizedStringKey) -> some View {
+        KeyPress(controller: controller, key: key, repeats: true) { pressed in
+            Image(systemName: symbol)
+                .font(.title2.weight(.semibold))
+                .foregroundStyle(pressed ? Theme.accent : Color.primary)
+                .frame(width: arm, height: arm)
+                .background(pressed ? Color.white.opacity(0.12) : .clear, in: Circle())
+                .contentShape(Circle())
         }
+        .accessibilityLabel(Text(label))
     }
 }
 
@@ -342,10 +372,10 @@ struct RemoteButtons: View {
     let controller: TVController
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             row([.sym("arrow.uturn.backward", .back, "Back"), .sym("house.fill", .home, "Home"), .sym("line.3.horizontal", .menu, "Menu")])
             row([.sym("backward.fill", .rewind, "Rewind"), .sym("playpause.fill", .playPause, "Play or pause"), .sym("forward.fill", .fastForward, "Fast forward")])
-            row([.sym("speaker.minus.fill", .volumeDown, "Volume down"), .sym("speaker.slash.fill", .mute, "Mute"), .sym("speaker.plus.fill", .volumeUp, "Volume up")])
+            row([.sym("speaker.minus.fill", .volumeDown, "Volume down", repeats: true), .sym("speaker.slash.fill", .mute, "Mute"), .sym("speaker.plus.fill", .volumeUp, "Volume up", repeats: true)])
             row([.sym("power", .power, "Power"), .sym("rectangle.connected.to.line.below", .input, "Input"), .sym("gearshape.fill", .settings, "Settings")])
         }
     }
@@ -354,21 +384,26 @@ struct RemoteButtons: View {
         let symbol: String
         let key: RemoteKey
         let label: LocalizedStringKey
+        var repeats = false
         var id: String { key.rawValue }
-        static func sym(_ s: String, _ k: RemoteKey, _ l: LocalizedStringKey) -> Item { Item(symbol: s, key: k, label: l) }
+        static func sym(_ s: String, _ k: RemoteKey, _ l: LocalizedStringKey, repeats: Bool = false) -> Item {
+            Item(symbol: s, key: k, label: l, repeats: repeats)
+        }
     }
 
     private func row(_ items: [Item]) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 10) {
             ForEach(items) { item in
-                Button { controller.press(item.key) } label: {
+                KeyPress(controller: controller, key: item.key, repeats: item.repeats) { pressed in
                     Image(systemName: item.symbol)
-                        .font(.title2)
+                        .font(.title3)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 52)
+                        .frame(height: 48)
                         .foregroundStyle(item.key == .power ? Color.red : Color.primary)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+                        .opacity(pressed ? 0.6 : 1)
+                        .contentShape(RoundedRectangle(cornerRadius: 18))
                 }
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 20))
                 .accessibilityLabel(Text(item.label))
             }
         }
