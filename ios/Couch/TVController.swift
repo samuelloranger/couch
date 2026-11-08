@@ -102,7 +102,7 @@ final class TVController: Identifiable {
             link = .offline
             attempt = ok ? 0 : attempt + 1
             let delay = min(15.0, ok ? 1.0 : pow(2.0, Double(min(attempt, 4))))
-            let nap = Task { try? await Task.sleep(for: .seconds(delay)) }
+            let nap = Task<Void, Never> { try? await Task.sleep(for: .seconds(delay)) }
             backoff = nap
             await nap.value
             backoff = nil
