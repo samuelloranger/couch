@@ -108,7 +108,9 @@ The `Docs` workflow builds it on every push to `main` that touches `docs/` and p
 - **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: build,
   unit tests, lint, an 800 KB APK size budget, and the APK as an artifact.
 - **Release** (`.github/workflows/release.yml`) runs on `v*` tags: it builds and signs the APK and
-  publishes a GitHub release with the APK and its SHA-256.
+  publishes a GitHub release with the APK and its SHA-256. When `ios/` changed since the previous
+  tag, a macOS job also attaches an unsigned iPhone build (`couch-ios-vX.Y.Z-unsigned.ipa`) for
+  sideloading tools that sign it themselves.
 - **Docs** (`.github/workflows/docs.yml`) builds the documentation site and pushes it to the
   repository that serves it. Android CI skips pushes that only change documentation.
 
