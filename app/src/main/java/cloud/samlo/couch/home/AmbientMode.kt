@@ -32,7 +32,7 @@ class AmbientMode(
         val now = SystemClock.uptimeMillis()
         if (activity || idleSince == 0L) idleSince = now
         main.removeCallbacks(enter)
-        if (!isResumed() || minutes <= 0) return
+        if (!isResumed() || minutes <= 0 || (!activity && ambient.showing)) return
         val due = idleSince + minutes * 60_000L
         main.postDelayed(enter, (due - now).coerceAtLeast(0L))
     }
