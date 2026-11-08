@@ -52,19 +52,33 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
     }
 
     private var urls: List<String> = emptyList()
-    private var index = 0
+    private var session = 0L
+
+    /** Optional local rescan; the provider must return its result on the main thread. */
+    var reloadPictures: (((List<String>) -> Unit) -> Unit)? = null
 
     @Volatile
     private var wanted: String? = null
 
     private val rotate = object : Runnable {
         override fun run() {
-            if (urls.size > 1) {
-                index = (index + 1) % urls.size
-                showPicture(urls[index])
+            val mine = session
+            val reload = reloadPictures
+            if (reload == null) {
+                advance(urls)
+            } else {
+                reload { pictures ->
+                    // A scan finishing after wake-up must not bring the overlay or timer back.
+                    if (mine == session && showing) advance(pictures)
+                }
             }
-            main.postDelayed(this, ROTATE_MS)
         }
+    }
+
+    private fun advance(pictures: List<String>) {
+        urls = pictures
+        nextAmbientPicture(pictures, wanted)?.takeIf { it != wanted }?.let { showPicture(it) }
+        main.postDelayed(rotate, ROTATE_MS)
     }
 
     val showing: Boolean get() = visibility == View.VISIBLE
@@ -104,18 +118,20 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
     }
 
     fun show(pictures: List<String>, weatherLine: String?) {
+        session++
         urls = pictures
         weather.text = weatherLine.orEmpty()
         weather.visibility = if (weatherLine.isNullOrEmpty()) View.GONE else View.VISIBLE
         visibility = View.VISIBLE
         animate().alpha(1f).setDuration(800).setInterpolator(Tokens.ease).start()
-        index = if (urls.isEmpty()) 0 else (System.currentTimeMillis() / ROTATE_MS % urls.size).toInt()
+        val index = if (urls.isEmpty()) 0 else (System.currentTimeMillis() / ROTATE_MS % urls.size).toInt()
         urls.getOrNull(index)?.let { showPicture(it) }
         main.removeCallbacks(rotate)
         main.postDelayed(rotate, ROTATE_MS)
     }
 
     fun hide() {
+        session++
         main.removeCallbacks(rotate)
         wanted = null
         animate().alpha(0f).setDuration(220).setInterpolator(Tokens.ease).withEndAction {

@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import cloud.samlo.couch.data.Config
+import cloud.samlo.couch.data.CustomWallpapers
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.data.Wallpapers
 import cloud.samlo.couch.data.Weather
@@ -42,6 +43,14 @@ class HomeLoader(
     private val main = Handler(Looper.getMainLooper())
     private var loading = false
     private var reloadQueued = false
+
+    /** A local-only scan for the active slideshow, without rebuilding the home screen. */
+    fun customPictures(onReady: (List<String>) -> Unit) {
+        executor.execute {
+            val pictures = CustomWallpapers.paths(files.dir)
+            main.post { onReady(pictures) }
+        }
+    }
 
     fun load() {
         if (loading) {

@@ -117,11 +117,11 @@
 
     <!-- Settings: wallpaper -->
     <string name="wallpaper_source">Wallpaper</string>
-    <string name="wallpaper_source_help">Photo of the day: a new Bing photo every day.\nReddit: the best images of a subreddit, changing through the day.\nMy image: wallpaper.jpg, sent over ADB.</string>
+    <string name="wallpaper_source_help">Photo of the day: a new Bing photo every day.\nReddit: the best images of a subreddit, changing through the day.\nMy images: photos in wallpapers/, sent over ADB, alternate every two minutes. Falls back to wallpaper.jpg.</string>
     <string name="wallpaper_daily">Photo of the day</string>
     <string name="wallpaper_reddit">Reddit</string>
     <string name="wallpaper_gradient">Gradient</string>
-    <string name="wallpaper_custom">My image</string>
+    <string name="wallpaper_custom">My images</string>
     <string name="subreddit">Subreddit</string>
     <string name="subreddit_help">The subreddit used when the source is Reddit. Only TV-shaped images are kept.</string>
     <string name="wallpaper_hours">Change image</string>

@@ -197,6 +197,7 @@ class HomeScreen(private val activity: Activity) {
         views.index.topBar.god.show(god)
         ambientMode.minutes = config.ambientMinutes
         ambientMode.pictures = data.pictures
+        views.ambient.reloadPictures = if (config.wallpaper == "custom") loader::customPictures else null
         showWeather(data.weather)
         update = data.update
         // A reload mid-download keeps the "Downloading" label.

@@ -117,11 +117,11 @@
 
     <!-- Settings: wallpaper -->
     <string name="wallpaper_source">Fond d’écran</string>
-    <string name="wallpaper_source_help">Photo du jour : une nouvelle photo de Bing chaque jour.\nReddit : les meilleures images d’un subreddit, qui changent au fil de la journée.\nMon image : wallpaper.jpg, envoyée par ADB.</string>
+    <string name="wallpaper_source_help">Photo du jour : une nouvelle photo de Bing chaque jour.\nReddit : les meilleures images d’un subreddit, qui changent au fil de la journée.\nMes images : les photos du dossier wallpapers/, envoyées par ADB, alternent toutes les deux minutes. Sinon, wallpaper.jpg est utilisée.</string>
     <string name="wallpaper_daily">Photo du jour</string>
     <string name="wallpaper_reddit">Reddit</string>
     <string name="wallpaper_gradient">Dégradé</string>
-    <string name="wallpaper_custom">Mon image</string>
+    <string name="wallpaper_custom">Mes images</string>
     <string name="subreddit">Subreddit</string>
     <string name="subreddit_help">Le subreddit utilisé quand la source est Reddit. Seules les images au format télé sont gardées.</string>
     <string name="wallpaper_hours">Changer d’image</string>
