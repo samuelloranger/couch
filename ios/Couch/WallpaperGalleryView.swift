@@ -50,7 +50,7 @@ struct WallpaperGalleryView: View {
                         ContentUnavailableView("No ambient images", systemImage: "photo.on.rectangle",
                             description: Text("Add photos from your iPhone to start a slideshow on the TV."))
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 145))], alignment: .leading, spacing: 20) {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 145), alignment: .top)], alignment: .leading, spacing: 20) {
                             ForEach(gallery.entries) { image in
                                 Button { selected = image; gallery.request(image.id, preview: true) } label: {
                                     VStack(alignment: .leading, spacing: 8) {
