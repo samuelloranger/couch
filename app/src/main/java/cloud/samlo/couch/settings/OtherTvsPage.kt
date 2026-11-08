@@ -65,7 +65,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
             },
         )
         o.header(ctx.str(R.string.tvs_paired))
-        val all = peers.all()
+        val all = peers.tvs()
         if (all.isEmpty()) o.note(ctx.str(R.string.tvs_none))
         all.forEach { peer ->
             o.link(peer.name, ctx.str(R.string.tvs_peer_help), { peerValue(peer.id, peer.lastSync) }) {

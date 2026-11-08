@@ -12,6 +12,7 @@ import cloud.samlo.couch.data.Fetcher
 import cloud.samlo.couch.godmode.GodmodePage
 import cloud.samlo.couch.godmode.PRESSES
 import cloud.samlo.couch.godmode.Unlock
+import cloud.samlo.couch.sync.Sync
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.update.Installer
@@ -223,6 +224,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.page(ctx.str(R.string.settings_tvs), ctx.str(R.string.settings_tvs_help), { ctx.str(if (config.syncEnabled) R.string.yes else R.string.no) }) {
             open(SettingsActivity.PAGE_TVS)
         }
+        o.page(ctx.str(R.string.settings_phone), ctx.str(R.string.settings_phone_help), { phoneValue() }) { open(SettingsActivity.PAGE_PHONE) }
         o.page(ctx.str(R.string.remote_title), ctx.str(R.string.remote_link_help), { ctx.str(if (config.remoteButtons) R.string.yes else R.string.no) }) {
             open(RemotePage.PAGE)
         }
@@ -232,6 +234,11 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
             ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
+    }
+
+    private fun phoneValue(): String {
+        val count = Sync.peers(ctx.activity).phones().size
+        return if (count == 0) ctx.str(R.string.no) else count.toString()
     }
 
     private fun accessValue(): String {

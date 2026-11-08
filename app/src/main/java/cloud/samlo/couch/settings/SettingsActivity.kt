@@ -37,6 +37,7 @@ class SettingsActivity : Activity() {
             GodmodePage.page -> GodmodePage(ctx)
             DebloatPage.page -> DebloatPage(ctx)
             PAGE_TVS -> OtherTvsPage(ctx)
+            PAGE_PHONE -> PhonePage(ctx)
             PAGE_HOME_ASSISTANT -> HomeAssistantPage(ctx)
             RemotePage.PAGE -> RemotePage(ctx)
             else -> MainPage(ctx)
@@ -75,6 +76,7 @@ class SettingsActivity : Activity() {
         const val PAGE_CHANNELS = "channels"
         const val PAGE_INPUTS = "inputs"
         const val PAGE_TVS = "tvs"
+        const val PAGE_PHONE = "phone"
         const val PAGE_HOME_ASSISTANT = "homeassistant"
         const val PAGE_ACCESS = "access"
         const val PAGE_APPS = "apps"

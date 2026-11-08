@@ -676,4 +676,18 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="hass_page_send">Connect</string>
     <string name="hass_page_done">Connected. You can close this page.</string>
     <string name="hass_page_rejected">Home Assistant didn\'t accept this address or token.</string>
+    <string name="settings_phone">Phone</string>
+    <string name="settings_phone_help">Pair the Couch phone app: a remote, your settings and the screen from your phone, over your home network only.</string>
+    <string name="phone_title">Phone</string>
+    <string name="phone_hint">The Couch app for iPhone. It is encrypted and goes straight between your phone and this TV.</string>
+    <string name="phone_paired">Paired phones</string>
+    <string name="phone_none">None yet</string>
+    <string name="phone_peer_help">Press OK twice to forget this phone. It is cut off right away and can\u2019t reconnect without pairing again.</string>
+    <string name="phone_connected">Connected</string>
+    <string name="phone_not_connected">Not connected</string>
+    <string name="phone_add">Pair a phone</string>
+    <string name="phone_add_help">Open the Couch app on your phone and pick this TV. Both screens show the same six digits; one OK on each confirms. Works with screen-time sharing off.</string>
+    <string name="phone_wait_group">Waiting for your phone</string>
+    <string name="phone_wait_help">In the Couch app, add a TV and pick this one, or type its address.</string>
+    <string name="phone_code_help">The phone must show these same six digits.</string>
 </resources>
