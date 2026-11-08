@@ -11,6 +11,7 @@ final class AppModel {
     private(set) var discovered: [DiscoveredTV] = []
     private(set) var backups: [ConfigBackup] = []
     let demoMode: Bool
+    let pairings = PairingCoordinator()
     let demoScreen: String?
 
     @ObservationIgnored private let store: any PairedStore

@@ -5,6 +5,14 @@ enum PairTarget: Hashable {
     case found(DiscoveredTV)
     case address(String)
 
+    /// One pairing session per TV (or typed address), however often a view is rebuilt.
+    var key: String {
+        switch self {
+        case .found(let d): "tv:" + d.id
+        case .address(let a): "addr:" + a
+        }
+    }
+
     var title: String {
         switch self {
         case .found(let d): d.name
@@ -75,6 +83,7 @@ struct AddTVView: View {
             .navigationDestination(for: PairTarget.self) { target in
                 PairingView(target: target) { dismiss() }
             }
+            .onChange(of: path) { _, new in if new.isEmpty { model.pairings.cancelAll() } }
             .task {
                 if model.demoMode, model.demoScreen == "pair", let first = model.discovered.first { path = [.found(first)] }
             }
@@ -96,27 +105,52 @@ struct PairingView: View {
     let target: PairTarget
     let onDone: () -> Void
 
-    private enum Phase: Equatable {
-        case connecting
-        case compare(String)
-        case finishing
-        case failed(String)
+    var body: some View {
+        PairingContent(session: session, target: target, onDone: onDone)
     }
 
-    @State private var phase: Phase = .connecting
-    @State private var pending: PairingInProgress?
-    @State private var attempt = 0
+    /// Looked up by key each time, so a rebuilt view reuses the pairing already in flight.
+    private var session: PairingSession {
+        let phoneId = model.phoneId, phoneName = model.phoneName, demo = model.demoMode
+        let target = self.target
+        return model.pairings.session(key: target.key) {
+            if demo { return DemoPairing() }
+            switch target {
+            case .found(let d):
+                return try await PairingClient.begin(endpoint: d.endpoint, phoneId: phoneId, phoneName: phoneName)
+            case .address(let a):
+                let (host, port) = PairingContent.split(a)
+                return try await PairingClient.begin(host: host, port: port, phoneId: phoneId, phoneName: phoneName)
+            }
+        }
+    }
+}
+
+final class DemoPairing: PendingPairing, @unchecked Sendable {
+    let tvName = "Bedroom TV"
+    let code = "042431"
+    func finish(matched: Bool) async throws -> PairedTV { PairedTV(id: "demo-new", name: tvName, linkKey: Data(count: 32)) }
+    func cancel() {}
+}
+
+struct PairingContent: View {
+    @Environment(AppModel.self) private var model
+    let session: PairingSession
+    let target: PairTarget
+    let onDone: () -> Void
 
     var body: some View {
         VStack(spacing: 28) {
             Spacer()
-            switch phase {
-            case .connecting, .finishing:
+            switch session.phase {
+            case .idle, .connecting, .done:
                 ProgressView().controlSize(.large)
-                Text(phase == .connecting ? connectingText : finishingText)
-                    .foregroundStyle(.secondary)
+                Text(connectingText).foregroundStyle(.secondary)
+            case .finishing:
+                ProgressView().controlSize(.large)
+                Text(finishingText).foregroundStyle(.secondary)
             case .compare(let code):
-                Text("Does \(target.title) show these digits?")
+                Text(compareTitle)
                     .font(.title3.weight(.medium))
                     .multilineTextAlignment(.center)
                 Text(grouped(code))
@@ -126,89 +160,58 @@ struct PairingView: View {
                     .accessibilityLabel(code.map(String.init).joined(separator: " "))
                     .padding(.vertical, 8)
                 VStack(spacing: 12) {
-                    Button { finish(true) } label: {
+                    Button { answer(true) } label: {
                         Text("They match").frame(maxWidth: .infinity).padding(.vertical, 6)
                     }
                     .buttonStyle(.borderedProminent)
-                    Button { finish(false) } label: {
+                    Button { answer(false) } label: {
                         Text("They differ").frame(maxWidth: .infinity).padding(.vertical, 6)
                     }
                     .buttonStyle(.bordered)
                 }
                 .controlSize(.large)
-            case .failed(let message):
+            case .failed(let failure):
                 Image(systemName: "exclamationmark.triangle.fill").font(.largeTitle).foregroundStyle(.yellow)
-                Text(message).multilineTextAlignment(.center)
-                Button("Try again") { attempt += 1 }.buttonStyle(.borderedProminent)
+                Text(message(for: failure)).multilineTextAlignment(.center)
+                Button("Try again") { session.retry() }.buttonStyle(.borderedProminent)
             }
             Spacer()
         }
         .padding(24)
         .navigationTitle("Pair")
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(phase == .finishing)
-        .task(id: attempt) { await begin() }
-        .onDisappear { pending?.cancel() }
+        .navigationBarBackButtonHidden(session.phase == .finishing)
+        // start() is idempotent: a rebuilt view never opens a second connection.
+        .task { session.start() }
+        .onChange(of: session.phase) { _, phase in if phase == .done { Haptics.success(); onDone() } }
     }
 
     private var connectingText: LocalizedStringKey { "Connecting to \(target.title)…" }
     private var finishingText: LocalizedStringKey { "Finishing…" }
+    private var compareTitle: LocalizedStringKey { "Does \(session.tvName ?? target.title) show these digits?" }
 
     private func grouped(_ code: String) -> String {
         guard code.count == 6 else { return code }
         return String(code.prefix(3)) + " " + String(code.suffix(3))
     }
 
-    private func begin() async {
-        phase = .connecting
-        if model.demoMode {
-            phase = .compare("042 431".replacingOccurrences(of: " ", with: ""))
-            return
-        }
-        do {
-            let p: PairingInProgress
-            switch target {
-            case .found(let d):
-                p = try await PairingClient.begin(endpoint: d.endpoint, phoneId: model.phoneId, phoneName: model.phoneName)
-            case .address(let a):
-                let (host, port) = Self.split(a)
-                p = try await PairingClient.begin(host: host, port: port, phoneId: model.phoneId, phoneName: model.phoneName)
-            }
-            pending = p
-            phase = .compare(p.code)
-        } catch let e as PairingError {
-            phase = .failed(message(for: e))
-        } catch {
-            phase = .failed(String(localized: "Couldn't reach the TV."))
+    private func answer(_ matched: Bool) {
+        let address: String? = { if case .address(let a) = target { return Self.split(a).0 } else { return nil } }()
+        session.finish(matched: matched) { tv in
+            var tv = tv
+            if let address { tv.lastHost = address }
+            if !model.demoMode { try model.add(tv) }
         }
     }
 
-    private func finish(_ matched: Bool) {
-        guard let p = pending else { if matched { onDone() } else { onDone() }; return }
-        phase = .finishing
-        Task {
-            do {
-                var tv = try await p.finish(matched: matched)
-                if case .address(let a) = target { tv.lastHost = Self.split(a).0 }
-                try model.add(tv)
-                Haptics.success()
-                onDone()
-            } catch PairingError.declined {
-                if matched { phase = .failed(String(localized: "The TV didn't confirm. Try pairing again.")) } else { onDone() }
-            } catch is StoreError {
-                phase = .failed(String(localized: "Couldn't save this TV on the phone. Try pairing again."))
-            } catch {
-                phase = .failed(String(localized: "The connection dropped. Try pairing again."))
-            }
-        }
-    }
-
-    private func message(for e: PairingError) -> String {
-        switch e {
+    private func message(for failure: PairingFailure) -> String {
+        switch failure {
         case .notPairing: String(localized: "This TV isn't waiting for a phone. On the TV, open Customize, then Phone, then Pair a phone.")
         case .unreachable: String(localized: "Couldn't reach the TV. Check that you are on the same network.")
         case .protocolError: String(localized: "The TV sent something unexpected. Update Couch on the TV and try again.")
-        case .declined: String(localized: "Pairing was cancelled.")
+        case .declined: String(localized: "The TV didn't confirm. Try pairing again.")
+        case .storage: String(localized: "Couldn't save this TV on the phone. Try pairing again.")
+        case .dropped: String(localized: "The connection dropped. Try pairing again.")
         }
     }
 

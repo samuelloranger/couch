@@ -253,3 +253,82 @@ final class CopyTests: XCTestCase {
         XCTAssertTrue(s.load().isEmpty)
     }
 }
+
+private final class FakePending: PendingPairing, @unchecked Sendable {
+    let tvName = "TV"
+    let code: String
+    private(set) var cancelled = false
+    init(code: String) { self.code = code }
+    func finish(matched: Bool) async throws -> PairedTV { PairedTV(id: "t", name: "TV", linkKey: Data([1])) }
+    func cancel() { cancelled = true }
+}
+
+private actor BeginCounter {
+    private(set) var count = 0
+    func next() -> Int { count += 1; return count }
+}
+
+@MainActor
+final class PairingCoordinatorTests: XCTestCase {
+    func testRepeatedStartOpensOneConnectionAndKeepsItsCode() async throws {
+        let counter = BeginCounter()
+        let coordinator = PairingCoordinator()
+        let make: @Sendable () async throws -> any PendingPairing = {
+            let n = await counter.next()
+            try await Task.sleep(for: .milliseconds(50))
+            return FakePending(code: "00000\(n)")
+        }
+        // A rebuilt view looks the session up again and starts again, several times, mid-flight and after.
+        for _ in 0..<5 { coordinator.session(key: "tv:a", begin: make).start() }
+        try await Task.sleep(for: .milliseconds(300))
+        for _ in 0..<5 { coordinator.session(key: "tv:a", begin: make).start() }
+        let session = coordinator.session(key: "tv:a", begin: make)
+        XCTAssertEqual(session.phase, .compare("000001"))
+        let opened = await counter.count
+        XCTAssertEqual(opened, 1)
+        XCTAssertEqual(session.attempts, 1)
+    }
+
+    func testRetryClosesThePreviousConnectionFirst() async throws {
+        let counter = BeginCounter()
+        let made = Made()
+        let session = PairingSession {
+            let n = await counter.next()
+            let p = FakePending(code: "00000\(n)")
+            made.add(p)
+            return p
+        }
+        session.start()
+        try await Task.sleep(for: .milliseconds(100))
+        session.retry()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(session.phase, .compare("000002"))
+        XCTAssertTrue(made.items[0].cancelled)
+        XCTAssertFalse(made.items[1].cancelled)
+    }
+
+    func testNotPairingBecomesAFailureNotACode() async throws {
+        let session = PairingSession { throw PairingError.notPairing }
+        session.start()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(session.phase, .failed(.notPairing))
+        session.start()  // does not silently retry
+        XCTAssertEqual(session.attempts, 1)
+    }
+
+    func testStorageFailureIsSurfaced() async throws {
+        let session = PairingSession { FakePending(code: "123456") }
+        session.start()
+        try await Task.sleep(for: .milliseconds(100))
+        session.finish(matched: true) { _ in throw StoreError.keychain(-1) }
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(session.phase, .failed(.storage))
+    }
+}
+
+private final class Made: @unchecked Sendable {
+    private let lock = NSLock()
+    private var list: [FakePending] = []
+    func add(_ p: FakePending) { lock.lock(); list.append(p); lock.unlock() }
+    var items: [FakePending] { lock.lock(); defer { lock.unlock() }; return list }
+}
