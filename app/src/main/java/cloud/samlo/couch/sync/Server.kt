@@ -1,5 +1,7 @@
 package cloud.samlo.couch.sync
 
+import cloud.samlo.couch.phone.Handshake
+import cloud.samlo.couch.phone.PhoneHost
 import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
@@ -31,6 +33,12 @@ class Server(
     /** Called after a pairing this TV answered went through. */
     @Volatile var onPaired: ((Peer) -> Unit)? = null
 
+    /** Where authenticated phone sessions go; null answers none. */
+    @Volatile var phones: PhoneHost? = null
+
+    /** Whether snapshots are shared right now: the server also runs for phones alone. */
+    @Volatile var shares: () -> Boolean = { true }
+
     private val watchdog = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
         Thread(r, "couch-sync-watchdog").apply { isDaemon = true }
     }
@@ -61,12 +69,14 @@ class Server(
                     continue
                 }
                 thread(name = "couch-sync-conn", isDaemon = true) {
+                    var kept = false
                     try {
-                        handle(client)
+                        kept = handle(client)
                     } catch (e: Exception) {
                         // Anything a peer can break is that peer's problem: the connection just ends.
                     } finally {
-                        runCatching { client.close() }
+                        // A phone session owns its socket now, and no longer counts against the short-connection budget.
+                        if (!kept) runCatching { client.close() }
                         live.decrementAndGet()
                     }
                 }
@@ -80,7 +90,8 @@ class Server(
         socket = null
     }
 
-    private fun handle(client: Socket) {
+    /** True when the connection was handed to a phone session, which closes it itself. */
+    private fun handle(client: Socket): Boolean {
         client.soTimeout = READ_MS
         val limit = Limit(client)
         try {
@@ -91,7 +102,9 @@ class Server(
             when (request.getString("op")) {
                 "snapshot" -> snapshot(request, output)
                 "pair1" -> pair(client, limit, request, input, output)
+                "phone" -> return phone(client, request, input, output)
             }
+            return false
         } finally {
             limit.cancel()
         }
@@ -114,13 +127,31 @@ class Server(
     /** An unknown or unproven asker gets silence; a proven one gets the snapshot only it can read. */
     private fun snapshot(request: JSONObject, output: DataOutputStream) {
         val id = request.getString("id")
-        val peer = peers.get(id) ?: return
+        // Phones are never asked for snapshots, and nobody is while sharing is off.
+        val peer = peers.get(id)?.takeIf { !it.isPhone && shares() } ?: return
         val nonce = Wire.unb64(request.getString("nonce"))
         if (nonce.size != NONCE_BYTES) return
         val proof = Wire.unb64(request.getString("proof"))
         if (!MessageDigest.isEqual(proof, Crypto.requestProof(peer.key, nonce, id))) return
         val sealed = Crypto.seal(peer.key, current().toByteArray(), nonce)
         Wire.write(output, JSONObject().put("data", Wire.b64(sealed)))
+    }
+
+    /**
+     * A phone opening its long-lived session: it proves it holds the link key, the TV proves the
+     * same back, and the encrypted session starts. Anything wrong closes without a word.
+     */
+    private fun phone(client: Socket, request: JSONObject, input: DataInputStream, output: DataOutputStream): Boolean {
+        val host = phones ?: return false
+        val id = request.getString("id")
+        val peer = peers.get(id)?.takeIf { it.isPhone } ?: return false
+        val cn = Wire.unb64(request.getString("nonce"))
+        if (cn.size != Handshake.NONCE_BYTES) return false
+        val proof = Wire.unb64(request.getString("proof"))
+        if (!MessageDigest.isEqual(proof, Handshake.requestProof(peer.key, cn, id))) return false
+        val sn = Crypto.random(Handshake.NONCE_BYTES)
+        Wire.write(output, JSONObject().put("nonce", Wire.b64(sn)).put("proof", Wire.b64(Handshake.replyProof(peer.key, cn, sn))))
+        return host.adopt(peer, client, input, Handshake.keys(peer.key, cn, sn))
     }
 
     /** Building the snapshot reads the usage log, so paired TVs asking in a burst share one. */
@@ -138,6 +169,7 @@ class Server(
         val commit = Wire.unb64(first.getString("commit"))
         val theirId = first.getString("id").take(Snapshot.MAX_NAME)
         val theirName = first.getString("name").take(Snapshot.MAX_NAME)
+        val kind = Peer.kindOf(first.optString("kind"))
         val mine = Crypto.keyPair()
         Wire.write(output, JSONObject().put("pub", Wire.b64(mine.publicKey)).put("id", peers.id).put("name", peers.name))
         val theirs = Wire.unb64(Wire.read(input, Wire.MAX_REQUEST).getString("pub"))
@@ -156,7 +188,7 @@ class Server(
             val matched = ask(theirName, code)
             val theirAnswer = Wire.read(input, Wire.MAX_REQUEST).getBoolean("ok")
             if (matched && theirAnswer && theirId != peers.id) {
-                val peer = Peer(theirId, theirName, Crypto.linkKey(secret, theirs, mine.publicKey))
+                val peer = Peer(theirId, theirName, Crypto.linkKey(secret, theirs, mine.publicKey), kind = kind)
                 peers.add(peer)
                 Wire.write(output, JSONObject().put("done", true))
                 onPaired?.invoke(peer)
