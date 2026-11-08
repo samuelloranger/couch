@@ -23,6 +23,15 @@ public enum H264 {
         return format
     }
 
+    /// Decode this frame but do not show it (it is stale; a newer one is waiting).
+    public static func markDoNotDisplay(_ sample: CMSampleBuffer) {
+        guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sample, createIfNecessary: true),
+              CFArrayGetCount(attachments) > 0 else { return }
+        let dict = unsafeBitCast(CFArrayGetValueAtIndex(attachments, 0), to: CFMutableDictionary.self)
+        CFDictionarySetValue(dict, Unmanaged.passUnretained(kCMSampleAttachmentKey_DoNotDisplay).toOpaque(),
+                             Unmanaged.passUnretained(kCFBooleanTrue).toOpaque())
+    }
+
     /// One AVCC access unit as a sample buffer shown as soon as it is enqueued.
     public static func sampleBuffer(avcc: Data, keyframe: Bool, format: CMVideoFormatDescription) throws -> CMSampleBuffer {
         guard !avcc.isEmpty else { throw H264Error.empty }

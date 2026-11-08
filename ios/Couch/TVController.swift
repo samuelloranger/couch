@@ -21,12 +21,13 @@ final class TVController: Identifiable {
     private(set) var stream: StreamStatus?
     private(set) var wantsStream = false
     private(set) var hasPicture = false
-    var quality: StreamQuality = .medium
+    /// Low by default (kind to weak Wi-Fi); the last choice is remembered per TV.
+    var quality: StreamQuality = .low
     var banner: String?
     /// Several connections reached the TV but it never answered the handshake.
     private(set) var mayBeForgotten = false
 
-    let video = VideoPipeline()
+    @ObservationIgnored private(set) var video: VideoPipeline!
     nonisolated let id: String
     var displayName: String { state?.name.isEmpty == false ? (state?.name ?? tv.name) : tv.name }
 
@@ -34,6 +35,7 @@ final class TVController: Identifiable {
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var wantedIcons: Set<String> = []
     @ObservationIgnored private var noReplyCount = 0
+    @ObservationIgnored private var keyChain: Task<Void, Never>?
     @ObservationIgnored private var sendChain: Task<Void, Never>?
     @ObservationIgnored private var requestedIcons: Set<String> = []
     @ObservationIgnored private let phoneId: String
@@ -43,13 +45,21 @@ final class TVController: Identifiable {
 
     init(tv: PairedTV, phoneId: String, resolve: @escaping @MainActor () -> NWEndpoint?, remember: @escaping @MainActor (PairedTV) -> Void) {
         self.tv = tv; self.id = tv.id; self.phoneId = phoneId; self.resolve = resolve; self.remember = remember; self.isDemo = false
-        video.onFirstPicture = { [weak self] in self?.hasPicture = true }
-        video.onLayerChange = { [weak self] in
-            // The picture moved to a new layer: have the TV replay config and a keyframe.
-            guard let self, self.wantsStream else { return }
-            self.send(.streamStop)
-            self.send(.streamStart(self.quality))
-        }
+        installVideo()
+        if let raw = UserDefaults.standard.string(forKey: "quality." + tv.id), let q = StreamQuality(rawValue: raw) { quality = q }
+    }
+
+    private func installVideo() {
+        video = VideoPipeline(
+            onFirstPicture: { [weak self] in Task { @MainActor in self?.hasPicture = true } },
+            onLayerChange: { [weak self] in
+                // The picture moved to a new layer: have the TV replay config and a keyframe.
+                Task { @MainActor in
+                    guard let self, self.wantsStream else { return }
+                    self.send(.streamStop)
+                    self.send(.streamStart(self.quality))
+                }
+            })
     }
 
     /// Demo controller: filled with sample data, never touches the network.
@@ -57,6 +67,7 @@ final class TVController: Identifiable {
         tv = demo.tv; id = demo.tv.id; phoneId = ""; resolve = { nil }; remember = { _ in }; isDemo = true
         link = .connected; state = demo.state; config = demo.config; groups = demo.groups
         apps = demo.apps; inputs = demo.inputs; usage = demo.usage; quality = .medium
+        installVideo()
     }
 
     // MARK: lifecycle
@@ -114,6 +125,7 @@ final class TVController: Identifiable {
         } catch { return false }
         if Task.isCancelled { await session.close(); return false }
         self.session = session
+        session.setVideoSink(video)
         requestedIcons.removeAll()
         link = .connected
         if let ip = session.remoteIPv4, ip != tv.lastHost {
@@ -142,10 +154,7 @@ final class TVController: Identifiable {
 
     private func handle(_ event: SessionEvent, from session: PhoneSession) {
         switch event {
-        case .videoConfig(let sps, let pps): video.configure(sps: sps, pps: pps)
-        case .videoUnit(let key, let avcc):
-            video.enqueue(avcc: avcc, keyframe: key)
-            session.backlog.consumed(bytes: avcc.count)
+        case .videoConfig, .videoUnit: break  // video goes to the sink, off the main actor
         case .closed: break
         case .message(let m): handle(m)
         }
@@ -180,8 +189,14 @@ final class TVController: Identifiable {
 
     func send(_ message: OutgoingMessage) {
         guard !isDemo, let s = session else { return }
-        let previous = sendChain
-        sendChain = Task { await previous?.value; try? await s.send(message) }
+        // Keys and stream control never wait behind icon, usage or config traffic.
+        if message.isPriority {
+            let previous = keyChain
+            keyChain = Task { await previous?.value; try? await s.send(message) }
+        } else {
+            let previous = sendChain
+            sendChain = Task { await previous?.value; try? await s.send(message) }
+        }
     }
 
     func press(_ key: RemoteKey, action: KeyAction = .tap) {
@@ -226,6 +241,7 @@ final class TVController: Identifiable {
 
     func setQuality(_ q: StreamQuality) {
         quality = q
+        UserDefaults.standard.set(q.rawValue, forKey: "quality." + tv.id)
         if wantsStream { send(.streamStart(q)) }
     }
 

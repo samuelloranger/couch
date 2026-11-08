@@ -16,6 +16,7 @@ struct VideoSurface: UIViewRepresentable {
     func makeUIView(context: Context) -> VideoLayerView {
         let view = VideoLayerView()
         view.backgroundColor = .black
+        view.displayLayer?.videoGravity = .resizeAspect
         view.onDismantle = { [pipeline] layer in pipeline.detach(layer) }
         if active, let layer = view.displayLayer { pipeline.attach(layer) }
         return view

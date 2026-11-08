@@ -46,6 +46,19 @@ final class Heartbeat: @unchecked Sendable {
     var silentFor: Duration { lock.lock(); defer { lock.unlock() }; return ContinuousClock.now - last }
 }
 
+/// Receives video straight from the session's read loop, off the main actor.
+public protocol VideoSink: AnyObject, Sendable {
+    func videoConfig(sps: Data, pps: Data)
+    /// `release` must be called once the frame has been handled, so the backlog bound can advance.
+    func videoUnit(avcc: Data, keyframe: Bool, release: @escaping @Sendable () -> Void)
+}
+
+final class SinkBox: @unchecked Sendable {
+    private let lock = NSLock()
+    private var sink: (any VideoSink)?
+    var value: (any VideoSink)? { get { lock.lock(); defer { lock.unlock() }; return sink } set { lock.lock(); sink = newValue; lock.unlock() } }
+}
+
 public enum SessionError: Error, Equatable {
     case handshakeFailed(String)
     /// TCP connected but the TV closed or stalled without answering: it may have forgotten this phone.
@@ -68,6 +81,10 @@ public actor PhoneSession {
 
     /// Video the consumer has not handled yet; the reader drops delta frames when it grows.
     public nonisolated let backlog = VideoBacklog()
+    private nonisolated let sinkBox = SinkBox()
+
+    /// With a sink set, video bypasses `events` and goes to the sink on the read loop's thread.
+    public nonisolated func setVideoSink(_ sink: (any VideoSink)?) { sinkBox.value = sink }
 
     public nonisolated var remoteIPv4: String? { channel.remoteIPv4 }
 
@@ -121,6 +138,7 @@ public actor PhoneSession {
         let continuation = self.continuation
         let heartbeat = self.heartbeat
         let backlog = self.backlog
+        let sinkBox = self.sinkBox
         readTask = Task.detached { [weak self] in
             var cipher = cipher
             do {
@@ -134,9 +152,16 @@ public actor PhoneSession {
                     switch try SessionFrame.parse(try cipher.open(sealed)) {
                     case .json(let data):
                         if let message = try? IncomingMessage.decode(data) { continuation.yield(.message(message)) }
-                    case .videoConfig(let sps, let pps): continuation.yield(.videoConfig(sps: sps, pps: pps))
+                    case .videoConfig(let sps, let pps):
+                        if let sink = sinkBox.value { sink.videoConfig(sps: sps, pps: pps) } else { continuation.yield(.videoConfig(sps: sps, pps: pps)) }
                     case .videoUnit(let key, let avcc):
-                        if backlog.admit(bytes: avcc.count, keyframe: key) { continuation.yield(.videoUnit(keyframe: key, avcc: avcc)) }
+                        guard backlog.admit(bytes: avcc.count, keyframe: key) else { break }
+                        if let sink = sinkBox.value {
+                            let size = avcc.count
+                            sink.videoUnit(avcc: avcc, keyframe: key) { backlog.consumed(bytes: size) }
+                        } else {
+                            continuation.yield(.videoUnit(keyframe: key, avcc: avcc))
+                        }
                     case .ignored: break
                     }
                 }

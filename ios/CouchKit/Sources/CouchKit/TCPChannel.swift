@@ -19,22 +19,21 @@ public final class TCPChannel: @unchecked Sendable {
     private let queue = DispatchQueue(label: "cloud.samlo.couch.channel")
 
     public init(host: String, port: UInt16) {
-        let params = NWParameters.tcp
-        if let tcp = params.defaultProtocolStack.transportProtocol as? NWProtocolTCP.Options {
-            tcp.noDelay = true
-            tcp.enableKeepalive = true
-            tcp.keepaliveIdle = 20
-        }
+        let params = Self.parameters()
         connection = NWConnection(host: NWEndpoint.Host(host), port: NWEndpoint.Port(rawValue: port) ?? 47820, using: params)
     }
 
+    /// TCP_NODELAY on, so a key press or a video frame never waits for Nagle.
+    static func parameters() -> NWParameters {
+        let tcp = NWProtocolTCP.Options()
+        tcp.noDelay = true
+        tcp.enableKeepalive = true
+        tcp.keepaliveIdle = 20
+        return NWParameters(tls: nil, tcp: tcp)
+    }
+
     public init(endpoint: NWEndpoint) {
-        let params = NWParameters.tcp
-        if let tcp = params.defaultProtocolStack.transportProtocol as? NWProtocolTCP.Options {
-            tcp.noDelay = true
-            tcp.enableKeepalive = true
-            tcp.keepaliveIdle = 20
-        }
+        let params = Self.parameters()
         connection = NWConnection(to: endpoint, using: params)
     }
 

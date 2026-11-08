@@ -62,6 +62,14 @@ public enum OutgoingMessage: Sendable, Equatable {
 
     public static let maxText = 500
 
+    /// Input and stream control: sent on their own path so bulk requests never delay them.
+    public var isPriority: Bool {
+        switch self {
+        case .key, .text, .launch, .input, .streamStart, .streamStop, .ping: return true
+        default: return false
+        }
+    }
+
     public var object: [String: JSONValue] {
         switch self {
         case .hello(let app): return ["t": .string("hello"), "app": .string(app)]
