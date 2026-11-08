@@ -2,6 +2,7 @@ package cloud.samlo.couch.phone
 
 import android.content.Context
 import cloud.samlo.couch.adb.AdbShell
+import cloud.samlo.couch.adb.RootShell
 import cloud.samlo.couch.adb.Shell
 import org.json.JSONObject
 
@@ -67,6 +68,8 @@ class Video(private val context: Context) {
     }
 
     private fun launch() {
+        // Earlier sources of ours may have left a root-side screenrecord running.
+        RootShell.killTracked()
         val mine = ++generation
         state = "starting"
         message = null
@@ -87,6 +90,7 @@ class Video(private val context: Context) {
     private fun halt(next: String, why: String?) {
         generation++
         shell?.close()
+        RootShell.killTracked()
         shell = null
         thread = null
         config = null
