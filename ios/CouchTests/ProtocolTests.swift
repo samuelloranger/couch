@@ -262,6 +262,65 @@ final class CopyTests: XCTestCase {
     }
 }
 
+final class PendingQueueTests: XCTestCase {
+    private let t0 = ContinuousClock.now
+
+    func testKeepsOrderAndEmptiesOnDrain() {
+        var q = PendingQueue()
+        q.append(.key(.power, .tap), now: t0)
+        q.append(.text("hi"), now: t0 + .seconds(1))
+        q.append(.launch(packageName: "com.a"), now: t0 + .seconds(2))
+        q.append(.input(id: "hdmi1"), now: t0 + .seconds(2))
+        XCTAssertEqual(q.drain(now: t0 + .seconds(3)),
+                       [.key(.power, .tap), .text("hi"), .launch(packageName: "com.a"), .input(id: "hdmi1")])
+        XCTAssertEqual(q.count, 0)
+        XCTAssertEqual(q.drain(now: t0 + .seconds(3)), [])
+    }
+
+    func testCapDropsTheOldest() {
+        var q = PendingQueue()
+        for i in 0..<(PendingQueue.capacity + 3) { q.append(.text("\(i)"), now: t0) }
+        let out = q.drain(now: t0)
+        XCTAssertEqual(out.count, PendingQueue.capacity)
+        XCTAssertEqual(out.first, .text("3"))
+        XCTAssertEqual(out.last, .text("\(PendingQueue.capacity + 2)"))
+    }
+
+    func testExpiredEntriesAreDroppedSilently() {
+        var q = PendingQueue()
+        q.append(.key(.power, .tap), now: t0)
+        q.append(.key(.home, .tap), now: t0 + .seconds(4))
+        XCTAssertEqual(q.drain(now: t0 + .seconds(6)), [.key(.home, .tap)])
+        q.append(.key(.back, .tap), now: t0)
+        q.append(.key(.ok, .tap), now: t0 + PendingQueue.lifetime + .seconds(1))  // expires the first on append
+        XCTAssertEqual(q.count, 1)
+    }
+
+    func testExpiryIsExactlyAtTheLifetime() {
+        var q = PendingQueue()
+        q.append(.key(.power, .tap), now: t0)
+        XCTAssertEqual(q.drain(now: t0 + PendingQueue.lifetime).count, 1)
+        q.append(.key(.power, .tap), now: t0)
+        XCTAssertEqual(q.drain(now: t0 + PendingQueue.lifetime + .milliseconds(1)).count, 0)
+    }
+
+    func testLiveCountIgnoresExpiredEntries() {
+        var q = PendingQueue()
+        XCTAssertEqual(q.liveCount(now: t0), 0)
+        q.append(.key(.power, .tap), now: t0)
+        XCTAssertEqual(q.liveCount(now: t0 + .seconds(1)), 1)
+        XCTAssertEqual(q.liveCount(now: t0 + .seconds(6)), 0)
+    }
+
+    func testStreamControlAndBulkRequestsAreNeverQueued() {
+        var q = PendingQueue()
+        for m: OutgoingMessage in [.streamStart(.low), .streamStop, .usage, .icon(key: "a"), .configSet([:]), .ping, .hello(app: "1")] {
+            XCTAssertFalse(q.append(m, now: t0))
+        }
+        XCTAssertEqual(q.count, 0)
+    }
+}
+
 private final class FakePending: PendingPairing, @unchecked Sendable {
     let tvName = "TV"
     let code: String

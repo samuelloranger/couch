@@ -35,6 +35,11 @@ final class TVController: Identifiable {
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var wantedIcons: Set<String> = []
     @ObservationIgnored private var noReplyCount = 0
+    @ObservationIgnored private var pending = PendingQueue()
+    @ObservationIgnored private var closed = false
+    @ObservationIgnored private var lastAttempt: ContinuousClock.Instant?
+    @ObservationIgnored private var backoff: Task<Void, Never>?
+    @ObservationIgnored private var nudged = false
     @ObservationIgnored private var keyChain: Task<Void, Never>?
     @ObservationIgnored private var sendChain: Task<Void, Never>?
     @ObservationIgnored private var requestedIcons: Set<String> = []
@@ -73,13 +78,16 @@ final class TVController: Identifiable {
     // MARK: lifecycle
 
     func connect() {
-        guard !isDemo, loop == nil else { return }
+        guard !isDemo, !closed, loop == nil else { return }
         loop = Task { [weak self] in await self?.run() }
     }
 
     func disconnect() {
         guard !isDemo else { return }
         loop?.cancel(); loop = nil
+        backoff?.cancel(); backoff = nil
+        pending.clear()
+        nudged = false
         let s = session; session = nil
         Task { await s?.close() }
         link = .offline
@@ -88,18 +96,37 @@ final class TVController: Identifiable {
         hasPicture = false
     }
 
+    /// The controller was replaced or forgotten: stop for good, so a stale reference can't reconnect.
+    func close() {
+        closed = true
+        disconnect()
+    }
+
     func update(_ tv: PairedTV) { self.tv = tv }
 
     private func run() async {
         var attempt = 0
         while !Task.isCancelled {
+            // At least 500 ms between attempts, however often a press nudges the loop.
+            if let last = lastAttempt {
+                let gap = ContinuousClock.now - last
+                if gap < .milliseconds(500) { try? await Task.sleep(for: .milliseconds(500) - gap) }
+                if Task.isCancelled { return }
+            }
+            lastAttempt = .now
             link = .connecting
             let ok = await runOnce(attempt: attempt)
             if Task.isCancelled { return }
             link = .offline
             attempt = ok ? 0 : attempt + 1
+            // A press during the attempt asked for an immediate retry; honour it before any wait.
+            if nudged { nudged = false; attempt = 0; continue }
             let delay = min(15.0, ok ? 1.0 : pow(2.0, Double(min(attempt, 4))))
-            try? await Task.sleep(for: .seconds(delay))
+            let nap = Task<Void, Never> { try? await Task.sleep(for: .seconds(delay)) }
+            backoff = nap
+            await withTaskCancellationHandler { await nap.value } onCancel: { nap.cancel() }
+            if backoff == nap { backoff = nil }
+            if nudged { nudged = false; attempt = 0 }
         }
     }
 
@@ -127,20 +154,29 @@ final class TVController: Identifiable {
         if Task.isCancelled { await session.close(); return false }
         self.session = session
         requestedIcons.removeAll()
+        nudged = false
         link = .connected
         if let ip = session.remoteIPv4, ip != tv.lastHost {
             tv.lastHost = ip
             remember(tv)
         }
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        try? await session.send(.hello(app: version))
-        try? await session.send(.usage)
+        // No suspension from here to the end of this block: everything goes through one serial path,
+        // hello first, then what was pressed while connecting, then bulk requests, so a live press
+        // that arrives afterwards can never overtake an older one.
+        dispatch(session, .hello(app: version), priorityPath: true)
+        for message in pending.drain() { dispatch(session, message, priorityPath: true) }
+        // Bulk requests keep their own order, but only start once hello and the flushed presses are out;
+        // a live key pressed afterwards never waits behind them.
+        let keysSoFar = keyChain
+        sendChain = Task { [previous = sendChain] in await previous?.value; await keysSoFar?.value }
+        dispatch(session, .usage, priorityPath: false)
         for key in wantedIcons.subtracting(icons.keys) {
             requestedIcons.insert(key)
-            try? await session.send(.icon(key: key))
+            dispatch(session, .icon(key: key), priorityPath: false)
         }
         wantedIcons.removeAll()
-        if wantsStream { try? await session.send(.streamStart(quality)) }
+        if wantsStream { dispatch(session, .streamStart(quality), priorityPath: true) }
         for await event in session.events { handle(event, from: session) }
         // A newer session may already own the controller; only clear what is ours.
         if self.session === session {
@@ -188,15 +224,34 @@ final class TVController: Identifiable {
     // MARK: sending
 
     func send(_ message: OutgoingMessage) {
-        guard !isDemo, let s = session else { return }
+        guard !isDemo, !closed else { return }
+        guard let s = session else {
+            // Not connected: hold what the person pressed and reconnect now, not at the next retry.
+            // Only the first press of a burst asks for a reconnect; repeats of queued keys don't re-nudge.
+            let first = pending.liveCount() == 0
+            if pending.append(message), first { reconnectNow() }
+            return
+        }
         // Keys and stream control never wait behind icon, usage or config traffic.
-        if message.isPriority {
+        dispatch(s, message, priorityPath: message.isPriority)
+    }
+
+    private func dispatch(_ s: PhoneSession, _ message: OutgoingMessage, priorityPath: Bool) {
+        if priorityPath {
             let previous = keyChain
             keyChain = Task { await previous?.value; try? await s.send(message) }
         } else {
             let previous = sendChain
             sendChain = Task { await previous?.value; try? await s.send(message) }
         }
+    }
+
+    /// Cancels the current backoff wait so the next attempt starts immediately.
+    func reconnectNow() {
+        guard !closed else { return }
+        if loop == nil { connect(); return }
+        nudged = true
+        backoff?.cancel()
     }
 
     func press(_ key: RemoteKey, action: KeyAction = .tap) {
