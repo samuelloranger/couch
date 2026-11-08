@@ -2,6 +2,7 @@ package cloud.samlo.couch.phone
 
 import android.content.Context
 import cloud.samlo.couch.adb.AdbShell
+import cloud.samlo.couch.adb.Shell
 import org.json.JSONObject
 
 /**
@@ -30,7 +31,7 @@ class Video(private val context: Context) {
     private var config: ByteArray? = null
     private var quality = Quality.MEDIUM
     private var thread: Thread? = null
-    private var shell: AdbShell? = null
+    private var shell: Shell? = null
     @Volatile private var generation = 0
     private var state = "ended"
     private var message: String? = null
@@ -105,16 +106,20 @@ class Video(private val context: Context) {
             val q = synchronized(lock) { quality }
             val units = AccessUnits({ unit -> frames++; publish(mine, unit) }, { sps, pps -> newConfig(mine, sps, pps) })
             val splitter = AnnexB(units::add)
-            val sh = PhoneAdb.create(context, PhoneAdb.state != PhoneAdb.State.READY && PhoneAdb.enabled(context) && PhoneAdb.claimPrompt())
+            val sh = PhoneAdb.create(context, true)
+            if (sh == null) {
+                PhoneAdb.failed(AdbShell.Failed.Off(null))
+                synchronized(lock) { if (current(mine)) halt("needs-adb", PhoneAdb.message()) }
+                return
+            }
             synchronized(lock) { if (current(mine)) shell = sh else return sh.close() }
             try {
-                if (!PhoneAdb.enabled(context)) throw AdbShell.Failed.Off(null)
                 sh.exec(
                     "screenrecord --output-format=h264 --size ${q.width}x${q.height} --bit-rate ${q.bitRate} -",
                     IDLE_MS,
                     { splitter.flush(); units.flush() },
                 ) {
-                    PhoneAdb.ready()
+                    PhoneAdb.ready(sh)
                     splitter.feed(it)
                 }
             } catch (e: AdbShell.Failed) {

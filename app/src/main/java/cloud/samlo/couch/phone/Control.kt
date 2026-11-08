@@ -3,6 +3,7 @@ package cloud.samlo.couch.phone
 import android.content.Context
 import cloud.samlo.couch.HomeAccessibilityService
 import cloud.samlo.couch.adb.AdbShell
+import cloud.samlo.couch.adb.Shell
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.remote.RelayLink
@@ -24,7 +25,7 @@ class Control(private val context: Context) {
         1, 1, 0L, TimeUnit.MILLISECONDS, ArrayBlockingQueue(QUEUE),
         { r -> Thread(r, "couch-phone-control").apply { isDaemon = true } },
     )
-    @Volatile private var shell: AdbShell? = null
+    @Volatile private var shell: Shell? = null
     @Volatile private var own: RelayLink? = null
     private var relayRetryAt = 0L
 
@@ -65,16 +66,9 @@ class Control(private val context: Context) {
      * the picture; a full queue skips it, since the next request tries again anyway.
      */
     fun probe() {
-        if (PhoneAdb.state == PhoneAdb.State.READY) return
+        if (PhoneAdb.usable) return
         try {
-            worker.execute {
-                if (!PhoneAdb.enabled(context)) {
-                    shell = null
-                    PhoneAdb.failed(AdbShell.Failed.Off(null))
-                } else {
-                    shell(allowPrompt = false) { it.run("true") }
-                }
-            }
+            worker.execute { shell(allowPrompt = false, probeRoot = false) { it.run("true") } }
         } catch (e: RejectedExecutionException) {
             // Busy with real requests, which retry the connection themselves.
         }
@@ -123,14 +117,14 @@ class Control(private val context: Context) {
     }
 
     /** Runs [block] on the persistent connection, opening it if needed; null when ADB isn't usable. */
-    private fun <T> shell(allowPrompt: Boolean = true, block: (AdbShell) -> T): T? {
-        if (!PhoneAdb.enabled(context)) {
+    private fun <T> shell(allowPrompt: Boolean = true, probeRoot: Boolean = true, block: (Shell) -> T): T? {
+        val sh = shell ?: PhoneAdb.create(context, allowPrompt, probeRoot)?.also { shell = it }
+        if (sh == null) {
             PhoneAdb.failed(AdbShell.Failed.Off(null))
             return null
         }
-        val sh = shell ?: PhoneAdb.create(context, allowPrompt && PhoneAdb.state != PhoneAdb.State.READY && PhoneAdb.claimPrompt()).also { shell = it }
         try {
-            return block(sh).also { PhoneAdb.ready() }
+            return block(sh).also { PhoneAdb.ready(sh) }
         } catch (e: AdbShell.Failed) {
             sh.close()
             // A connection closed by release() failing says nothing about ADB.

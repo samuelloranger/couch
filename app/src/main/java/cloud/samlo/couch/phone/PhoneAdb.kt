@@ -3,6 +3,9 @@ package cloud.samlo.couch.phone
 import android.content.Context
 import android.provider.Settings
 import cloud.samlo.couch.adb.AdbShell
+import cloud.samlo.couch.adb.Root
+import cloud.samlo.couch.adb.RootShell
+import cloud.samlo.couch.adb.Shell
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -12,7 +15,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object PhoneAdb {
     /** The values `state.adb` takes on the wire. */
-    enum class State(val wire: String) { UNKNOWN("unknown"), READY("ready"), DIALOG("dialog"), OFF("off"), BLOCKED("blocked") }
+    enum class State(val wire: String) { UNKNOWN("unknown"), READY("ready"), ROOT("root"), DIALOG("dialog"), OFF("off"), BLOCKED("blocked") }
 
     @Volatile var state = State.UNKNOWN
         private set
@@ -28,16 +31,29 @@ object PhoneAdb {
     /** Whether Developer options has debugging on; without it nothing listens, whatever the state says. */
     fun enabled(context: Context) = Settings.Global.getInt(context.contentResolver, Settings.Global.ADB_ENABLED, 0) == 1
 
-    /** A shell that, when [prompt] is off, fails instead of asking. Connects on first use. */
-    fun create(context: Context, prompt: Boolean): AdbShell = AdbShell.create(context, prompt) { phase ->
-        when (phase) {
-            AdbShell.Phase.DIALOG -> set(State.DIALOG)
-            AdbShell.Phase.READY -> set(State.READY)
-            else -> Unit
+    /** Whether a shell works, by ADB or as root. */
+    val usable get() = state == State.READY || state == State.ROOT
+
+    /**
+     * A shell for keys, text and video, or null when there is no way to one. Root, where `su` gives
+     * it, comes first and asks nothing; [probeRoot] false only uses root already found, so merely
+     * saying hello never runs `su`. Otherwise ADB: with [prompt] off it fails instead of asking,
+     * and a request that may ask does so at most once per process. Connects on first use.
+     */
+    fun create(context: Context, prompt: Boolean, probeRoot: Boolean = true): Shell? {
+        if (if (probeRoot) Root.available() else Root.cached() == true) return RootShell()
+        if (!enabled(context)) return null
+        val ask = prompt && !usable && claimPrompt()
+        return AdbShell.create(context, ask) { phase ->
+            when (phase) {
+                AdbShell.Phase.DIALOG -> set(State.DIALOG)
+                AdbShell.Phase.READY -> set(State.READY)
+                else -> Unit
+            }
         }
     }
 
-    fun ready() = set(State.READY)
+    fun ready(shell: Shell) = set(if (shell is RootShell) State.ROOT else State.READY)
 
     /** Records why a connection failed. */
     fun failed(e: AdbShell.Failed) = set(

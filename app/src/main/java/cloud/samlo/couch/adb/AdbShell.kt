@@ -25,7 +25,7 @@ class AdbShell private constructor(
     private val key: AdbKey,
     private val prompt: Boolean,
     private val phase: (Phase) -> Unit,
-) {
+) : Shell {
     private var live: Socket? = null
     private var stream = 0
 
@@ -43,13 +43,13 @@ class AdbShell private constructor(
      * Android may ask to allow debugging; later calls reuse that connection as a new stream, so
      * one piece of work asks at most once however many commands it takes. [close] when done.
      */
-    fun run(command: String): String = stream("shell:$command").toString(Charsets.UTF_8.name())
+    override fun run(command: String): String = stream("shell:$command").toString(Charsets.UTF_8.name())
 
     /**
      * Like [run], over adbd's newer shell protocol. Anything the command leaves running in the
      * background then outlives the stream; the old protocol takes it down when the stream ends.
      */
-    fun runLasting(command: String): String {
+    override fun runLasting(command: String): String {
         val raw = stream("shell,v2,raw:$command").toByteArray()
         // Each v2 packet is an id byte, a little-endian length, and that many bytes; id 1 is stdout.
         val out = ByteArrayOutputStream()
@@ -77,7 +77,7 @@ class AdbShell private constructor(
      * ends; [close] from another thread ends it early, as a [Failed.Blocked]. Uses this
      * connection's stream, so give a long-running command a shell of its own.
      */
-    fun exec(command: String, idleMs: Int, onIdle: () -> Unit, onData: (ByteArray) -> Unit) =
+    override fun exec(command: String, idleMs: Int, onIdle: () -> Unit, onData: (ByteArray) -> Unit) =
         pump("exec:$command", idleMs, onIdle, onData)
 
     /** Opens [service] as a new stream and feeds its output to [sink] until adbd closes it. */
@@ -124,7 +124,7 @@ class AdbShell private constructor(
     }
 
     /** Lets go of the connection; a later [run] opens a new one and may ask again. */
-    fun close() {
+    override fun close() {
         live?.let { runCatching { it.close() } }
         live = null
     }
