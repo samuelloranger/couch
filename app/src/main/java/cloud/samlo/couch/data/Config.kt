@@ -6,7 +6,7 @@ import java.io.File
  * Everything the user can customise, stored in `Android/data/cloud.samlo.couch/files/config.json`
  * so it can also be edited or backed up over ADB. Custom images go next to it in
  * `icons/<key>.png` (an app's package name, or an input's slug such as `hdmi4`) and
- * `wallpaper.jpg`.
+ * `wallpapers/` (or the original `wallpaper.jpg`).
  */
 class Config {
     // Apps and inputs
@@ -32,7 +32,7 @@ class Config {
     var wallpaper: String = "daily"
     var clock24h = true
 
-    // Wallpaper: "daily" (Bing photo of the day), "reddit", "gradient" or "custom" (wallpaper.jpg)
+    // Wallpaper: "daily" (Bing photo of the day), "reddit", "gradient" or "custom" (wallpapers/)
     var subreddit = DEFAULT_SUBREDDIT
     var wallpaperHours = 3
 

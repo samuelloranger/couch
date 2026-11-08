@@ -14,7 +14,7 @@ is off, a line at the top says so and opens the permissions page.
 |---|---|---|
 | Appearance | Accent colour | Mint, Ember, Amber, Sky, Coral, White |
 | | Ambient mode | Never, 2, 5, 10 or 20 minutes |
-| | Wallpaper *(ambient on)* | Photo of the day (Bing), Reddit, Gradient, My image |
+| | Wallpaper *(ambient on)* | Photo of the day (Bing), Reddit, Gradient, My images |
 | | Subreddit *(Reddit)* | any subreddit; only TV-shaped images (16:9 to 21:9) are kept |
 | | Change image *(Reddit)* | every 1, 3, 6 or 24 hours |
 | Home screen | App order | Usage, Manual, Alphabetical; pinned apps stay first |
@@ -122,13 +122,32 @@ Couch keeps its settings in its external files directory, which ADB can read and
 ```
 /sdcard/Android/data/cloud.samlo.couch/files/
 ├── config.json
-├── wallpaper.jpg          # used when the wallpaper source is "Mon image"
+├── wallpaper.jpg          # single-image fallback for "My images"
+├── wallpapers/            # "My images" slideshow, in filename order
+│   ├── 01-landscape.jpg
+│   └── 02-night-sky.png
 └── icons/
     ├── hdmi1.png          # custom image for an input (key = its system name, letters and digits)
     └── <package>.png      # custom image for an app (key = package name)
 ```
 
 Custom images are centre-cropped to the card's 16:9 shape.
+
+For an ambient slideshow, select **My images** and copy JPEG (`.jpg` or `.jpeg`), PNG or WebP
+files into `wallpapers/`. Extensions are case-insensitive; hidden files, empty files and
+subdirectories are ignored. Pictures alternate every two minutes with a crossfade and gentle
+zoom, at 1920 × 1080 pixels. Number filenames to choose their order; the first picture when
+ambient mode opens varies with the time, then playback follows that order and loops.
+
+```sh
+adb shell mkdir -p /sdcard/Android/data/cloud.samlo.couch/files/wallpapers
+adb push 01-landscape.jpg 02-night-sky.png /sdcard/Android/data/cloud.samlo.couch/files/wallpapers/
+```
+
+Return to the home screen after adding or removing pictures to reload the list. To replace an
+image, use a new filename so an earlier copy is not reused from memory. When the folder has no
+supported nonempty files, Couch uses the original `wallpaper.jpg`; with neither, it falls back
+to the photo of the day. Existing single-image configurations need no changes.
 
 ## config.json
 
