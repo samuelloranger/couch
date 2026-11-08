@@ -25,7 +25,7 @@ final class TVController: Identifiable {
     var banner: String?
 
     let video = VideoPipeline()
-    var id: String { tv.id }
+    nonisolated let id: String
     var displayName: String { state?.name.isEmpty == false ? (state?.name ?? tv.name) : tv.name }
 
     @ObservationIgnored private var session: PhoneSession?
@@ -38,13 +38,13 @@ final class TVController: Identifiable {
     @ObservationIgnored let isDemo: Bool
 
     init(tv: PairedTV, phoneId: String, resolve: @escaping @MainActor () -> NWEndpoint?, remember: @escaping @MainActor (PairedTV) -> Void) {
-        self.tv = tv; self.phoneId = phoneId; self.resolve = resolve; self.remember = remember; self.isDemo = false
+        self.tv = tv; self.id = tv.id; self.phoneId = phoneId; self.resolve = resolve; self.remember = remember; self.isDemo = false
         video.onFirstPicture = { [weak self] in self?.hasPicture = true }
     }
 
     /// Demo controller: filled with sample data, never touches the network.
     init(demo: DemoData) {
-        tv = demo.tv; phoneId = ""; resolve = { nil }; remember = { _ in }; isDemo = true
+        tv = demo.tv; id = demo.tv.id; phoneId = ""; resolve = { nil }; remember = { _ in }; isDemo = true
         link = .connected; state = demo.state; config = demo.config; groups = demo.groups
         apps = demo.apps; inputs = demo.inputs; usage = demo.usage; quality = .medium
     }

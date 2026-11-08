@@ -1,7 +1,7 @@
 import Foundation
 import Network
 
-public struct DiscoveredTV: Sendable, Identifiable, Equatable {
+public struct DiscoveredTV: Sendable, Identifiable, Hashable {
     public var id: String
     public var name: String
     /// True while the TV has "Pair a phone" open.
