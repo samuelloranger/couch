@@ -50,9 +50,23 @@ final class WallpaperWireTests: XCTestCase {
         XCTAssertTrue(CGImageDestinationFinalize(destination))
         let prepared = try prepareWallpaper(original as Data, maxPixelSize: 40)
         let source = try XCTUnwrap(CGImageSourceCreateWithData(prepared as CFData, nil))
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.jpeg.identifier)
         let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
         XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 20)
         XCTAssertEqual(properties[kCGImagePropertyPixelHeight] as? Int, 40)
+    }
+
+    func testPhotoPreparationReencodesOtherFormatsAsJPEG() throws {
+        let context = try XCTUnwrap(CGContext(data: nil, width: 64, height: 32, bitsPerComponent: 8,
+            bytesPerRow: 64 * 4, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let original = NSMutableData()
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(original, UTType.png.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, try XCTUnwrap(context.makeImage()), nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let prepared = try prepareWallpaper(original as Data)
+        let source = try XCTUnwrap(CGImageSourceCreateWithData(prepared as CFData, nil))
+        XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.jpeg.identifier)
+        XCTAssertEqual(Array(prepared.prefix(3)), [0xFF, 0xD8, 0xFF])
     }
 
     func testUploadWaitsForEveryAcknowledgementAndCommitsLast() async throws {
