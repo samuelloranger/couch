@@ -235,7 +235,7 @@ class Video(private val context: Context) {
     }
 
     private companion object {
-        /** Quiet this long and the frame being read is whole: screenrecord writes a frame in one burst. */
+        /** The last frame before a pause is closed after this much quiet; otherwise the next frame's start ends it. */
         const val IDLE_MS = 50
         const val QUICK_MS = 3_000L
         const val MAX_QUICK = 3

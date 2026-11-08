@@ -199,7 +199,7 @@ static void press(int fd, int code, int value) {
 // hardware keyboard to Android, which can then hide the on-screen one.
 static int vkbd = -1;
 static const int VKBD_KEYS[] = {
-    KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_OK, KEY_BACK, KEY_HOME, KEY_MENU, KEY_PLAYPAUSE,
+    KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, KEY_SELECT, KEY_BACK, KEY_HOMEPAGE, KEY_MENU, KEY_PLAYPAUSE,
     KEY_REWIND, KEY_FASTFORWARD, KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_MUTE, KEY_POWER, KEY_CHANNELUP,
     KEY_CHANNELDOWN,
 };
