@@ -53,4 +53,17 @@ class PhoneKeysTest {
         val long = Keys.textCommand("x".repeat(900))!!
         assertEquals("input text '".length + Keys.MAX_TEXT + 1, long.length)
     }
+
+    /**
+     * The virtual keyboard has no layout of its own, so Android reads it through Generic.kl: KEY_OK
+     * (352) maps to nothing there and KEY_HOME (102) to MOVE_HOME, a text-editing key.
+     */
+    @Test
+    fun linuxCodesAreTheOnesGenericKlMapsToTheseKeys() {
+        val genericKl = mapOf(
+            "UP" to 103, "DOWN" to 108, "LEFT" to 105, "RIGHT" to 106, "OK" to 353, "BACK" to 158, "HOME" to 172,
+            "MENU" to 139, "PLAY_PAUSE" to 164, "VOLUME_UP" to 115, "VOLUME_DOWN" to 114, "MUTE" to 113, "POWER" to 116,
+        )
+        genericKl.forEach { (name, code) -> assertEquals(name, code, Keys.named(name)!!.linux) }
+    }
 }
