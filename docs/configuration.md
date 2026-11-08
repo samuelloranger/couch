@@ -144,10 +144,13 @@ adb shell mkdir -p /sdcard/Android/data/cloud.samlo.couch/files/wallpapers
 adb push 01-landscape.jpg 02-night-sky.png /sdcard/Android/data/cloud.samlo.couch/files/wallpapers/
 ```
 
-Return to the home screen after adding or removing pictures to reload the list. To replace an
+While ambient mode is showing, the folder is scanned again before each two-minute transition.
+New pictures join the same slideshow without waking the screen or restarting Couch. To replace an
 image, use a new filename so an earlier copy is not reused from memory. When the folder has no
-supported nonempty files, Couch uses the original `wallpaper.jpg`; with neither, it falls back
-to the photo of the day. Existing single-image configurations need no changes.
+supported nonempty files at startup, Couch uses the original `wallpaper.jpg`; with neither, it
+falls back to the photo of the day. If all files disappear during an active slideshow, its last
+picture stays visible while Couch waits for new files. Existing single-image configurations
+need no changes.
 
 ## config.json
 
