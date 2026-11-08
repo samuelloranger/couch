@@ -234,7 +234,7 @@ class Video(private val context: Context) {
         wanting.toList().forEach { it.send(status) }
     }
 
-    private companion object {
+        /** The last frame before a pause is closed after this much quiet; otherwise the next frame's start ends it. */
         /** Quiet this long and the frame being read is whole: screenrecord writes a frame in one burst. */
         const val IDLE_MS = 50
         const val QUICK_MS = 3_000L
