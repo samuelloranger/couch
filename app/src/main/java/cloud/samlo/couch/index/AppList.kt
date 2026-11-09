@@ -11,6 +11,7 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.arrange
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
+import cloud.samlo.couch.ui.reveal
 
 /**
  * The app list on the left. Like Couch's rows, it never scrolls: the track glides by
@@ -67,8 +68,8 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
 
     fun rows(): List<AppRow> = (0 until column.childCount).map { column.getChildAt(it) as AppRow }
 
-    /** Shows [entries] in order, reusing rows by app; only rows whose data changed are rebound. */
-    fun bind(entries: List<IndexEntry>, rebuildAll: Boolean, moveFocus: (AppRow) -> Unit) {
+    /** Shows [entries] in order, reusing rows by app; only rows whose data changed are rebound. With [animate], newly added apps fade in. */
+    fun bind(entries: List<IndexEntry>, rebuildAll: Boolean, animate: Boolean, moveFocus: (AppRow) -> Unit) {
         val existing = rows().associateBy { it.entry.key }
         val wanted = entries.map { e ->
             val kept = existing[e.key]?.takeIf { !rebuildAll }
@@ -85,6 +86,8 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         }
         // The focused app went away (hidden, uninstalled): focus the one now in its place.
         column.arrange(wanted) { _, index -> moveFocus(wanted[index.coerceAtMost(wanted.lastIndex)]) }
+        // A rebuild (accent change) replaces every row; only apps not listed before are new.
+        if (animate && !rebuildAll) wanted.filter { it.entry.key !in existing }.forEach { it.reveal() }
     }
 
     /** Makes [row] the selected one; [inRow] while focus is in its channel row, which quietens it. */

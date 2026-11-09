@@ -12,6 +12,7 @@ import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.appear
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -48,8 +49,8 @@ class IndexRail(context: Context, onInputs: () -> Unit, onSettings: () -> Unit) 
     }
 
     /** Hidden when the TV has no inputs to switch to. */
-    fun setHasInputs(has: Boolean) {
-        inputs.visibility = if (has) View.VISIBLE else View.GONE
+    fun setHasInputs(has: Boolean, animate: Boolean) {
+        inputs.appear(has, animate)
     }
 
     /** The focusable item whose middle is closest to [y] (screen pixels): where ← from a row lands. */

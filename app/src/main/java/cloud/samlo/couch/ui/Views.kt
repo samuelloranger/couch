@@ -51,5 +51,26 @@ fun View.fadeOut() {
     }.start()
 }
 
+/**
+ * Fades in a view that was just shown: from transparent and a little low, by render properties
+ * only (no layout, no layer). A running reveal restarts, so one view is never left half-faded.
+ */
+fun View.reveal() {
+    animate().cancel()
+    alpha = 0f
+    translationY = context.dpf(APPEAR_RISE_DP)
+    animate().alpha(1f).translationY(0f).setDuration(Tokens.APPEAR_MS).setInterpolator(Tokens.ease).start()
+}
+
+/** Shows or hides a view, fading it in when [animated]; either way settles a running reveal so no view keeps a partial alpha. */
+fun View.appear(show: Boolean, animated: Boolean) {
+    if (show == (visibility == View.VISIBLE)) return
+    animate().cancel()
+    alpha = 1f
+    translationY = 0f
+    visibility = if (show) View.VISIBLE else View.GONE
+    if (show && animated) reveal()
+}
+
 private const val APPEAR_RISE_DP = 6f
 
