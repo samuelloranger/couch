@@ -60,10 +60,9 @@ final class TVController: Identifiable {
         video = VideoPipeline(
             onFirstPicture: { [weak self] in Task { @MainActor in self?.hasPicture = true } },
             onLayerChange: { [weak self] in
-                // The picture moved to a new layer: have the TV replay config and a keyframe.
+                // The picture moved to a new layer: asking again makes the TV replay config and a keyframe.
                 Task { @MainActor in
                     guard let self, self.wantsStream else { return }
-                    self.send(.streamStop)
                     self.send(.streamStart(self.quality))
                 }
             })
@@ -297,6 +296,8 @@ final class TVController: Identifiable {
 
     /// Optimistic: the screen changes now; the TV's `config` push is the final word.
     func set(_ patch: [String: JSONValue]) {
+        // Settings aren't queued, so with no session the change would only flip locally and be reverted by the next push.
+        guard session != nil || isDemo else { banner = "Not connected to the TV."; return }
         for (k, v) in patch { config[k] = v }
         send(.configSet(patch))
     }
