@@ -61,11 +61,14 @@ class HomeScreen(private val activity: Activity) {
     private var resumed = false
     private var resumedAt = 0L
 
-    private val ambientMode = AmbientMode(views.ambient) { resumed }
+    private val ambientMode = AmbientMode(views.ambient, { resumed }) { shown ->
+        // The overlay hides the home screen: keep its live parts quiet while it shows.
+        if (resumed) if (shown) stopLive() else startLive()
+    }
         .also { it.minutes = config.ambientMinutes }
     private val menus: CardMenus = CardMenus(activity, { config }, files, { views.index.appTiles() }) { load() }
     private val loader = HomeLoader(
-        activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded,
+        activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded, ::onExtras,
     )
     private val watchers = SystemWatchers(activity, { load() }) { offerInput(it) }
     private val reloadForRecommendations = Runnable { if (resumed) load() }
@@ -197,9 +200,7 @@ class HomeScreen(private val activity: Activity) {
         val god = config.godmode && (config.hud != Config.HUD_OFF || TvSettings.changed(activity) > 0 || RealHome.active(activity))
         views.index.topBar.god.show(god)
         ambientMode.minutes = config.ambientMinutes
-        ambientMode.pictures = data.pictures
         views.ambient.reloadPictures = if (config.wallpaper == "custom") loader::customPictures else null
-        showWeather(data.weather)
         update = data.update
         // A reload mid-download keeps the "Downloading" label.
         if (!Installer.running) {
@@ -207,6 +208,11 @@ class HomeScreen(private val activity: Activity) {
         }
         views.index.bind(data.index, config)
         ambientMode.schedule()
+    }
+
+    private fun onExtras(extras: HomeExtras) {
+        ambientMode.pictures = extras.pictures
+        showWeather(extras.weather)
     }
 
     private fun startLive() {
