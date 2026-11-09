@@ -119,14 +119,19 @@ class IndexScreen(
         )
     }
 
-    /** The Home Assistant row takes what the top bar leaves, so the two never overlap. */
+    /**
+     * The Home Assistant row takes what the top bar leaves, so the two never overlap. With many
+     * devices and chips showing it starts over the list instead of the right column.
+     */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         if (homeRow.visibility == VISIBLE) {
             val width = MeasureSpec.getSize(widthMeasureSpec)
             topBar.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-            val left = activity.dp(IndexTokens.COLUMN_X - Tokens.RING_INSET)
-            val right = activity.dp(IndexTokens.RIGHT_MARGIN + HOME_ROW_GAP) + topBar.measuredWidth
-            homeRow.fit(width - left - right)
+            val limit = width - activity.dp(IndexTokens.RIGHT_MARGIN + HOME_ROW_GAP) - topBar.measuredWidth
+            val ring = activity.dp(Tokens.RING_INSET)
+            val left = HomeRowPlacement.startX(homeRow.minWidth(), activity.dp(IndexTokens.COLUMN_X) - ring, activity.dp(IndexTokens.LIST_X) - ring, limit)
+            (homeRow.layoutParams as LayoutParams).leftMargin = left
+            homeRow.fit(limit - left)
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
@@ -143,6 +148,11 @@ class IndexScreen(
         this.config = config
         homeRow.bind(config)
         layoutFor(homeRow.visibility == VISIBLE)
+        // The inputs went away (unplugged, hidden): their item and menu go with them, so focus moves on.
+        if (data.inputs.isEmpty()) {
+            inputMenu?.dismiss()
+            if (rail.inputs.hasFocus()) rail.settings.requestFocus()
+        }
         // The accent is the one setting that changes how rows and cards are drawn.
         val rebuild = look != config.accent
         look = config.accent

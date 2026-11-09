@@ -16,6 +16,16 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
+ * Where the Home Assistant row starts: at the right column when its narrowest form ends before
+ * [limit] (the top-right cluster's left edge), else at the list's edge, which is free above the list.
+ * All values in the same unit.
+ */
+object HomeRowPlacement {
+    fun startX(minWidth: Int, columnX: Int, listX: Int, limit: Int): Int =
+        if (columnX + minWidth <= limit) columnX else listX
+}
+
+/**
  * The Index's Home Assistant row, top left: up to six devices, lights, then plugs, then
  * appliances, each pill showing its own state. States are read when the Index shows, when focus comes up to the row and
  * after each command, never on a timer; see [HassDevices].
@@ -65,6 +75,15 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         val excess = natural - available
         val cap = if (excess <= 0) Int.MAX_VALUE else labelCap(pills.map { it.labelWidth() }, excess)
         pills.forEach { it.labelLimit = cap }
+    }
+
+    /** The narrowest the row gets, padding included: every name cut to nothing. */
+    fun minWidth(): Int {
+        val pills = pills()
+        if (pills.isEmpty()) return 0
+        val rules = dividers.count { it.visibility == VISIBLE } * context.dp(1 + 2 * DIVIDER_SPACE)
+        val gaps = groups.sumOf { (it.childCount - 1).coerceAtLeast(0) } * context.dp(GAP)
+        return paddingLeft + paddingRight + rules + gaps + pills.sumOf { it.naturalWidth() - it.labelWidth() }
     }
 
     fun pills(): List<HomePill> = groups.flatMap { g -> (0 until g.childCount).map { g.getChildAt(it) as HomePill } }

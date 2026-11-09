@@ -84,8 +84,18 @@ class SystemLine(context: Context) : LinearLayout(context) {
         }
         set(4, uptime, c.getString(R.string.index_uptime))
         set(5, if (r.adb) c.getString(R.string.index_adb) else "", c.getString(R.string.index_adb_on), Tokens.accent)
-        items[5].visibility = if (r.adb) VISIBLE else GONE
-        dots[4].visibility = items[5].visibility
+        placeDots(r.adb)
+    }
+
+    /** An empty item hides; a " · " shows only between two items that show, so the line never starts with or doubles a dot. */
+    private fun placeDots(adb: Boolean) {
+        var any = false
+        items.forEachIndexed { i, item ->
+            val shown = item.text.isNotEmpty() && (i != items.lastIndex || adb)
+            item.visibility = if (shown) VISIBLE else GONE
+            if (i > 0) dots[i - 1].visibility = if (shown && any) VISIBLE else GONE
+            any = any || shown
+        }
     }
 
     /** "value label", the value bold and brighter. Unchanged text is left alone. */
