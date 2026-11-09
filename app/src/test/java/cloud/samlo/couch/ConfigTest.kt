@@ -8,6 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
+import java.io.File
 
 class ConfigTest {
     @get:Rule
@@ -132,6 +133,14 @@ class ConfigTest {
     fun malformedFilesGiveDefaults() {
         assertEquals(Config().toJson(), Config.fromJson("not json").toJson())
         assertEquals(Config().toJson(), Config.fromJson("").toJson())
+    }
+
+    @Test
+    fun anUnparseableFileIsKeptAside() {
+        File(folder.root, "config.json").writeText("{half a fi")
+        assertEquals(Config().toJson(), Config.load(folder.root).toJson())
+        assertEquals("{half a fi", File(folder.root, "config.json.bad").readText())
+        assertFalse(File(folder.root, "config.json").exists())
     }
 
     @Test

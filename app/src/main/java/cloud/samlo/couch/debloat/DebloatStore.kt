@@ -1,25 +1,24 @@
 package cloud.samlo.couch.debloat
 
+import cloud.samlo.couch.data.keepAside
+import cloud.samlo.couch.data.writeAtomically
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
 /**
- * What Couch did, in `debloat.json` next to `config.json`: each package's original state, recorded
- * before Couch first touched it, each removal, so the undo list survives restarts, and the batch
+ * What Couch did, in `debloat.json` next to `config.json`: each removal, so the undo list survives restarts, and the batch
  * flow in progress, so restarting the TV between batches picks up where it stopped. Sits in its
  * own file because config.json is the user's hand-edited setup, and this is Couch's ledger.
  */
 class DebloatStore private constructor(private val file: File?) {
-    /** original pkg -> "present" | "absent", whatever the TV had before Couch came along. */
-    private val originals = LinkedHashMap<String, String>()
     private val applied = LinkedHashMap<String, Removal>()
     val before = Snapshot()
 
     /** Storage as Couch first found it, for the after-report. Readings may be missing. */
     class Snapshot(var ramFreeMb: Int = -1, var storageFreeMb: Int = -1)
 
-    private data class Removal(val at: Long, val viaShell: Boolean, var undone: Boolean)
+    private data class Removal(val at: Long, var undone: Boolean)
 
     /**
      * Batches still to run: [index] is the batch on screen, [check] what it removed, waiting for
@@ -60,14 +59,8 @@ class DebloatStore private constructor(private val file: File?) {
         save()
     }
 
-    /** Records what the TV had; later calls for the same package change nothing. */
-    fun record(pkg: String, present: Boolean) {
-        originals.putIfAbsent(pkg, if (present) "present" else "absent")
-        save()
-    }
-
-    fun removed(pkg: String, viaShell: Boolean) {
-        applied[pkg] = Removal(System.currentTimeMillis(), viaShell, false)
+    fun removed(pkg: String) {
+        applied[pkg] = Removal(System.currentTimeMillis(), false)
         save()
     }
 
@@ -81,10 +74,10 @@ class DebloatStore private constructor(private val file: File?) {
 
     fun tally(): Tally {
         val done = applied.filterValues { !it.undone }
-        return Tally(done.count { it.value.viaShell }, done.size, applied.size)
+        return Tally(done.size, applied.size)
     }
 
-    data class Tally(val fromShell: Int, val active: Int, val ever: Int)
+    data class Tally(val active: Int, val ever: Int)
 
     /** Packages Couch removed and has not undone, the undo list's rows. */
     fun entries(): List<String> = applied.keys.filter { applied[it]?.undone != true }
@@ -101,13 +94,12 @@ class DebloatStore private constructor(private val file: File?) {
     private fun save() {
         file ?: return
         val out = JSONObject()
-            .put("originals", JSONObject(originals))
             .put("before", JSONObject()
                 .put("ramFreeMb", before.ramFreeMb)
                 .put("storageFreeMb", before.storageFreeMb))
         val rows = JSONArray()
         applied.forEach { (pkg, r) ->
-            rows.put(JSONObject().put("pkg", pkg).put("at", r.at).put("shell", r.viaShell).put("undone", r.undone))
+            rows.put(JSONObject().put("pkg", pkg).put("at", r.at).put("undone", r.undone))
         }
         out.put("removed", rows)
         flow?.let { f ->
@@ -117,20 +109,20 @@ class DebloatStore private constructor(private val file: File?) {
                 .put("check", JSONArray(f.check))
                 .put("boot", f.boot))
         }
-        val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeText(out.toString(2))
-        tmp.renameTo(file)
+        try {
+            writeAtomically(file, out.toString(2))
+        } catch (e: java.io.IOException) {
+            // The ledger on disk stays as it was; the next change saves again.
+        }
     }
 
     companion object {
         private fun file(dir: File?) = dir?.let { File(it, FILE) }
 
         fun load(dir: File?): DebloatStore = DebloatStore(file(dir)).also { s ->
-            val json = runCatching { file(dir)?.takeIf { it.isFile }?.readText() }.getOrNull()
-                ?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return s
-            json.optJSONObject("originals")?.let { o ->
-                o.keys().asSequence().forEach { s.originals[it] = o.getString(it) }
-            }
+            val f = file(dir)?.takeIf { it.isFile } ?: return s
+            // Kept aside, not overwritten: this ledger is the only record that lets the user undo a removal.
+            val json = runCatching { JSONObject(f.readText()) }.getOrNull() ?: return s.also { keepAside(f) }
             json.optJSONObject("before")?.let {
                 s.before.ramFreeMb = it.optInt("ramFreeMb", -1)
                 s.before.storageFreeMb = it.optInt("storageFreeMb", -1)
@@ -145,7 +137,7 @@ class DebloatStore private constructor(private val file: File?) {
                 (0 until rows.length()).forEach {
                     val r = rows.getJSONObject(it)
                     s.applied[r.getString("pkg")] =
-                        Removal(r.optLong("at", 0), r.optBoolean("shell", true), r.optBoolean("undone", false))
+                        Removal(r.optLong("at", 0), r.optBoolean("undone", false))
                 }
             }
         }

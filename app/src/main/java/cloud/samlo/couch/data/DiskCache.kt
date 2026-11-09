@@ -14,9 +14,14 @@ class DiskCache(context: Context, private val fetcher: Fetcher) {
         if (url.startsWith("/")) return File(url).takeIf { it.isFile }
         val cached = File(dir, sha1(url))
         if (cached.isFile && cached.length() > 0) return cached
-        val tmp = File(dir, cached.name + ".tmp")
-        fetcher.open(url).use { input -> tmp.outputStream().use { input.copyTo(it) } }
-        if (!tmp.renameTo(cached)) return null
+        // Its own temp file: the same URL can be fetched at two sizes at once.
+        val tmp = File.createTempFile(cached.name, ".tmp", dir)
+        try {
+            fetcher.open(url).use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            if (!tmp.renameTo(cached)) return null
+        } finally {
+            tmp.delete()
+        }
         trim()
         return cached
     }

@@ -59,10 +59,9 @@ internal fun DebloatPage.runBatch() {
         val done = ArrayList<String>()
         val refused = ArrayList<String>()
         for (pkg in batch) {
-            store.record(pkg, present = true)
             try {
                 engine.remove(pkg)
-                store.removed(pkg, viaShell = true)
+                store.removed(pkg)
                 done += pkg
             } catch (e: Engine.Refused) {
                 refused += label(pkg)
@@ -73,7 +72,7 @@ internal fun DebloatPage.runBatch() {
                 // The shell dropped before its answer arrived: the app may be gone all the same,
                 // and a removal nobody wrote down could never be undone.
                 if (!Packages.installed(ctx.activity, pkg)) {
-                    store.removed(pkg, viaShell = true)
+                    store.removed(pkg)
                     done += pkg
                 }
                 error = ctx.str(R.string.shell_no_ok)
@@ -124,13 +123,13 @@ private fun DebloatPage.removeAgain(pkgs: List<String>) {
             try {
                 engine.remove(pkg)
                 // Back on the undo list too: an undo made while the firmware had it back took it off.
-                store.removed(pkg, viaShell = true)
+                store.removed(pkg)
             } catch (e: Engine.Refused) {
                 toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
             } catch (e: IllegalArgumentException) {
                 toast(ctx.activity.getString(R.string.refused_toast, label(pkg)))
             } catch (e: AdbShell.Failed) {
-                if (!Packages.installed(ctx.activity, pkg)) store.removed(pkg, viaShell = true)
+                if (!Packages.installed(ctx.activity, pkg)) store.removed(pkg)
                 error = ctx.str(R.string.shell_no_ok)
             }
         }

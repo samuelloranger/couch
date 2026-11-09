@@ -32,8 +32,7 @@ private fun DebloatPage.markRan(batch: List<String>) {
         if (Packages.installed(ctx.activity, pkg)) {
             still += label(pkg)
         } else {
-            store.record(pkg, present = true)
-            store.removed(pkg, viaShell = false)
+            store.removed(pkg)
             picked.remove(pkg)
         }
     }
