@@ -50,6 +50,8 @@ class HomeLoader(
     private var reloadQueued = false
     /** Set by [shutdown]: late posts from the update check must not touch the dead executors. */
     private var closed = false
+    /** Touched only on [executor]: whether the apps have been posted once. */
+    private var shownOnce = false
 
     /** A local-only scan for the active slideshow, without rebuilding the home screen. */
     fun customPictures(onReady: (List<String>) -> Unit) {
@@ -70,8 +72,15 @@ class HomeLoader(
         checker.execute { if (updates.refresh(Config.load(files.dir))) main.post { load() } }
         executor.execute {
             val config = Config.load(files.dir)
-            val index = IndexBuilder.build(context, config, files.icons)
-            val data = HomeData(config, index, updates.pending(config))
+            val apps = IndexBuilder.apps(context, config, files.icons)
+            val update = updates.pending(config)
+            // The first load shows the apps before the channels, which take about a second on a weak TV.
+            // Later ones wait for both, so a return home never blanks the cards on show.
+            if (!shownOnce) {
+                shownOnce = true
+                main.post { onLoaded(HomeData(config, apps, update)) }
+            }
+            val data = HomeData(config, IndexBuilder.withChannels(context, config, apps), update)
             main.post { onLoaded(data) }
             val pictures = if (config.ambientMinutes > 0) wallpapers.all(config, files.dir) else emptyList()
             val extras = HomeExtras(pictures, weather.now(config))

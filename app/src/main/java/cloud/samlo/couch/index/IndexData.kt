@@ -46,31 +46,47 @@ class IndexData(
     /** False without usage access: no screen time, apps in the user's order. */
     val usageKnown: Boolean,
     val inputs: List<Tile>,
+    /** False while the channels are still being read: the column waits rather than say an app has none. */
+    val channelsKnown: Boolean = true,
 )
 
 /** Builds [IndexData] on the loader thread. */
 object IndexBuilder {
     /** [withChannels] false skips the preview-channel queries and the other-TV merge, for callers that list only apps and inputs. */
     fun build(context: Context, config: Config, iconsDir: File?, withChannels: Boolean = true): IndexData {
+        val apps = apps(context, config, iconsDir, otherTvs = withChannels)
+        return if (withChannels) withChannels(context, config, apps) else apps
+    }
+
+    /** The apps in order, with icons and screen time but no channels yet: the quick part on a cold start. */
+    fun apps(context: Context, config: Config, iconsDir: File?, otherTvs: Boolean = true): IndexData {
         val apps = AppSource.tiles(
             context, config, iconsDir,
             context.dp(IndexTokens.cardWidth(-1)), context.dp(IndexTokens.CARD_H), context.dpf(IndexTokens.CARD_RADIUS),
         )
-        val usage = Usage.lastWeek(context)?.let { if (withChannels && config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
-        val channels = if (withChannels) Programs.channels(context, config).groupBy { it.packageName } else emptyMap()
+        val usage = Usage.lastWeek(context)?.let { if (otherTvs && config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
         val byKey = apps.associateBy { it.key }
         val ordered = AppOrder.sorted(apps.map { it.key }, config, usage?.mapValues { it.value.weekMs })
         val entries = ordered.map { key ->
             val tile = byKey.getValue(key)
+            IndexEntry(app = tile, icon = icon(context, tile.key), channels = emptyList(), preferredChannel = null, usage = usage?.get(tile.key))
+        }
+        return IndexData(entries, usage != null, InputSource.tiles(context, config, iconsDir), channelsKnown = false)
+    }
+
+    /** [data] with each app's preview channels: the slow part, about a second on a weak TV. */
+    fun withChannels(context: Context, config: Config, data: IndexData): IndexData {
+        val channels = Programs.channels(context, config).groupBy { it.packageName }
+        val entries = data.entries.map { e ->
             IndexEntry(
-                app = tile,
-                icon = icon(context, tile.key),
-                channels = channels[tile.key].orEmpty().map { IndexChannel(it.id, Programs.title(context, it.packageName, it.name, ", "), it.tiles) },
-                preferredChannel = config.preferredChannels[tile.key],
-                usage = usage?.get(tile.key),
+                app = e.app,
+                icon = e.icon,
+                channels = channels[e.key].orEmpty().map { IndexChannel(it.id, Programs.title(context, it.packageName, it.name, ", "), it.tiles) },
+                preferredChannel = config.preferredChannels[e.key],
+                usage = e.usage,
             )
         }
-        return IndexData(entries, usage != null, InputSource.tiles(context, config, iconsDir))
+        return IndexData(entries, data.usageKnown, data.inputs)
     }
 
     /** The app's launcher icon as a small rounded square, rendered once per app version. */

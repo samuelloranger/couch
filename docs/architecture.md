@@ -41,7 +41,10 @@ settings/* ─▶ config.json
 
 1. `HomeLoader` runs on a single background thread: it reads `config.json`, lists apps and inputs,
    queries preview channels and screen time, and fetches the weather and the ambient pictures.
-   Banners are rendered there, at their final pixel size.
+   Banners are rendered there, at their final pixel size. The apps are applied first, then the
+   network extras (weather, pictures); on the first load after start the apps also go before the
+   preview channels, the slowest local query. The Index stays hidden until that first bind, then
+   fades in whole.
 2. `IndexBuilder` turns that into `IndexData`: the apps in order, each with what it offers.
 3. `IndexScreen.bind` applies it on the main thread. Rows and cards whose data didn't change are
    left alone (`FocusRow.update` and `arrange`), and the focused one is never detached before
