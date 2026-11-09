@@ -117,7 +117,7 @@
 
     <!-- Settings: wallpaper -->
     <string name="wallpaper_source">Wallpaper</string>
-    <string name="wallpaper_source_help">Photo of the day: a new Bing photo every day.\nReddit: the best images of a subreddit, changing through the day.\nMy images: photos in wallpapers/, sent over ADB, alternate every two minutes. Falls back to wallpaper.jpg.</string>
+    <string name="wallpaper_source_help">Photo of the day: a new Bing photo every day.\nReddit: the best images of a subreddit, changing through the day.\nMy images: photos in wallpapers/, sent over ADB, alternate every 30 seconds. Falls back to wallpaper.jpg.</string>
     <string name="wallpaper_daily">Photo of the day</string>
     <string name="wallpaper_reddit">Reddit</string>
     <string name="wallpaper_gradient">Gradient</string>
@@ -695,7 +695,7 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
 
     <!-- Ambient image gallery -->
     <string name="gallery_title">Ambient images</string>
-    <string name="gallery_help">Preview, add or delete photos. Images alternate every two minutes.</string>
+    <string name="gallery_help">Preview, add or delete photos. Images alternate every 30 seconds.</string>
     <string name="gallery_add">Add image</string>
     <string name="gallery_use">Use for ambient</string>
     <string name="gallery_refresh">Refresh</string>

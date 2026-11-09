@@ -135,7 +135,7 @@ Custom images are centre-cropped to the card's 16:9 shape.
 
 For an ambient slideshow, select **My images** and copy JPEG (`.jpg` or `.jpeg`), PNG or WebP
 files into `wallpapers/`. Extensions are case-insensitive; hidden files, empty files and
-subdirectories are ignored. Pictures alternate every two minutes with a crossfade and gentle
+subdirectories are ignored. Pictures alternate every 30 seconds with a crossfade and gentle
 zoom, at 1920 × 1080 pixels. Number filenames to choose their order; the first picture when
 ambient mode opens varies with the time, then playback follows that order and loops.
 

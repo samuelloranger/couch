@@ -22,7 +22,7 @@ import cloud.samlo.couch.data.Images
 
 /**
  * Ambient mode: the wallpaper full screen with a slow drift, a large clock and the weather.
- * Pictures rotate every few minutes when the source has several. Only render properties move
+ * Pictures rotate every 30 seconds when the source has several. Only render properties move
  * (scale and alpha), so it stays cheap on a weak GPU.
  */
 @SuppressLint("ViewConstructor")
@@ -170,14 +170,16 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
         PropertyValuesHolder.ofFloat(View.SCALE_X, 1f, DRIFT),
         PropertyValuesHolder.ofFloat(View.SCALE_Y, 1f, DRIFT),
     ).apply {
-        duration = ROTATE_MS
+        duration = DRIFT_MS
         interpolator = AccelerateDecelerateInterpolator()
         repeatCount = ValueAnimator.INFINITE
         repeatMode = ValueAnimator.REVERSE
     }
 
     private companion object {
-        const val ROTATE_MS = 120_000L
+        const val ROTATE_MS = 30_000L
+        // Slower than the rotation, so each picture zooms gently.
+        const val DRIFT_MS = 120_000L
         const val DRIFT = 1.08f
     }
 }

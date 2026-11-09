@@ -117,7 +117,7 @@
 
     <!-- Settings: wallpaper -->
     <string name="wallpaper_source">Fond d’écran</string>
-    <string name="wallpaper_source_help">Photo du jour : une nouvelle photo de Bing chaque jour.\nReddit : les meilleures images d’un subreddit, qui changent au fil de la journée.\nMes images : les photos du dossier wallpapers/, envoyées par ADB, alternent toutes les deux minutes. Sinon, wallpaper.jpg est utilisée.</string>
+    <string name="wallpaper_source_help">Photo du jour : une nouvelle photo de Bing chaque jour.\nReddit : les meilleures images d’un subreddit, qui changent au fil de la journée.\nMes images : les photos du dossier wallpapers/, envoyées par ADB, alternent toutes les 30 secondes. Sinon, wallpaper.jpg est utilisée.</string>
     <string name="wallpaper_daily">Photo du jour</string>
     <string name="wallpaper_reddit">Reddit</string>
     <string name="wallpaper_gradient">Dégradé</string>
@@ -704,7 +704,7 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
 
     <!-- Ambient image gallery -->
     <string name="gallery_title">Images de veille</string>
-    <string name="gallery_help">Aperçu, ajout et suppression de photos. Les images alternent toutes les deux minutes.</string>
+    <string name="gallery_help">Aperçu, ajout et suppression de photos. Les images alternent toutes les 30 secondes.</string>
     <string name="gallery_add">Ajouter une image</string>
     <string name="gallery_use">Utiliser en veille</string>
     <string name="gallery_refresh">Actualiser</string>
