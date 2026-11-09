@@ -18,13 +18,13 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.reveal
 
 /**
- * Where the Home Assistant row starts: at the right column when its narrowest form ends before
- * [limit] (the top-right cluster's left edge), else at the list's edge, which is free above the list.
- * All values in the same unit.
+ * Where the Home Assistant row starts: at the right column when it ends there with every name
+ * whole before [limit] (the top-right cluster's left edge), else at the list's edge, which is free
+ * above the list. All values in the same unit.
  */
 object HomeRowPlacement {
-    fun startX(minWidth: Int, columnX: Int, listX: Int, limit: Int): Int =
-        if (columnX + minWidth <= limit) columnX else listX
+    fun startX(width: Int, columnX: Int, listX: Int, limit: Int): Int =
+        if (columnX + width <= limit) columnX else listX
 }
 
 /**
@@ -70,22 +70,18 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     fun fit(available: Int) {
         val pills = pills()
         if (pills.isEmpty()) return
-        val rules = dividers.count { it.visibility == VISIBLE } * context.dp(1 + 2 * DIVIDER_SPACE)
-        val gaps = groups.sumOf { (it.childCount - 1).coerceAtLeast(0) } * context.dp(GAP)
-        val fixed = paddingLeft + paddingRight + rules + gaps
-        val natural = fixed + pills.sumOf { it.naturalWidth() }
-        val excess = natural - available
+        val excess = naturalWidth() - available
         val cap = if (excess <= 0) Int.MAX_VALUE else labelCap(pills.map { it.labelWidth() }, excess)
         pills.forEach { it.labelLimit = cap }
     }
 
-    /** The narrowest the row gets, padding included: every name cut to nothing. */
-    fun minWidth(): Int {
+    /** The row with every name and status whole, padding included. */
+    fun naturalWidth(): Int {
         val pills = pills()
         if (pills.isEmpty()) return 0
         val rules = dividers.count { it.visibility == VISIBLE } * context.dp(1 + 2 * DIVIDER_SPACE)
         val gaps = groups.sumOf { (it.childCount - 1).coerceAtLeast(0) } * context.dp(GAP)
-        return paddingLeft + paddingRight + rules + gaps + pills.sumOf { it.naturalWidth() - it.labelWidth() }
+        return paddingLeft + paddingRight + rules + gaps + pills.sumOf { it.naturalWidth() }
     }
 
     fun pills(): List<HomePill> = groups.flatMap { g -> (0 until g.childCount).map { g.getChildAt(it) as HomePill } }

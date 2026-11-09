@@ -134,7 +134,7 @@ class IndexScreen(
             topBar.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
             val limit = width - activity.dp(IndexTokens.RIGHT_MARGIN + HOME_ROW_GAP) - topBar.measuredWidth
             val ring = activity.dp(Tokens.RING_INSET)
-            val left = HomeRowPlacement.startX(homeRow.minWidth(), activity.dp(IndexTokens.COLUMN_X) - ring, activity.dp(IndexTokens.LIST_X) - ring, limit)
+            val left = HomeRowPlacement.startX(homeRow.naturalWidth(), activity.dp(IndexTokens.COLUMN_X) - ring, activity.dp(IndexTokens.LIST_X) - ring, limit)
             (homeRow.layoutParams as LayoutParams).leftMargin = left
             homeRow.fit(limit - left)
         }
