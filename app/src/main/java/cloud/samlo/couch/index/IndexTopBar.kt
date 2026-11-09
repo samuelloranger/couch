@@ -17,6 +17,7 @@ import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.UpdateChip
+import cloud.samlo.couch.ui.appear
 import cloud.samlo.couch.ui.dp
 
 /**
@@ -81,16 +82,19 @@ class IndexTopBar(context: Context, onUpdate: () -> Unit) : LinearLayout(context
         clock.format24Hour = format
     }
 
+    /** Set once the first paint is done: the weather then fades in instead of popping. */
+    var animate = false
+
     fun showWeather(now: WeatherNow?) {
         if (now == null) {
-            weather.visibility = GONE
+            weather.appear(false, animate)
             return
         }
         weatherIcon.setImageResource(now.icon)
         if (animating) (weatherIcon.drawable as? Animatable)?.start()
         temperature.text = context.getString(R.string.weather_temperature, now.temperature)
         range.text = context.getString(R.string.index_range, now.high, now.low)
-        weather.visibility = VISIBLE
+        weather.appear(true, animate)
     }
 
     private fun text(sizeSp: Float, weight: Int, color: Int, lineHeight: Float = 1f) =

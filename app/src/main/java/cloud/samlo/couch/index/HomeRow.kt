@@ -13,7 +13,9 @@ import cloud.samlo.couch.hass.HassJson
 import cloud.samlo.couch.hass.HomeAssistant
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.appear
 import cloud.samlo.couch.ui.dp
+import cloud.samlo.couch.ui.reveal
 
 /**
  * Where the Home Assistant row starts: at the right column when its narrowest form ends before
@@ -94,12 +96,18 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     /** Streams changes while the Index shows; see [HassDevices.live]. */
     fun live(on: Boolean) = devices.live(on)
 
-    fun bind(config: Config) {
+    /** The last pill, where left from the top chips lands. */
+    fun lastPill(): View? = pills().lastOrNull()
+
+    /** With [animate] the row, or its pills when it was already showing, fade in. */
+    fun bind(config: Config, animate: Boolean) {
+        val shown = visibility == VISIBLE
         if (devices.use(config.homeAssistantUrl, config.homeDevices) || config.homeNames != names) {
             names = config.homeNames
             rebuild()
+            if (animate && shown) pills().forEach { it.reveal() }
         }
-        visibility = if (devices.ids.isEmpty()) GONE else VISIBLE
+        appear(devices.ids.isNotEmpty(), animate)
         devices.refresh()
     }
 
