@@ -24,11 +24,11 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
     private val track = FrameLayout(context)
     private val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
     private val fill = GradientDrawable().apply { cornerRadius = context.dpf(6f) }
-    private val marker = GradientDrawable().apply { cornerRadius = context.dpf(1.5f) }
+    private val marker = GradientDrawable().apply { cornerRadius = context.dpf(1f) }
     private val selection = FrameLayout(context).apply {
         background = fill
         visibility = INVISIBLE
-        addView(FlatView(context).apply { background = marker }, LayoutParams(context.dp(3), context.dp(IndexTokens.ROW_H - 22), Gravity.CENTER_VERTICAL))
+        addView(FlatView(context).apply { background = marker }, LayoutParams(context.dp(IndexTokens.LIST_MARKER_W), context.dp(IndexTokens.LIST_MARKER_H), Gravity.CENTER_VERTICAL))
     }
     private var selectionY = 0f
     private val fade = FlatView(context).apply {
@@ -43,7 +43,7 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
 
     init {
         clipChildren = true
-        track.addView(selection, LayoutParams(LayoutParams.MATCH_PARENT, context.dp(IndexTokens.ROW_H)))
+        track.addView(selection, LayoutParams(LayoutParams.MATCH_PARENT, context.dp(IndexTokens.LIST_ROW_H)))
         track.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         addView(track, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         addView(fade, LayoutParams(LayoutParams.MATCH_PARENT, 0))
@@ -73,8 +73,8 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         val wanted = entries.map { e ->
             val kept = existing[e.key]?.takeIf { !rebuildAll }
             kept?.also { if (it.entry.signature != e.signature) it.bind(e) } ?: makeRow(e).apply {
-                layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, context.dp(IndexTokens.ROW_H)).apply {
-                    bottomMargin = context.dp(IndexTokens.ROW_PITCH - IndexTokens.ROW_H)
+                layoutParams = LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, context.dp(IndexTokens.LIST_ROW_H)).apply {
+                    bottomMargin = context.dp(IndexTokens.LIST_ROW_PITCH - IndexTokens.LIST_ROW_H)
                 }
             }
         }
@@ -92,10 +92,10 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         rows().forEach { it.chosen = it === row }
         if (painted != inRow to Tokens.accent) {
             painted = inRow to Tokens.accent
-            fill.setColor(if (inRow) Tokens.surface else Tokens.surfaceFocused)
+            fill.setColor(if (inRow) SELECTED_QUIET else SELECTED)
             marker.setColor(if (inRow) IndexTokens.markerIdle else Tokens.accent)
         }
-        val target = (column.indexOfChild(row) * context.dp(IndexTokens.ROW_PITCH)).toFloat()
+        val target = (column.indexOfChild(row) * context.dp(IndexTokens.LIST_ROW_PITCH)).toFloat()
         if (selection.visibility != VISIBLE) {
             selectionY = target
             selection.translationY = target
@@ -111,7 +111,7 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
     fun reveal(index: Int, animate: Boolean = true) {
         val count = column.childCount
         val first = (index - IndexTokens.ROWS_ABOVE).coerceAtMost(count - rowsShown).coerceAtLeast(0)
-        val target = -(first * context.dp(IndexTokens.ROW_PITCH)).toFloat()
+        val target = -(first * context.dp(IndexTokens.LIST_ROW_PITCH)).toFloat()
         track.animate().cancel()
         if (!animate) {
             track.translationY = target
@@ -121,5 +121,11 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         }
         if (track.translationY == target) return
         track.animate().translationY(target).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
+    }
+
+    private companion object {
+        /** White at 6%, and a little less while focus is in the channel row. */
+        const val SELECTED = 0x0FFFFFFF
+        const val SELECTED_QUIET = 0x0AFFFFFF
     }
 }

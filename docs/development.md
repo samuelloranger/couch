@@ -73,7 +73,7 @@ adb -s emulator-5580 shell am start -n cloud.samlo.couch/.MainActivity
 adb -s emulator-5580 exec-out screencap -p > shot.png
 ```
 
-The emulator has no HDMI inputs, so the inputs row only shows on a real TV.
+The emulator has no HDMI inputs, so the rail's Inputs item only shows on a real TV.
 
 ## Measuring smoothness
 

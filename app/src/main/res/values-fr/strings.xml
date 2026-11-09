@@ -8,6 +8,7 @@
 
     <!-- Home -->
     <string name="section_inputs">Entrées</string>
+    <string name="index_home">Accueil</string>
     <string name="section_apps">Applications</string>
     <string name="input_offer">Passer à %1$s</string>
     <string name="input_disconnected">Débranché</string>
@@ -32,7 +33,7 @@
     <string name="index_not_opened">Pas ouverte cette semaine</string>
     <string name="index_no_channel">Pas de chaîne pour %1$s. Appuie sur OK pour l’ouvrir.</string>
     <string name="index_no_usage">Le temps d’écran s’affiche ici quand Couch a l’accès aux données d’utilisation. Le guide d’installation explique comment l’activer.</string>
-    <string name="index_place_range">%1$s\n%2$d° / %3$d°</string>
+    <string name="index_range">%1$d° / %2$d°</string>
     <string name="index_ethernet">Ethernet</string>
     <string name="index_wifi">Wi-Fi</string>
     <string name="index_offline">Hors ligne</string>

@@ -18,23 +18,23 @@ import cloud.samlo.couch.ui.dpf
  * get them.
  */
 class StatsBar(context: Context) : LinearLayout(context) {
-    private val weekValue = text(24f, 600, Tokens.textPrimary).apply {
+    private val weekValue = text(16f, 600, Tokens.textPrimary).apply {
         letterSpacing = -0.02f
         fontFeatureSettings = "tnum"
     }
-    private val weekLine = text(12f, 400, Tokens.textMuted).apply { ellipsize = TextUtils.TruncateAt.END }
+    private val weekLine = text(9.5f, 400, Tokens.textMuted).apply { ellipsize = TextUtils.TruncateAt.END }
     private val bars = List(Usage.DAYS) { View(context) }
     private val barFills = List(Usage.DAYS) { GradientDrawable().apply { cornerRadius = context.dpf(2f) } }
-    private val letters = List(Usage.DAYS) { text(10f, 500, Tokens.textMuted) }
+    private val letters = List(Usage.DAYS) { text(8f, 500, Tokens.textMuted) }
     private val figures: LinearLayout
-    private val missing = text(12f, 500, Tokens.textMuted, 1.4f).apply { maxLines = 3 }
+    private val missing = text(10f, 500, Tokens.textMuted, 1.4f).apply { maxLines = 3 }
 
     init {
         orientation = VERTICAL
         val total = LinearLayout(context).apply {
             orientation = VERTICAL
             addView(weekValue, weekValue.stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)))
-            addView(weekLine, weekLine.stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT), top = context.dp(8)))
+            addView(weekLine, weekLine.stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT), top = context.dp(5)))
         }
         figures = LinearLayout(context).apply {
             orientation = HORIZONTAL
@@ -90,7 +90,7 @@ class StatsBar(context: Context) : LinearLayout(context) {
                 gravity = Gravity.CENTER_HORIZONTAL or Gravity.BOTTOM
                 bars[i].background = barFills[i]
                 addView(bars[i], LayoutParams(context.dp(BAR_W), context.dp(2)))
-                addView(letters[i], letters[i].stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT), top = context.dp(5)))
+                addView(letters[i], letters[i].stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT), top = context.dp(4)))
             }, LayoutParams(context.dp(BAR_W), LayoutParams.MATCH_PARENT).apply { if (i > 0) marginStart = context.dp(BAR_GAP) })
         }
     }
@@ -99,10 +99,10 @@ class StatsBar(context: Context) : LinearLayout(context) {
         IndexText(context, sizeSp, weight, color, lineHeight).apply { maxLines = 1 }
 
     private companion object {
-        const val BAR_W = 22
-        const val BAR_GAP = 6
-        const val BAR_MAX = 48
+        const val BAR_W = 12
+        const val BAR_GAP = 5
+        const val BAR_MAX = 30
         /** The gap under the bars plus a day letter's line. */
-        const val LETTER_ROW = 15
+        const val LETTER_ROW = 13
     }
 }

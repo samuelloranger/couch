@@ -80,7 +80,7 @@ object IndexBuilder {
         } catch (e: PackageManager.NameNotFoundException) {
             return null
         }
-        val size = context.dp(IndexTokens.ICON)
+        val size = context.dp(IndexTokens.LIST_ICON)
         return Banners.memoized("icon|$pkg|$size|$updated") {
             try {
                 Banners.render(pm.getApplicationIcon(pkg), size, size, context.dpf(AppRow.ICON_RADIUS))

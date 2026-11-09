@@ -28,12 +28,12 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
             setColor(Tokens.surface)
         }
     }
-    private val name = IndexText(context, 19f, 600, Tokens.textMuted).apply {
-        letterSpacing = -0.015f
+    private val name = IndexText(context, 14f, 500, Tokens.textMuted).apply {
+        letterSpacing = -0.01f
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
     }
-    private val hours = IndexText(context, 11f, 500, IndexTokens.hours).apply {
+    private val hours = IndexText(context, 8.5f, 500, IndexTokens.hours).apply {
         fontFeatureSettings = "tnum"
         maxLines = 1
     }
@@ -53,10 +53,10 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
         val line = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(context.dp(15), 0, context.dp(13), 0)
-            addView(icon, LinearLayout.LayoutParams(context.dp(IndexTokens.ICON), context.dp(IndexTokens.ICON)))
-            addView(name, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = context.dp(12) })
-            addView(hours, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(8) })
+            setPadding(context.dp(11), 0, context.dp(10), 0)
+            addView(icon, LinearLayout.LayoutParams(context.dp(IndexTokens.LIST_ICON), context.dp(IndexTokens.LIST_ICON)))
+            addView(name, LinearLayout.LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = context.dp(9) })
+            addView(hours, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(6) })
         }
         addView(line, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
         bind(entry)
@@ -77,6 +77,6 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
     }
 
     companion object {
-        const val ICON_RADIUS = 6f
+        const val ICON_RADIUS = 5f
     }
 }

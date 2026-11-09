@@ -8,7 +8,6 @@ import android.view.KeyEvent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Images
@@ -21,13 +20,15 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
- * The Index layout: apps listed on the left; on the right, what the selected app offers (the
- * focused program's text over its chosen channel's cards), its last week of use, and the TV's
- * readings along the bottom.
+ * The Index layout: a rail of Inputs and Settings down the left edge, the apps listed beside it;
+ * on the right, what the selected app offers (the focused program's text over its chosen
+ * channel's cards), its last week of use, and the TV's readings along the bottom.
  *
  * D-pad: up/down walks the list, right enters the app's channel row, left (from its first card),
  * down comes back. With several channels, right reaches the channel picker first and up from
- * the cards returns to it. Up from the first app reaches Inputs and Settings.
+ * the cards returns to it. Left from the list (or the Home Assistant row) reaches the rail, right
+ * from the rail returns to the selected app. Up from the first app reaches the Home Assistant row,
+ * or else the chips at the top right.
  */
 @SuppressLint("ViewConstructor")
 class IndexScreen(
@@ -39,7 +40,8 @@ class IndexScreen(
     private val onProgramMenu: (Card) -> Unit,
     private val onChannelSelected: (String, Long) -> Unit,
 ) : FrameLayout(activity) {
-    val topBar = IndexTopBar(activity, { pickInput() }, onSettings, onUpdate)
+    val topBar = IndexTopBar(activity, onUpdate)
+    private val rail = IndexRail(activity, { pickInput() }, onSettings)
     private val list = AppList(activity) { entry -> row(entry) }
     private val spotlight = Spotlight(activity)
     private val programs = FocusRow(activity).apply {
@@ -51,14 +53,9 @@ class IndexScreen(
     private val banner = ImageView(activity).apply { scaleType = ImageView.ScaleType.FIT_XY }
     private val stats = StatsBar(activity)
     val systemLine = SystemLine(activity)
-    /** Lights and plugs from Home Assistant, top left; gone until some are chosen. */
+    /** Lights and plugs from Home Assistant, top of the right column; gone until some are chosen. */
     private val homeRow = HomeRow(activity, HomeAssistant(Prefs.of(activity)))
-    /** Inputs and Settings, below the list, while the Home Assistant row takes the top left. */
-    private val tools = LinearLayout(activity).apply {
-        orientation = LinearLayout.HORIZONTAL
-        visibility = GONE
-    }
-    /** The layout in place: with the Home Assistant row or without. */
+    /** Whether the Home Assistant row is showing. */
     private var homeLayout = false
 
     private var data: IndexData? = null
@@ -67,7 +64,7 @@ class IndexScreen(
     private var selectedKey: String? = null
     /** The app and channel whose programs the row holds. */
     private var stripKey: String? = null
-    /** The Inputs pill's menu while it is open. */
+    /** The rail's Inputs menu while it is open. */
     private var inputMenu: InputMenu? = null
     private var channelMenu: AlertDialog? = null
     /** Placed once, on the first bind; later binds keep focus where it is. */
@@ -92,6 +89,11 @@ class IndexScreen(
         }
         // The window paints the background (HomeViews swaps it to Index's flat colour), and no
         // layer here covers the screen: each full-screen layer costs the TV's GPU.
+        place(rail, 0, 0, IndexTokens.RAIL_W, LayoutParams.MATCH_PARENT)
+        // Focus in the rail quietens the list's selection, as focus in the channel row does.
+        listOf(rail.inputs, rail.settings).forEach { item ->
+            item.setOnFocusChangeListener { _, has -> if (has) selectedRow()?.let { list.select(it, inRow = true) } }
+        }
         place(list, IndexTokens.LIST_X, IndexTokens.LIST_Y, IndexTokens.LIST_W, IndexTokens.LIST_H)
         place(spotlight, IndexTokens.COLUMN_X, IndexTokens.HEADER_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         // The row starts a little left of the column so a scaled card's ring isn't clipped.
@@ -102,52 +104,43 @@ class IndexScreen(
         })
         place(banner, IndexTokens.COLUMN_X, IndexTokens.STRIP_Y, IndexTokens.cardWidth(-1), IndexTokens.CARD_H)
         place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
-        addView(systemLine, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.START).apply {
-            leftMargin = activity.dp(IndexTokens.LIST_X)
-            bottomMargin = activity.dp(IndexTokens.FOOTER_BOTTOM) - systemLine.inset
+        addView(systemLine, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+            leftMargin = activity.dp(IndexTokens.COLUMN_X)
+            topMargin = activity.dp(IndexTokens.FOOTER_Y) - systemLine.inset
         })
-        addView(topBar, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
-            topMargin = activity.dp(TOP_BAR_Y)
-            rightMargin = activity.dp(IndexTokens.LIST_X)
+        addView(topBar, LayoutParams(LayoutParams.WRAP_CONTENT, activity.dp(IndexTokens.TOP_H), Gravity.TOP or Gravity.END).apply {
+            topMargin = activity.dp(IndexTokens.TOP_Y)
+            rightMargin = activity.dp(IndexTokens.RIGHT_MARGIN)
         })
         // The row carries a ring-sized margin of its own, so it sits that much up and left.
         place(
-            homeRow, IndexTokens.LIST_X - Tokens.RING_INSET, IndexTokens.HOME_ROW_Y - Tokens.RING_INSET,
+            homeRow, IndexTokens.COLUMN_X - Tokens.RING_INSET, IndexTokens.HOME_ROW_Y - Tokens.RING_INSET,
             LayoutParams.WRAP_CONTENT, IndexTokens.HOME_ROW_H + 2 * Tokens.RING_INSET,
         )
-        place(tools, IndexTokens.TOOLS_X, IndexTokens.TOOLS_Y, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
     }
 
-    /** The Home Assistant row takes what the top bar leaves, so the two never overlap. */
+    /**
+     * The Home Assistant row takes what the top bar leaves, so the two never overlap. With many
+     * devices and chips showing it starts over the list instead of the right column.
+     */
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         if (homeRow.visibility == VISIBLE) {
             val width = MeasureSpec.getSize(widthMeasureSpec)
             topBar.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-            val left = activity.dp(IndexTokens.LIST_X - Tokens.RING_INSET)
-            val right = activity.dp(IndexTokens.LIST_X + HOME_ROW_GAP) + topBar.measuredWidth
-            homeRow.fit(width - left - right)
+            val limit = width - activity.dp(IndexTokens.RIGHT_MARGIN + HOME_ROW_GAP) - topBar.measuredWidth
+            val ring = activity.dp(Tokens.RING_INSET)
+            val left = HomeRowPlacement.startX(homeRow.minWidth(), activity.dp(IndexTokens.COLUMN_X) - ring, activity.dp(IndexTokens.LIST_X) - ring, limit)
+            (homeRow.layoutParams as LayoutParams).leftMargin = left
+            homeRow.fit(limit - left)
         }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
-    /** Moves the list down and Inputs and Settings under it while the Home Assistant row shows. */
+    /** What's playing gives way to the Home Assistant row when it shows: its devices matter more there. */
     private fun layoutFor(home: Boolean) {
         if (home == homeLayout) return
         homeLayout = home
-        list.layoutParams = (list.layoutParams as LayoutParams).apply {
-            topMargin = activity.dp(if (home) IndexTokens.LIST_Y_HOME else IndexTokens.LIST_Y)
-            height = activity.dp(if (home) IndexTokens.LIST_H_HOME else IndexTokens.LIST_H)
-        }
-        if (home) {
-            list.fit(IndexTokens.LIST_H_HOME, IndexTokens.LIST_FADE_Y_HOME, IndexTokens.ROWS_SHOWN_HOME)
-        } else {
-            list.fit(IndexTokens.LIST_H, IndexTokens.LIST_FADE_Y, IndexTokens.ROWS_SHOWN)
-        }
-        topBar.placePills(if (home) tools else null)
-        // No room for what's playing beside the row; the row's devices matter more here.
         topBar.nowPlaying.suppressed = home
-        tools.visibility = if (home) VISIBLE else GONE
-        selectedRow()?.let { list.reveal(list.rows().indexOf(it), animate = false) }
     }
 
     fun bind(data: IndexData, config: Config) {
@@ -155,10 +148,16 @@ class IndexScreen(
         this.config = config
         homeRow.bind(config)
         layoutFor(homeRow.visibility == VISIBLE)
+        // The inputs went away (unplugged, hidden): their item and menu go with them, so focus moves on.
+        if (data.inputs.isEmpty()) {
+            inputMenu?.dismiss()
+            if (rail.inputs.hasFocus()) rail.settings.requestFocus()
+        }
         // The accent is the one setting that changes how rows and cards are drawn.
         val rebuild = look != config.accent
         look = config.accent
-        topBar.setHasInputs(data.inputs.isNotEmpty())
+        rail.setHasInputs(data.inputs.isNotEmpty())
+        rail.paintBar()
         binding = true
         list.bind(data.entries, rebuild) { it.requestFocus() }
         val rows = list.rows()
@@ -190,7 +189,7 @@ class IndexScreen(
         if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
         val focused = activity.currentFocus ?: return false
         val elsewhere = programs.isAncestorOf(focused) || topBar.isAncestorOf(focused) || homeRow.isAncestorOf(focused) ||
-            tools.isAncestorOf(focused) || focused === spotlight.channelButton
+            rail.isAncestorOf(focused) || focused === spotlight.channelButton
         if (!elsewhere) return false
         if (event.action == KeyEvent.ACTION_UP) selectedRow()?.requestFocus()
         return true
@@ -296,7 +295,7 @@ class IndexScreen(
 
     private fun card(tile: Tile, cardLook: String) = Card(
         activity, tile, IndexTokens.cardWidth(tile.imageRatio), IndexTokens.CARD_H, images,
-        showLabel = true, look = cardLook, onFocused = { onProgramFocused(it) },
+        showLabel = false, look = cardLook, onFocused = { onProgramFocused(it) },
         radiusDp = IndexTokens.CARD_RADIUS, thinRing = true,
     ).apply {
         isLongClickable = true
@@ -319,14 +318,15 @@ class IndexScreen(
         val inStrip = focused != null && programs.isAncestorOf(focused)
         val inTop = focused != null && topBar.isAncestorOf(focused)
         val inHome = focused != null && homeRow.isAncestorOf(focused)
-        val inTools = focused != null && tools.isAncestorOf(focused)
+        val inRail = focused != null && rail.isAncestorOf(focused)
         return when {
             focused is AppRow -> {
                 val rows = list.rows()
                 val i = rows.indexOf(focused)
                 when (direction) {
                     FOCUS_UP -> rows.getOrNull(i - 1) ?: homeRow.takeIf { homeLayout }?.entry() ?: firstTopTarget() ?: focused
-                    FOCUS_DOWN -> rows.getOrNull(i + 1) ?: firstTool() ?: focused
+                    FOCUS_DOWN -> rows.getOrNull(i + 1) ?: focused
+                    FOCUS_LEFT -> toRail(focused)
                     FOCUS_RIGHT -> {
                         // Right before the row has filled: fill it now.
                         if (stripKey != focused.entry.stripKey) fill(focused.entry)
@@ -347,12 +347,14 @@ class IndexScreen(
             }
             inHome -> when (direction) {
                 FOCUS_DOWN -> row ?: focused
-                FOCUS_LEFT, FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: focused
+                FOCUS_LEFT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: toRail(focused)
+                FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: firstTopTarget() ?: focused
                 else -> focused
             }
-            inTools -> when (direction) {
-                FOCUS_UP -> list.rows().lastOrNull() ?: focused
-                FOCUS_LEFT, FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { tools.isAncestorOf(it) } ?: focused
+            inRail -> when (direction) {
+                FOCUS_UP -> rail.neighbour(focused!!, down = false) ?: focused
+                FOCUS_DOWN -> rail.neighbour(focused!!, down = true) ?: focused
+                FOCUS_RIGHT -> row ?: focused
                 else -> focused
             }
             inTop -> if (direction == FOCUS_DOWN) row ?: focused else super.focusSearch(focused, direction)?.takeIf { topBar.isAncestorOf(it) } ?: focused
@@ -363,9 +365,15 @@ class IndexScreen(
     /** Back to the selected app; its focus listener puts the panel back on the first program. */
     private fun leaveStrip(row: AppRow?): View? = row
 
-    private fun firstTopTarget(): View? = listOf(topBar.inputs, topBar.settings).firstOrNull { it.visibility == VISIBLE && it.parent === topBar }
+    /** The first chip at the top right that is showing, reached from the apps (no Home Assistant row) or its end. */
+    private fun firstTopTarget(): View? = listOf<View>(topBar.inputOffer, topBar.nowPlaying, topBar.update)
+        .firstOrNull { it.visibility == VISIBLE && it.isFocusable }
 
-    private fun firstTool(): View? = if (homeLayout) listOf(topBar.inputs, topBar.settings).firstOrNull { it.visibility == VISIBLE } else null
+    /** The rail item level with [from]'s middle. */
+    private fun toRail(from: View): View? {
+        val at = IntArray(2).also { from.getLocationOnScreen(it) }
+        return rail.nearest(at[1] + from.height / 2)
+    }
 
     private fun View.isAncestorOf(view: View): Boolean {
         var p: View? = view
@@ -379,7 +387,7 @@ class IndexScreen(
     private fun pickInput() {
         val inputs = data?.inputs.orEmpty()
         if (inputs.isEmpty() || inputMenu != null) return
-        inputMenu = InputMenu(activity, inputs, topBar.inputs).apply {
+        inputMenu = InputMenu(activity, inputs, rail.inputs).apply {
             setOnDismissListener { if (inputMenu === this) inputMenu = null }
             show()
         }
@@ -418,8 +426,7 @@ class IndexScreen(
     private companion object {
         /** Where the channel row's clipping starts, left of the column: room for a focused card's ring. */
         const val STRIP_START = 16
-        const val TOP_BAR_Y = 23
-        /** Between the Home Assistant row and the top bar's weather. */
+        /** Between the Home Assistant row and the top bar's first item. */
         const val HOME_ROW_GAP = 16
         const val STRIP_SETTLE_MS = 160L
         const val CARDS_PER_FRAME = 2

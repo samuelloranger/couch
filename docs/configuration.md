@@ -34,16 +34,20 @@ Couch follows the TV's language: English, or French on a TV set to French.
 
 ## Home screen
 
-The home screen (Index) is a list of your apps on the left. The right side shows what the
+The home screen (Index) has a slim rail down the left edge: Home (this screen), Inputs, and
+Settings at the bottom. Beside it is the list of your apps. The right side shows what the
 selected app offers (the chosen channel: the program's title and synopsis, then the channel as a
-row of cards with their names), how much you used it over the last seven days with a bar per day,
+row of cards), how much you used it over the last seven days with a bar per day,
 and when you last opened it. An app without a channel shows its banner in the channel's place. The
 bottom line shows the TV's address, network traffic, memory, storage, uptime and whether ADB is on.
+The top right shows the weather and the clock (24-hour or 12-hour, as set in Customize).
 
 - Up and down move through the apps, OK opens one. Right enters its channel; left (from the first
   card), down or Back comes back. With multiple channels, Right first reaches the channel name;
   OK opens the channel picker, then Down enters its cards. Up from the cards returns to the
-  channel name. Up from the first app reaches Inputs and Settings.
+  channel name. Left from the apps reaches the rail (Inputs, or Settings if it is nearer); Up and
+  Down move within it, OK opens the Inputs list or Customize, and Right returns to the app you
+  left. Up from the first app reaches the Home Assistant row, or the chips at the top right.
 - Pinned apps always stay first, in their saved order. **Customize → Home screen → App order**
   chooses how the other apps follow: Usage (screen time over the last seven days), Manual, or
   Alphabetical. Without usage access, Usage falls back to alphabetical order and the figures
@@ -56,11 +60,10 @@ bottom line shows the TV's address, network traffic, memory, storage, uptime and
 
 ## Home Assistant
 
-With Home Assistant connected, a row of up to six devices sits at the top left of the Index:
+With Home Assistant connected, a row of up to six devices sits at the top of the Index's right column:
 lights, then plugs, then appliances. Each pill shows an icon, a short name and its state: a light's
 brightness, on or off, an appliance's cycle with its time left, or *Offline*. While the row shows,
-the app list starts below it, Inputs and Settings move under the list, and what's playing is
-hidden.
+what's playing is hidden.
 
 - Up from the first app reaches the row. OK switches a light or plug at once; holding OK on a
   dimmable light sets its brightness with Left and Right (OK or Back ends). Appliances only

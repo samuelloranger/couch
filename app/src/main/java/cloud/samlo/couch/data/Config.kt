@@ -100,7 +100,7 @@ class Config {
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
         const val HUD_OFF = "off"
 
-        /** The row is one line at the top of the Index: six pills always fit beside the weather. */
+        /** The row is one line at the top of the Index; six pills fit beside the weather and chips by starting over the app list. */
         const val MAX_HOME_DEVICES = 6
 
         /** How long each frame took: slow frames stand out, and fast ones still show their headroom. */

@@ -22,11 +22,11 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
 /**
- * The Inputs pill's menu: the TV's inputs in a panel hanging under the pill, set like the app
+ * The rail's Inputs menu: the TV's inputs in a panel beside the rail item, set like the app
  * list. Up and down glide the selection, OK switches, Back closes. A dialog window, so it takes
- * the remote while open and hands focus back to the pill when it closes. It opens on the input
- * chosen last, the best guess at what the TV is showing. It doesn't scroll: about eight inputs fit
- * under the pill, more than a TV usually has.
+ * the remote while open and hands focus back to the rail item when it closes. It opens on the input
+ * chosen last, the best guess at what the TV is showing. It doesn't scroll: about nine inputs fit
+ * beside the item, more than a TV usually has.
  */
 @SuppressLint("RtlHardcoded")
 class InputMenu(private val activity: Activity, private val inputs: List<Tile>, anchor: View) : Dialog(activity) {
@@ -71,21 +71,25 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
         }, top = activity.dp(8)))
         // The panel's own size, plus room for its shadow.
         val frame = FrameLayout(activity).apply { setPadding(activity.dp(SHADOW), activity.dp(SHADOW), activity.dp(SHADOW), activity.dp(SHADOW)) }
-        // Some dialog themes impose a minimum width; the panel must still sit under the pill.
-        frame.addView(panel, FrameLayout.LayoutParams(activity.dp(PANEL_W), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.RIGHT))
+        // Some dialog themes impose a minimum width; the panel must still sit beside the rail.
+        frame.addView(panel, FrameLayout.LayoutParams(activity.dp(PANEL_W), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.LEFT))
         setContentView(frame)
         window?.apply {
             setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             setLayout(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT)
             setDimAmount(DIM)
             addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-            // Right edges lined up with the pill's, just under it. RIGHT, not END: the Index canvas
-            // places the pill at a fixed spot, so the panel must not mirror in a right-to-left language.
+            // Right of the rail item, level with it, but never hanging off the screen bottom.
+            // LEFT, not START: the Index canvas places the rail at a fixed spot, so the panel must
+            // not mirror in a right-to-left language.
             val at = IntArray(2).also { anchor.getLocationInWindow(it) }
-            setGravity(Gravity.TOP or Gravity.RIGHT)
+            val screenH = activity.window.decorView.height
+            val panelH = activity.dp(PANEL_PAD_V + TITLE_H + HINT_H) + inputs.size * activity.dp(IndexTokens.ROW_PITCH)
+            val top = minOf(at[1], screenH - panelH - activity.dp(MARGIN_BOTTOM)).coerceAtLeast(activity.dp(MARGIN_BOTTOM))
+            setGravity(Gravity.TOP or Gravity.LEFT)
             attributes = attributes.apply {
-                x = activity.window.decorView.width - (at[0] + anchor.width) - activity.dp(SHADOW)
-                y = at[1] + anchor.height + activity.dp(GAP) - activity.dp(SHADOW)
+                x = at[0] + anchor.width + activity.dp(GAP) - activity.dp(SHADOW)
+                y = top - activity.dp(SHADOW)
                 windowAnimations = 0
             }
         }
@@ -140,8 +144,13 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
         const val LAST = "inputs:last"
         const val PANEL_W = 330
         const val PANEL_RADIUS = 12f
-        /** Between the pill and the panel. */
+        /** Between the rail and the panel. */
         const val GAP = 9
+        /** Padding, title and hint heights: a guess at the panel height before it is measured. */
+        const val PANEL_PAD_V = 26
+        const val TITLE_H = 25
+        const val HINT_H = 28
+        const val MARGIN_BOTTOM = 20
         /** Transparent margin left for the panel's shadow. */
         const val SHADOW = 16
         const val SLIDE_DP = 8f

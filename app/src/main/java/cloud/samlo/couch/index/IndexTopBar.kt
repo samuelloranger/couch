@@ -3,34 +3,31 @@ package cloud.samlo.couch.index
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.Animatable
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
 import android.widget.ImageView
+import android.util.TypedValue
 import android.widget.LinearLayout
+import android.widget.TextClock
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.WeatherNow
+import cloud.samlo.couch.ui.FlatView
+import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.GodBadge
 import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.UpdateChip
 import cloud.samlo.couch.ui.dp
-import cloud.samlo.couch.ui.dpf
 
 /**
- * Top right: an input that just turned on, what's playing, an update when there is one, the
- * weather, then Inputs and Settings (below the app list instead while the Home Assistant row shows).
+ * Top right: an input that just turned on, what's playing, an update when there is one, then the
+ * weather and the clock, at the top row's height.
  */
 @SuppressLint("ViewConstructor")
-class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit, onUpdate: () -> Unit) : LinearLayout(context) {
+class IndexTopBar(context: Context, onUpdate: () -> Unit) : LinearLayout(context) {
     val nowPlaying = NowPlaying(context)
     val inputOffer = InputChip(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
-    val inputs = pill(R.drawable.ic_pill_inputs, R.string.section_inputs, onInputs)
-    val settings = pill(R.drawable.ic_pill_settings, R.string.settings, onSettings)
     val god = GodBadge(context, 9.5f)
     private val weather = LinearLayout(context).apply {
         orientation = HORIZONTAL
@@ -38,39 +35,50 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
         visibility = GONE
     }
     private val weatherIcon = ImageView(context)
-    private val temperature = text(20f, 600, Tokens.textPrimary).apply { letterSpacing = -0.02f }
-    private val place = text(9.5f, 500, Tokens.textMuted, 1.25f).apply { maxLines = 2 }
+    private val temperature = text(14f, 600, Tokens.textPrimary).apply { letterSpacing = -0.02f }
+    private val range = text(8f, 500, IndexTokens.railIdle)
+    private val divider = FlatView(context).apply { setBackgroundColor(0xFF2A3330.toInt()) }
+    private val clock = TextClock(context).apply {
+        typeface = Fonts.hanken(context, 500)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        setTextColor(Tokens.textPrimary)
+        includeFontPadding = false
+        fontFeatureSettings = "tnum"
+        maxLines = 1
+        format12Hour = CLOCK_12
+        format24Hour = CLOCK_24
+    }
 
     init {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
-        addView(inputOffer, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(15) })
-        addView(nowPlaying, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(15) })
-        addView(update, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(15) })
+        addView(inputOffer, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(12) })
+        addView(nowPlaying, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(12) })
+        addView(update, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(12) })
+        addView(god, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(12) })
         // Meteocons leave a margin around the drawing; 30dp draws the sky at about 20dp.
-        // The icon may overhang the pills' height without making the bar taller.
+        // The icon may overhang the row's height without making the bar taller.
         weather.addView(weatherIcon, LayoutParams(context.dp(30), context.dp(30)).apply {
-            marginEnd = context.dp(2)
+            marginEnd = context.dp(1)
             topMargin = -context.dp(2)
             bottomMargin = -context.dp(2)
         })
         weather.addView(temperature)
-        weather.addView(place, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(7) })
-        addView(weather, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(15) })
-        addView(god, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(10) })
-        placePills(null)
+        weather.addView(range, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginStart = context.dp(5) })
+        // The divider belongs to the weather; with no weather the clock stands alone.
+        weather.addView(divider, LayoutParams(context.dp(1), context.dp(13)).apply {
+            marginStart = context.dp(8)
+            marginEnd = context.dp(8)
+        })
+        addView(weather, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+        addView(clock, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
     }
 
-    /**
-     * Puts Inputs and Settings at the end of this bar, or in [into] (below the app list) while the
-     * Home Assistant row takes the top left.
-     */
-    fun placePills(into: LinearLayout?) {
-        val target = into ?: this
-        if (settings.parent === target) return
-        listOf(inputs, settings).forEach { (it.parent as? ViewGroup)?.removeView(it) }
-        target.addView(inputs, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(6) })
-        target.addView(settings, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)))
+    /** 24 hour or 12 hour, as set in Customize. */
+    fun setClock24h(on: Boolean) {
+        val format = if (on) CLOCK_24 else CLOCK_12
+        clock.format12Hour = format
+        clock.format24Hour = format
     }
 
     fun showWeather(now: WeatherNow?) {
@@ -81,33 +89,8 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
         weatherIcon.setImageResource(now.icon)
         if (animating) (weatherIcon.drawable as? Animatable)?.start()
         temperature.text = context.getString(R.string.weather_temperature, now.temperature)
-        place.text = context.getString(R.string.index_place_range, now.place, now.high, now.low)
+        range.text = context.getString(R.string.index_range, now.high, now.low)
         weather.visibility = VISIBLE
-    }
-
-    private fun pill(icon: Int, label: Int, onClick: () -> Unit) = LinearLayout(context).apply {
-        orientation = HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(context.dp(11), 0, context.dp(11), 0)
-        isFocusable = true
-        isClickable = true
-        contentDescription = context.getString(label)
-        background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), shape(0x33FFFFFF, Tokens.ring))
-            addState(intArrayOf(), shape(IndexTokens.pill, null))
-        }
-        addView(ImageView(context).apply {
-            setImageResource(icon)
-            setColorFilter(IndexTokens.pillText)
-        }, LayoutParams(context.dp(12), context.dp(12)).apply { marginEnd = context.dp(5) })
-        addView(text(11f, 500, IndexTokens.pillText).apply { text = context.getString(label) })
-        setOnClickListener { onClick() }
-    }
-
-    private fun shape(color: Int, stroke: Int?) = GradientDrawable().apply {
-        cornerRadius = context.dpf(13f)
-        setColor(color)
-        stroke?.let { setStroke(context.dp(2), it) }
     }
 
     private fun text(sizeSp: Float, weight: Int, color: Int, lineHeight: Float = 1f) =
@@ -121,8 +104,8 @@ class IndexTopBar(context: Context, onInputs: () -> Unit, onSettings: () -> Unit
         (weatherIcon.drawable as? Animatable)?.let { if (on) it.start() else it.stop() }
     }
 
-    /** Hidden when the TV has no inputs to switch to. */
-    fun setHasInputs(has: Boolean) {
-        inputs.visibility = if (has) View.VISIBLE else View.GONE
+    private companion object {
+        const val CLOCK_24 = "HH:mm"
+        const val CLOCK_12 = "h:mm"
     }
 }
