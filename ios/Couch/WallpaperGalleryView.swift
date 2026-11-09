@@ -21,7 +21,7 @@ struct WallpaperGalleryView: View {
                     ContentUnavailableView("Update Couch on the TV", systemImage: "photo.on.rectangle.angled",
                         description: Text("This TV needs a newer version of Couch to manage ambient images."))
                 } else {
-                    Text("Images alternate every two minutes during ambient mode.")
+                    Text("Images alternate every 30 seconds during ambient mode.")
                         .font(.subheadline).foregroundStyle(.secondary)
                     Text("JPEG, PNG or WebP. Up to 200 images; 20 MB per image.")
                         .font(.footnote).foregroundStyle(.secondary)

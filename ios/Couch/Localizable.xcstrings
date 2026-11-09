@@ -1551,12 +1551,12 @@
         }
       }
     },
-    "Images alternate every two minutes during ambient mode.": {
+    "Images alternate every 30 seconds during ambient mode.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les images alternent toutes les deux minutes pendant la veille."
+            "value": "Les images alternent toutes les 30 secondes pendant la veille."
           }
         }
       }
