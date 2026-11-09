@@ -8,39 +8,25 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
-/** The ledger: originals recorded once, removals remembered, undos held, all across restarts. */
+/** The ledger: removals remembered, undos held, all across restarts. */
 class DebloatStoreTest {
     private fun dir(): File = kotlin.io.path.createTempDirectory("debloat").toFile()
-
-    private fun original(pkg: String, d: File): String =
-        JSONObject(File(d, "debloat.json").readText()).getJSONObject("originals").getString(pkg)
-
-    @Test fun originalsAreRecordedOnce() {
-        val d = dir()
-        val store = DebloatStore.load(d)
-        store.record("com.t.app", present = true)
-        store.record("com.t.app", present = false) // a later scan changes nothing
-        assertEquals("present", original("com.t.app", d))
-    }
 
     @Test fun entriesListWhatisStillRemoved() {
         val d = dir()
         val store = DebloatStore.load(d)
-        store.record("com.t.a", true)
-        store.removed("com.t.a", viaShell = true)
-        store.record("com.t.b", true)
-        store.removed("com.t.b", viaShell = false)
-        assertEquals(DebloatStore.Tally(fromShell = 1, active = 2, ever = 2), store.tally())
+        store.removed("com.t.a")
+        store.removed("com.t.b")
+        assertEquals(DebloatStore.Tally(active = 2, ever = 2), store.tally())
         store.undone("com.t.a")
-        assertEquals(DebloatStore.Tally(fromShell = 0, active = 1, ever = 2), store.tally())
+        assertEquals(DebloatStore.Tally(active = 1, ever = 2), store.tally())
         assertEquals(listOf("com.t.b"), store.entries())
     }
 
     @Test fun undosSurviveARestart() {
         val d = dir()
         DebloatStore.load(d).apply {
-            record("com.t.a", true)
-            removed("com.t.a", viaShell = true)
+            removed("com.t.a")
         }
         val back = DebloatStore.load(d)
         assertEquals(listOf("com.t.a"), back.entries())
@@ -87,5 +73,6 @@ class DebloatStoreTest {
         val store = DebloatStore.load(d)
         assertTrue(store.entries().isEmpty())
         assertEquals(-1, store.before.ramFreeMb)
+        assertEquals("{not json at all", File(d, "debloat.json.bad").readText())
     }
 }

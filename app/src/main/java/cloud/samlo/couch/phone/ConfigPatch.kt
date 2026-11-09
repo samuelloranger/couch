@@ -14,12 +14,11 @@ object ConfigPatch {
     /** The config with [patch] applied. Throws [JSONException] for a value of the wrong type. */
     fun apply(current: Config, patch: JSONObject): Config {
         val merged = ConfigJson.encode(current)
-        val known = ConfigJson.encode(current)
         for (key in patch.keys()) {
-            if (!known.has(key)) continue
+            if (!merged.has(key)) continue
             val value = patch.get(key)
             // optBoolean and friends would quietly turn "nope" into the old value: say so instead.
-            if (!sameType(known.get(key), value)) throw JSONException("$key has the wrong type")
+            if (!sameType(merged.get(key), value)) throw JSONException("$key has the wrong type")
             merged.put(key, value)
         }
         val out = Config()

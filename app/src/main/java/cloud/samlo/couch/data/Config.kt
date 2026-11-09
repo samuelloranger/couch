@@ -85,18 +85,24 @@ class Config {
     /** Godmode's frame HUD on the home screen: [HUD_OFF], [HUD_MS] or [HUD_FPS]. */
     var hud = HUD_OFF
 
-    /** Written atomically so a half-written file never wipes the user's setup. */
+    /** Written atomically, one writer at a time, so a half-written file never wipes the user's setup; a failed write keeps the old file. */
     fun save(dir: File?) {
         dir ?: return
-        val tmp = File(dir, "config.json.tmp")
-        tmp.writeText(toJson())
-        tmp.renameTo(File(dir, FILE))
+        val text = toJson()
+        synchronized(lock) {
+            try {
+                writeAtomically(File(dir, FILE), text)
+            } catch (e: java.io.IOException) {
+                // The old file stays; losing one change beats crashing a click handler.
+            }
+        }
     }
 
     fun toJson(): String = ConfigJson.encode(this).toString(2)
 
     companion object {
         private const val FILE = "config.json"
+        private val lock = Any()
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
         const val HUD_OFF = "off"
 
@@ -126,12 +132,15 @@ class Config {
         )
 
         fun load(dir: File?): Config {
-            val text = try {
-                dir?.let { File(it, FILE) }?.takeIf { it.isFile }?.readText()
+            val file = dir?.let { File(it, FILE) }?.takeIf { it.isFile } ?: return Config()
+            val json = try {
+                org.json.JSONObject(file.readText())
             } catch (e: Exception) {
-                null
-            } ?: return Config()
-            return fromJson(text)
+                // Kept aside, not overwritten by the next save.
+                keepAside(file)
+                return Config()
+            }
+            return Config().also { ConfigJson.decode(json, it) }
         }
 
         /** Unreadable or malformed text gives the defaults, never a crash. */
