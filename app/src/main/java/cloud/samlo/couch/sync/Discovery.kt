@@ -14,6 +14,8 @@ class Discovery(context: Context) {
 
     private val nsd = context.applicationContext.getSystemService(NsdManager::class.java)
     private val seen = HashMap<String, Found>()
+    /** Service name as the network lists it (Android may rename a re-registered one) to the id it announced. */
+    private val ids = HashMap<String, String>()
     private val queue = ArrayDeque<NsdServiceInfo>()
     private var resolving = false
     private var onChange: (() -> Unit)? = null
@@ -46,6 +48,7 @@ class Discovery(context: Context) {
         browsing?.let { runCatching { nsd?.stopServiceDiscovery(it) } }
         browsing = null
         seen.clear()
+        ids.clear()
         queue.clear()
         resolving = false
         unannounce()
@@ -104,6 +107,7 @@ class Discovery(context: Context) {
 
     @Synchronized private fun enqueue(info: NsdServiceInfo) {
         if (!info.serviceName.startsWith(NAME_PREFIX)) return
+        if (queue.size >= MAX_TVS) return
         queue.addLast(info)
         next()
     }
@@ -137,17 +141,23 @@ class Discovery(context: Context) {
         fun attr(key: String) = info.attributes[key]?.let { String(it) }
         val id = attr("id")?.take(Snapshot.MAX_NAME) ?: return
         val found = Found(id, attr("name")?.take(Snapshot.MAX_NAME) ?: id, host, info.port, attr("pair") == "1")
-        synchronized(this) { seen[NAME_PREFIX + id] = found }
+        synchronized(this) {
+            if (id !in seen && seen.size >= MAX_TVS) return
+            seen[id] = found
+            ids[info.serviceName] = id
+        }
         onChange?.invoke()
     }
 
     private fun lose(serviceName: String) {
-        val removed = synchronized(this) { seen.remove(serviceName) != null }
+        val removed = synchronized(this) { seen.remove(ids.remove(serviceName) ?: serviceName.removePrefix(NAME_PREFIX)) != null }
         if (removed) onChange?.invoke()
     }
 
     companion object {
         private const val TYPE = "_couch._tcp."
         private const val NAME_PREFIX = "couch-"
+        /** A host advertising endless services can't grow the list or the queue past this. */
+        private const val MAX_TVS = 64
     }
 }

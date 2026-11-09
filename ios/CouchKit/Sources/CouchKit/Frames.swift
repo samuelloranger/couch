@@ -51,27 +51,6 @@ public enum AVCC {
     }
 }
 
-/// Splits a byte stream of `uint32 BE length | payload` frames; bounded by `maxFrame`.
-public struct LengthPrefixedReader: Sendable {
-    public let maxFrame: Int
-    private var buffer = Data()
-
-    public init(maxFrame: Int) { self.maxFrame = maxFrame }
-
-    public mutating func feed(_ data: Data) { buffer.append(data) }
-
-    /// The next whole frame, nil when more bytes are needed; throws on a length out of range.
-    public mutating func next() throws -> Data? {
-        guard let len32 = buffer.readU32(at: 0) else { return nil }
-        let len = Int(len32)
-        guard len >= 1, len <= maxFrame else { throw FrameError.tooLarge(len) }
-        guard buffer.count >= 4 + len else { return nil }
-        let frame = buffer.subdata(in: (buffer.startIndex + 4)..<(buffer.startIndex + 4 + len))
-        buffer = Data(buffer.dropFirst(4 + len))
-        return frame
-    }
-}
-
 /// Plain pre-session frames (pairing and the handshake): 4-byte length + JSON object.
 public enum PlainWire {
     public static let maxFrame = 64 * 1024

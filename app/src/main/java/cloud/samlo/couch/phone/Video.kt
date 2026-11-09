@@ -52,19 +52,17 @@ class Video(private val context: Context) {
         synchronized(lock) {
             val retune = thread != null && requested != quality
             quality = requested
-            session.wantsVideo = true
             session.resetVideo()
-            val joining = wanting.add(session)
+            wanting.add(session)
             if (retune) restart()
             if (thread == null) launch()
             session.send(status())
-            if (joining && !retune) replay(session)
+            if (!retune) replay(session)
         }
     }
 
     fun stop(session: Session) {
         synchronized(lock) {
-            session.wantsVideo = false
             if (!wanting.remove(session)) return
             if (wanting.isEmpty()) halt("ended", null)
             session.send(status())

@@ -65,7 +65,11 @@ object Sync {
         val me = peers(context)
         Phones.attach(context)
         val srv = server ?: Server(me) { local(context, me) }.also {
-            it.onPaired = { listener?.invoke() }
+            it.onPaired = {
+                listener?.invoke()
+                // Pairing may have closed first and stopped the server for want of a phone; now there is one.
+                thread(name = "couch-sync-paired") { reconcile(context) }
+            }
             it.phones = Phones
             it.shares = { sharing }
             server = it
@@ -104,6 +108,8 @@ object Sync {
             thread(name = "couch-sync-pull") {
                 try {
                     Client.pull(at.host, at.port, me, peer)?.let { me.store(peer.id, it, System.currentTimeMillis()) }
+                } catch (e: Exception) {
+                    // A failed pull or save just waits for the next one.
                 } finally {
                     pulling.remove(peer.id)
                 }

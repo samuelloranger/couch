@@ -47,9 +47,6 @@ class Session(
     val held = HeldKeys()
     val wallpaperUpload = WallpaperUpload()
 
-    /** Whether this phone asked for the picture; set by the stream messages. */
-    @Volatile var wantsVideo = false
-
     val isOpen get() = !closed
 
     /** Frames waiting for the writer. */
