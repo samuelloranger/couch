@@ -110,7 +110,11 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         }
     }
 
+    private var linkPending = false
+
     private fun openLink() {
+        if (linkPending) return
+        linkPending = true
         link?.stop()
         val activity = ctx.activity
         worker.execute {
@@ -120,6 +124,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
             }
             val address = phone.start()
             activity.runOnUiThread {
+                linkPending = false
                 if (activity.isFinishing) return@runOnUiThread phone.stop()
                 if (address == null) {
                     Toast.makeText(activity, R.string.hass_link_failed, Toast.LENGTH_LONG).show()

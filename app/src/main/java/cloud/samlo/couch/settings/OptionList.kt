@@ -91,7 +91,7 @@ class OptionList(
 
     /** Left/right step through [options]; OK steps forward. Short lists show every option at once. */
     fun choice(title: String, help: String, options: List<Option>, get: () -> String, set: (String) -> Unit) {
-        val labelOf = { options.firstOrNull { it.value == get() }?.label ?: options.first().label }
+        val labelOf = { options.firstOrNull { it.value == get() }?.label ?: get() }
         val row = add(title, help) { "‹  ${labelOf()}  ›" }
         val index = { options.indexOfFirst { it.value == get() }.coerceAtLeast(0) }
         val labels = options.map { it.label }
