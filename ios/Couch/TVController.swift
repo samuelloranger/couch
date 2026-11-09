@@ -297,7 +297,7 @@ final class TVController: Identifiable {
     /// Optimistic: the screen changes now; the TV's `config` push is the final word.
     func set(_ patch: [String: JSONValue]) {
         // Settings aren't queued, so with no session the change would only flip locally and be reverted by the next push.
-        guard session != nil || isDemo else { banner = "Not connected to the TV."; return }
+        guard session != nil || isDemo else { banner = String(localized: "Not connected to the TV."); return }
         for (k, v) in patch { config[k] = v }
         send(.configSet(patch))
     }

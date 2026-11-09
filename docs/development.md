@@ -39,8 +39,8 @@ first, which deletes Couch's settings. Back them up first (see
 
 ### Version
 
-The version comes from the latest `vX.Y.Z` tag: `versionName` is `X.Y.Z` and `versionCode` is
-`X·10000 + Y·100 + Z`. Without tags it is `0.1.0`.
+The version comes from the latest `vX.Y.Z` tag: `versionName` is the tag without its `v` (a
+pre-release keeps its suffix, like `0.3.0-beta.1`) and `versionCode` is `X·10000 + Y·100 + Z`. Without tags it is `0.1.0`.
 
 ## iPhone app
 

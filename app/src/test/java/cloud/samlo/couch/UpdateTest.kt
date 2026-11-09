@@ -24,7 +24,7 @@ class UpdateTest {
     fun preReleaseTagsCountAsTheirNumbers() {
         assertTrue(Versions.isNewer("v0.3.0-beta.1", "0.2.0"))
         assertFalse(Versions.isNewer("v0.3.0-rc.1", "0.3.0"))
-        assertFalse(Versions.isNewer("v0.3.0-beta.1", "0.3.0")) // installed has no suffix: undecidable
+        assertFalse(Versions.isNewer("v0.3.0-beta.1", "0.3.0")) // the final build is newer than its own betas
         assertEquals(listOf(0, 3, 0), Versions.parse("0.3.0-beta"))
     }
 

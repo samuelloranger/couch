@@ -26,7 +26,6 @@ object Versions {
         val diff = a.zip(b).firstOrNull { (x, y) -> x != y }
         if (diff != null) return diff.first > diff.second
         // Same X.Y.Z: a final release beats its pre-releases, a higher beta number beats a lower one.
-        // shortcut: the installed versionName carries no suffix, so a suffix-free installed build ties with its own beta and final; carry the tag into versionName to decide those.
         val x = preOf(candidate)
         val y = preOf(installed)
         return when {

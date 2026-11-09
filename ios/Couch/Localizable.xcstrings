@@ -804,6 +804,17 @@
         }
       }
     },
+    "Not connected to the TV.": {
+      "extractionState": "manual",
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La télé n’est pas connectée."
+          }
+        }
+      }
+    },
     "The TV hasn't sent its apps.": {
       "extractionState": "manual",
       "localizations": {
