@@ -97,8 +97,13 @@ class RootShell : Shell {
     @Volatile private var pid: Int? = null
 
     override fun run(command: String): String = launch(command).let { p ->
+        // A su that hangs would block the pipe for ever: end it when the time is up.
+        val timer = Thread({
+            if (!p.waitFor(RUN_MS, java.util.concurrent.TimeUnit.MILLISECONDS)) p.destroyForcibly()
+        }, "couch-root-run").apply { isDaemon = true; start() }
         val text = p.inputStream.readBytes().toString(Charsets.UTF_8)
         p.waitFor()
+        timer.interrupt()
         text
     }
 
@@ -180,6 +185,7 @@ class RootShell : Shell {
         fun killTracked() = pids.toList().forEach(::killRoot)
 
         private const val BUFFER = 64 * 1024
+        private const val RUN_MS = 30_000L
         private val END = ByteArray(0)
     }
 }

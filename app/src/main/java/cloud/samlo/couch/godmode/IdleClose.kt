@@ -84,20 +84,9 @@ internal object IdleClose {
 
     private fun receiver(context: Context) = Intent(context, IdleCloseReceiver::class.java)
 
+    // Failing (debugging off, key no longer allowed) is fine: the next check tries again.
     private fun shell(context: Context, command: String) {
-        val shell = try {
-            AdbShell.create(context, prompt = false)
-        } catch (e: Exception) {
-            // No key, or it can't be read: this runs on a bare thread.
-            return
-        }
-        try {
-            shell.run(command)
-        } catch (e: Exception) {
-            // Debugging off or the key no longer allowed; the next check tries again.
-        } finally {
-            shell.close()
-        }
+        AdbShell.once(context) { it.run(command) }
     }
 }
 

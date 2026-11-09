@@ -2,6 +2,8 @@ package cloud.samlo.couch.adb
 
 import android.util.Base64
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -9,6 +11,7 @@ import java.security.KeyFactory
 import java.security.KeyPair
 import java.security.KeyPairGenerator
 import java.security.Signature
+import java.security.interfaces.RSAKey
 import java.security.interfaces.RSAPublicKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
@@ -55,27 +58,40 @@ class AdbKey private constructor(private val pair: KeyPair, private val name: St
     }
 
     companion object {
+        private val lock = Any()
+
         /** Reuses the stored key, or generates one and keeps both halves on disk. */
-        fun load(dir: File, name: String): AdbKey {
+        fun load(dir: File, name: String): AdbKey = synchronized(lock) {
             val priv = File(dir, "adbkey")
             val pub = File(dir, "adbkey.pub")
             val factory = KeyFactory.getInstance("RSA")
             if (priv.isFile && pub.isFile) {
                 try {
-                    return AdbKey(
-                        KeyPair(factory.generatePublic(X509EncodedKeySpec(pub.readBytes())), factory.generatePrivate(PKCS8EncodedKeySpec(priv.readBytes()))),
-                        name,
-                    )
+                    val public = factory.generatePublic(X509EncodedKeySpec(pub.readBytes())) as RSAPublicKey
+                    val private = factory.generatePrivate(PKCS8EncodedKeySpec(priv.readBytes()))
+                    // Halves of two different pairs (an interrupted write) would never authorize.
+                    if ((private as RSAKey).modulus == public.modulus) return AdbKey(KeyPair(public, private), name)
                 } catch (e: Exception) {
                     // A broken key file is regenerating, at the cost of one more dialog.
-                    priv.delete()
-                    pub.delete()
                 }
+                priv.delete()
+                pub.delete()
             }
             val pair = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
-            priv.writeBytes(pair.private.encoded)
-            pub.writeBytes(pair.public.encoded)
-            return AdbKey(pair, name)
+            // Public first: a crash between the two leaves no private key, so the pair is regenerated whole.
+            write(pub, pair.public.encoded)
+            write(priv, pair.private.encoded)
+            AdbKey(pair, name)
+        }
+
+        /** Writes to a temp file, syncs, then renames into place, so a reader never sees half a file. */
+        private fun write(file: File, bytes: ByteArray) {
+            val tmp = File(file.parentFile, file.name + ".tmp")
+            FileOutputStream(tmp).use {
+                it.write(bytes)
+                it.fd.sync()
+            }
+            if (!tmp.renameTo(file)) throw IOException("can't write ${file.name}")
         }
     }
 }
