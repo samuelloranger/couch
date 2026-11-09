@@ -39,7 +39,6 @@ class SystemLine(context: Context) : LinearLayout(context) {
 
     init {
         orientation = HORIZONTAL
-        alpha = OPACITY
         items.forEachIndexed { i, view ->
             if (i > 0) addView(dots[i - 1], LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
             addView(view, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
@@ -116,7 +115,7 @@ class SystemLine(context: Context) : LinearLayout(context) {
     /** A real minus sign reads better than a hyphen. */
     private fun minus(value: Int) = if (value < 0) "−${-value}" else value.toString()
 
-    private fun item() = IndexText(context, 9f, 500, IndexTokens.hours).apply {
+    private fun item() = IndexText(context, 9f, 500, IndexTokens.footerLabel).apply {
         fontFeatureSettings = "tnum"
         maxLines = 1
     }
@@ -124,6 +123,5 @@ class SystemLine(context: Context) : LinearLayout(context) {
     private companion object {
         const val REFRESH_MS = 3_000L
         const val SEPARATOR = " · "
-        const val OPACITY = 0.55f
     }
 }
