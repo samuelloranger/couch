@@ -2,6 +2,7 @@ import CouchKit
 import Foundation
 import Network
 
+#if DEBUG
 /// Sample TVs for screenshots and design checks. Used only when the app launches with `COUCH_DEMO=1` in a debug build.
 struct DemoData {
     var tv: PairedTV
@@ -101,3 +102,4 @@ struct DemoData {
         ]
     }
 }
+#endif

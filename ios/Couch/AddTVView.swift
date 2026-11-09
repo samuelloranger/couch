@@ -114,7 +114,9 @@ struct PairingView: View {
         let phoneId = model.phoneId, phoneName = model.phoneName, demo = model.demoMode
         let target = self.target
         return model.pairings.session(key: target.key) {
+            #if DEBUG
             if demo { return DemoPairing() }
+            #endif
             switch target {
             case .found(let d):
                 return try await PairingClient.begin(endpoint: d.endpoint, phoneId: phoneId, phoneName: phoneName)
@@ -126,12 +128,14 @@ struct PairingView: View {
     }
 }
 
+#if DEBUG
 final class DemoPairing: PendingPairing, @unchecked Sendable {
     let tvName = "Bedroom TV"
     let code = "042431"
     func finish(matched: Bool) async throws -> PairedTV { PairedTV(id: "demo-new", name: tvName, linkKey: Data(count: 32)) }
     func cancel() {}
 }
+#endif
 
 struct PairingContent: View {
     @Environment(AppModel.self) private var model
