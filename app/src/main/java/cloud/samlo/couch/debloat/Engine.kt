@@ -94,23 +94,9 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      * key isn't allowed any more, null when the shell couldn't be reached at all.
      */
     fun touch(): Boolean? {
-        val shell = try {
-            AdbShell.create(context, prompt = false)
-        } catch (e: Exception) {
-            // Generating or reading the key failed; this runs on a bare thread.
-            return null
-        }
-        return try {
-            shell.run("true")
-            true
-        } catch (e: AdbShell.Failed.NoOk) {
-            false
-        } catch (e: Exception) {
-            // Runs on the keepalive's bare thread: anything else just means "couldn't reach it now".
-            null
-        } finally {
-            shell.close()
-        }
+        var notAllowed = false
+        val ran = AdbShell.once(context, { notAllowed = it is AdbShell.Failed.NoOk }) { it.run("true") }
+        return if (ran != null) true else if (notAllowed) false else null
     }
 
     /**
@@ -118,22 +104,11 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      * had without asking. A full `dumpsys meminfo` takes seconds on a TV, so this lists processes
      * first and asks only about the running ones.
      */
-    fun memory(pkgs: Collection<String>): Map<String, Int>? {
-        val shell = try {
-            AdbShell.create(context, prompt = false)
-        } catch (e: Exception) {
-            return null
-        }
-        return try {
-            val names = shell.run("ps -A -o NAME").lines().map(String::trim)
-            val running = pkgs.filter { pkg -> SAFE_NAME.matches(pkg) && names.any { it == pkg || it.startsWith("$pkg:") } }
-            if (running.isEmpty()) emptyMap()
-            else Impacts.parseMemory(shell.run(running.joinToString("; ") { "dumpsys meminfo -s $it" }))
-        } catch (e: AdbShell.Failed) {
-            null
-        } finally {
-            shell.close()
-        }
+    fun memory(pkgs: Collection<String>): Map<String, Int>? = AdbShell.once(context) { shell ->
+        val names = shell.run("ps -A -o NAME").lines().map(String::trim)
+        val running = pkgs.filter { pkg -> SAFE_NAME.matches(pkg) && names.any { it == pkg || it.startsWith("$pkg:") } }
+        if (running.isEmpty()) emptyMap()
+        else Impacts.parseMemory(shell.run(running.joinToString("; ") { "dumpsys meminfo -s $it" }))
     }
 
     /**
@@ -147,18 +122,13 @@ class Engine(private val context: Context, private val list: DebloatList? = null
     }
 
     /** One shell command, output as text; call after [connect] granted the shell. */
-    fun run(command: String): String = synchronized(this) {
-        (adb ?: throw AdbShell.Failed.Off(null)).run(command)
+    fun run(command: String, waitMs: Int = AdbShell.WAIT_MS): String = synchronized(this) {
+        (adb ?: throw AdbShell.Failed.Off(null)).run(command, waitMs)
     }
 
     /** Closes background apps, as Android would under memory pressure; call after [connect]. */
     fun killBackground() {
         run("am kill-all")
-    }
-
-    /** Clears every app's cache (apps rebuild them as they go); call after [connect]. */
-    fun trimCaches() {
-        run("pm trim-caches 999G")
     }
 
     /**
@@ -167,7 +137,7 @@ class Engine(private val context: Context, private val list: DebloatList? = null
      * manager agrees the app is gone.
      */
     fun remove(pkg: String) {
-        require(SAFE_NAME.matches(pkg) && list?.entry(pkg) != null) { "$pkg is not on Couch's list" }
+        require(removable(pkg, list)) { "$pkg is not on Couch's list" }
         val out = run("pm uninstall -k --user 0 $pkg")
         if (!out.contains("Success") || Packages.installed(context, pkg)) throw Refused(pkg, out)
     }
@@ -189,5 +159,8 @@ class Engine(private val context: Context, private val list: DebloatList? = null
         private const val RETRY_MS = 4_000L
         /** Package names only, so nothing else can reach the shell command. */
         private val SAFE_NAME = Regex("[A-Za-z0-9_.]+")
+
+        /** The guard before a removal: a plain package name that [list] names and does not protect. */
+        internal fun removable(pkg: String, list: DebloatList?) = SAFE_NAME.matches(pkg) && list?.entry(pkg) != null
     }
 }

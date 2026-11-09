@@ -27,6 +27,8 @@ class AdbShell private constructor(
     private val phase: (Phase) -> Unit,
 ) : Shell {
     private var live: Socket? = null
+    @Volatile private var closed = false
+    @Volatile private var wait = WAIT_MS
     private var stream = 0
 
     /** Steps worth showing to the user while a connection is negotiated. */
@@ -43,7 +45,17 @@ class AdbShell private constructor(
      * Android may ask to allow debugging; later calls reuse that connection as a new stream, so
      * one piece of work asks at most once however many commands it takes. [close] when done.
      */
-    override fun run(command: String): String = stream("shell:$command").toString(Charsets.UTF_8.name())
+    override fun run(command: String): String = run(command, WAIT_MS)
+
+    /** Like [run], waiting up to [waitMs] for output; for a command that can stay silent a while. */
+    fun run(command: String, waitMs: Int): String {
+        wait = waitMs
+        try {
+            return stream("shell:$command").toString(Charsets.UTF_8.name())
+        } finally {
+            wait = WAIT_MS
+        }
+    }
 
     /**
      * Like [run], over adbd's newer shell protocol. Anything the command leaves running in the
@@ -83,6 +95,7 @@ class AdbShell private constructor(
     /** Opens [service] as a new stream and feeds its output to [sink] until adbd closes it. */
     private fun pump(service: String, idleMs: Int = 0, onIdle: () -> Unit = {}, sink: (ByteArray) -> Unit) {
         val socket = open()
+        socket.soTimeout = wait
         val local = ++stream
         try {
             write(socket, AdbProtocol.OPEN, local, 0, "$service\u0000".toByteArray())
@@ -108,25 +121,40 @@ class AdbShell private constructor(
                     }
                     else -> {
                         // Out of step with adbd: this connection can't be trusted for the next command.
-                        close()
+                        drop()
                         throw Failed.Blocked(IllegalStateException("stream saw ${m.name()}"))
                     }
                 }
             }
         } catch (e: IOException) {
-            close()
+            drop()
             throw Failed.Blocked(e)
         }
     }
 
     /** The connection, opened and authorized on first use. */
-    private fun open(): Socket = live ?: connectAny().also {
-        live = it
+    private fun open(): Socket {
+        live?.let { return it }
+        if (closed) throw Failed.Blocked(IOException("closed"))
+        val socket = connectAny()
+        // A close() that came while connecting found nothing to close: it ends here instead.
+        if (closed) {
+            runCatching { socket.close() }
+            throw Failed.Blocked(IOException("closed"))
+        }
+        live = socket
         phase(Phase.READY)
+        return socket
     }
 
-    /** Lets go of the connection; a later [run] opens a new one and may ask again. */
+    /** Ends this shell for good, from any thread: a command running or connecting fails as [Failed.Blocked]. */
     override fun close() {
+        closed = true
+        drop()
+    }
+
+    /** Lets go of a connection that went wrong; a later [run] opens a new one and may ask again. */
+    private fun drop() {
         live?.let { runCatching { it.close() } }
         live = null
     }
@@ -204,7 +232,7 @@ class AdbShell private constructor(
         } catch (e: SocketTimeoutException) {
             return null
         } finally {
-            socket.soTimeout = WAIT_MS
+            socket.soTimeout = wait
         }
         if (first < 0) throw IOException("closed")
         return read(socket, first)
@@ -216,7 +244,10 @@ class AdbShell private constructor(
         if (first >= 0) head[0] = first.toByte()
         ins.readFully(head, if (first >= 0) 1 else 0, if (first >= 0) 23 else 24)
         val b = ByteBuffer.wrap(head).order(ByteOrder.LITTLE_ENDIAN)
-        val data = ByteArray(b.getInt(12))
+        val length = b.getInt(12)
+        // A local peer answering on the port could send anything here.
+        if (length < 0 || length > AdbProtocol.MAX_PAYLOAD) throw IOException("bad length $length")
+        val data = ByteArray(length)
         if (data.isNotEmpty()) ins.readFully(data)
         return AdbProtocol.Msg(b.getInt(0), b.getInt(4), b.getInt(8), data)
     }
@@ -235,7 +266,7 @@ class AdbShell private constructor(
     companion object {
         private const val PORT = 5555
         private const val CONNECT_MS = 3000
-        private const val WAIT_MS = 40_000
+        const val WAIT_MS = 40_000
         private const val TOKEN = 1
         private const val SIGN = 2
         private const val PUBKEY = 3
@@ -248,5 +279,27 @@ class AdbShell private constructor(
          */
         fun create(context: Context, prompt: Boolean = true, phase: (Phase) -> Unit = {}) =
             AdbShell(AdbKey.load(context.filesDir, "couch@tv"), prompt, phase)
+
+        /**
+         * Runs [block] on a silent connection (never asks) and closes it; null on any failure (no key,
+         * debugging off, key not allowed). [onFailed] sees the cause, for a caller that tells them apart.
+         */
+        fun <T> once(context: Context, onFailed: (Exception) -> Unit = {}, block: (AdbShell) -> T): T? {
+            val shell = try {
+                create(context, prompt = false)
+            } catch (e: Exception) {
+                // Reading or generating the key failed; callers here run on bare threads.
+                onFailed(e)
+                return null
+            }
+            return try {
+                block(shell)
+            } catch (e: Exception) {
+                onFailed(e)
+                null
+            } finally {
+                shell.close()
+            }
+        }
     }
 }
