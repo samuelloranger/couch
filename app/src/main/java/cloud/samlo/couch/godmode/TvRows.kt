@@ -9,9 +9,9 @@ import cloud.samlo.couch.settings.Option
 import kotlin.concurrent.thread
 
 /**
- * The TV's own settings: put everything back, animation speed, TV-wide ad blocking through
- * Android's private DNS, and closing background apps, now or once they sit idle. Writing needs the shell's grant; without it,
- * a row connects first and then applies the change.
+ * The TV's own settings: put back what an earlier Godmode changed, and closing background apps,
+ * now or once they sit idle. Writing needs the shell's grant; without it, a row connects first and
+ * then applies the change.
  */
 internal fun GodmodePage.tvRows() {
     val c = ctx.activity
@@ -25,25 +25,6 @@ internal fun GodmodePage.tvRows() {
                 toast(ctx.str(R.string.putback_done))
             }
         }
-    }
-    val speeds = listOf(Option(ctx.str(R.string.anim_off), "0"), Option(ctx.str(R.string.anim_half), "0.5"), Option(ctx.str(R.string.anim_normal), "1"))
-    o.choice(ctx.str(R.string.animations), ctx.str(R.string.animations_help), speeds, { TvSettings.animations(c) }) { speed ->
-        writing { TvSettings.setAnimations(c, speed) }
-    }
-    val dns = mutableListOf(
-        Option(ctx.str(R.string.dns_auto), "auto"),
-        Option(ctx.str(R.string.dns_adblock), "adblock"),
-        Option(ctx.str(R.string.dns_off), "off"),
-    )
-    if (TvSettings.dns(c) == "custom") dns += Option(ctx.str(R.string.dns_custom), "custom")
-    o.choice(ctx.str(R.string.dns), ctx.str(R.string.dns_help), dns, { TvSettings.dns(c) }) { choice ->
-        writing { TvSettings.setDns(c, choice, TvSettings.get(c, TvSettings.DNS_HOST)) }
-    }
-    o.text(ctx.str(R.string.dns_host), ctx.str(R.string.dns_host_help), ctx.str(R.string.dns_host_placeholder), {
-        if (TvSettings.dns(c) == "custom") TvSettings.get(c, TvSettings.DNS_HOST).orEmpty() else ctx.str(R.string.dns_host_placeholder)
-    }) { host ->
-        val name = host.trim()
-        if (name.isNotEmpty()) writing { TvSettings.setDns(c, "custom", name) }
     }
     o.link(ctx.str(R.string.kill_bg), ctx.str(R.string.kill_bg_help)) { closeBackground() }
     val limits = listOf(0, 30, 60, 120, 240).map { Option(if (it == 0) ctx.str(R.string.idle_close_off) else c.getString(R.string.idle_close_minutes, it), "$it") }

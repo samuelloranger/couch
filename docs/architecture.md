@@ -15,7 +15,7 @@ cloud.samlo.couch
 ├── godmode/   the hidden page: TV settings, real-home takeover, tools, frame readouts
 ├── debloat/   removing the apps a TV came with, measured and reversible, through the TV's own shell
 ├── adb/       a small ADB client (key, protocol, shell) for the TV's own debugging port
-├── measure/   frame timing: the HUD, the meter and the benchmark
+├── measure/   frame timing: the HUD, the meter and the benchmark (reached only from debug builds)
 ├── sync/      screen time shared between TVs: snapshot and merge, pairing, a bounded socket server
 ├── phone/     the iPhone app's sessions: encrypted frames, settings, keys, text and the picture
 └── capture/   a low-latency screen capture run under app_process, with screenrecord as fallback

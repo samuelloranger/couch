@@ -68,6 +68,7 @@ final class TVController: Identifiable {
             })
     }
 
+    #if DEBUG
     /// Demo controller: filled with sample data, never touches the network.
     init(demo: DemoData) {
         tv = demo.tv; id = demo.tv.id; phoneId = ""; resolve = { nil }; remember = { _ in }; isDemo = true
@@ -94,6 +95,7 @@ final class TVController: Identifiable {
             }
         }
     }
+    #endif
 
     // MARK: lifecycle
 

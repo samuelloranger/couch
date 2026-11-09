@@ -26,6 +26,7 @@ final class AppModel {
         demoMode = demo
         self.demoScreen = demoScreen
         if demo {
+            #if DEBUG
             store = MemoryStore()
             phoneId = "demo-phone"
             backupStore = BackupStore(url: FileManager.default.temporaryDirectory.appendingPathComponent("couch-demo-backups.json"))
@@ -34,6 +35,9 @@ final class AppModel {
                 ConfigBackup(name: "Weekend look", date: Date().addingTimeInterval(-86_400 * 3), groups: [.look, .ambient], patch: [:]),
             ]
             discovered = DemoData.discovered
+            #else
+            preconditionFailure("Demo mode exists only in debug builds")
+            #endif
         } else {
             let s = KeychainStore()
             store = s

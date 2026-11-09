@@ -189,7 +189,7 @@ setting changes, so edit it while the home screen is in the background.
 | `checkUpdates` | boolean | `true` | Look for a newer release once a day. |
 | `godmode` | boolean | `false` | Set by the seven OK presses on About; lists the hidden [Godmode](godmode.md) page in Customize. |
 | `preReleases` | boolean | `false` | Godmode's update channel: offer pre-releases too, never older than what is installed. |
-| `hud` | string | `off` | Godmode's frame readout on the home screen: `off`, `ms` or `fps`. |
+| `hud` | string | `off` | Godmode's frame readout on the home screen: `off`, `ms` or `fps`. Debug builds only. |
 | `syncEnabled` | boolean | `false` | Share screen time with paired TVs on the home network ([Other TVs](sync.md)). |
 | `remoteButtons` | boolean | `false` | The remote's Input and Settings buttons open Couch's lists ([Remote buttons](remote-buttons.md)). |
 | `remoteInputKey` | number | `0` | The Input button's key code, as learned in Customize; `0` when not set up. |
