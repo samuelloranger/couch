@@ -24,7 +24,18 @@ class UpdateTest {
     fun preReleaseTagsCountAsTheirNumbers() {
         assertTrue(Versions.isNewer("v0.3.0-beta.1", "0.2.0"))
         assertFalse(Versions.isNewer("v0.3.0-rc.1", "0.3.0"))
+        assertFalse(Versions.isNewer("v0.3.0-beta.1", "0.3.0")) // installed has no suffix: undecidable
         assertEquals(listOf(0, 3, 0), Versions.parse("0.3.0-beta"))
+    }
+
+    @Test
+    fun finalBeatsItsBetasAndHigherBetaBeatsLower() {
+        assertTrue(Versions.isNewer("v0.3.0", "0.3.0-beta.2"))
+        assertFalse(Versions.isNewer("v0.3.0-beta.2", "0.3.0"))
+        assertTrue(Versions.isNewer("v0.3.0-beta.10", "0.3.0-beta.2"))
+        assertFalse(Versions.isNewer("v0.3.0-beta.1", "0.3.0-beta.2"))
+        assertFalse(Versions.isNewer("v0.3.0-beta.2", "0.3.0-beta.2"))
+        assertTrue(Versions.isNewer("v0.3.1-beta.1", "0.3.0"))
     }
 
     @Test
