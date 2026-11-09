@@ -8,6 +8,7 @@ import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.debloat.DebloatPage
 import cloud.samlo.couch.debloat.Engine
 import cloud.samlo.couch.debloat.Keepalive
+import cloud.samlo.couch.home.Measuring
 import cloud.samlo.couch.settings.OptionRow
 import cloud.samlo.couch.settings.SettingsActivity
 import cloud.samlo.couch.settings.SettingsContext
@@ -81,7 +82,7 @@ class GodmodePage(internal val ctx: SettingsContext) : SettingsPage {
     /** What hiding would still have to undo: TV settings, the home, and the HUD. */
     private fun pending() =
         TvSettings.changed(ctx.activity) + (if (RealHome.active(ctx.activity)) 1 else 0) +
-            (if (ctx.config.hud != Config.HUD_OFF) 1 else 0)
+            (if (Measuring.BUILT && ctx.config.hud != Config.HUD_OFF) 1 else 0)
 
     private fun hideValue() = if (pending() == 0) "" else ctx.str(R.string.godmode_hide_first)
 

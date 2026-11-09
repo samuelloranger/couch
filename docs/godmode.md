@@ -51,7 +51,10 @@ the two commands to run from a computer instead, with this TV's address already 
   the accessibility workaround. Nothing is disabled, and uninstalling Couch hands HOME back by
   itself. TVs that ignore the preference keep working through the workaround.
 
-## Measure
+## Measure (debug builds)
+
+These two rows exist only in debug builds (`./gradlew assembleDebug`); release builds leave them
+out, with their code and strings.
 
 - **Frame HUD** — a small panel on the home screen: one line per remote press with that press's
   slowest frame and, when it ran over budget, the stage that took longest. Read it in
