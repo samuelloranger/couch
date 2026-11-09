@@ -1,5 +1,6 @@
 package cloud.samlo.couch.sync
 
+import cloud.samlo.couch.data.writeAtomically
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -69,7 +70,7 @@ class Peers private constructor(private val file: File?, val id: String, name: S
     }
 
     /** The latest snapshot of every paired TV that has sent one. */
-    @Synchronized fun snapshots(): List<Snapshot> = byId.values.filter { !it.isPhone }.mapNotNull { p -> p.snapshot?.let(Snapshot::fromJson) }
+    @Synchronized fun snapshots(): List<Snapshot> = tvs().mapNotNull { p -> p.snapshot?.let(Snapshot::fromJson) }
 
     private fun save() {
         val target = file ?: return
@@ -80,12 +81,7 @@ class Peers private constructor(private val file: File?, val id: String, name: S
                     .apply { p.snapshot?.let { put("snapshot", it) } },
             )
         }
-        val tmp = File(target.parentFile, target.name + ".tmp")
-        tmp.writeText(JSONObject().put("id", id).put("name", name).put("peers", rows).toString())
-        if (!tmp.renameTo(target)) {
-            target.delete()
-            tmp.renameTo(target)
-        }
+        writeAtomically(target, JSONObject().put("id", id).put("name", name).put("peers", rows).toString())
     }
 
     companion object {

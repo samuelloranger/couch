@@ -24,10 +24,12 @@ import cloud.samlo.couch.R
 class BluetoothAudio(private val context: Context) {
     private val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
     @Volatile private var a2dp: BluetoothA2dp? = null
+    @Volatile private var requested = false
 
     /** Asks Android for the A2DP profile once; its answer comes back on its own. */
     fun start() {
-        if (!allowed() || a2dp != null) return
+        if (!allowed() || requested) return
+        requested = true
         runCatching {
             adapter?.getProfileProxy(context, object : BluetoothProfile.ServiceListener {
                 override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
@@ -44,6 +46,7 @@ class BluetoothAudio(private val context: Context) {
     fun release() {
         a2dp?.let { proxy -> runCatching { adapter?.closeProfileProxy(BluetoothProfile.A2DP, proxy) } }
         a2dp = null
+        requested = false
     }
 
     /** The name of the device the sound goes to now, or null for the TV's own outputs. */

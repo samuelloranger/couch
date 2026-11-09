@@ -77,7 +77,7 @@ class PhoneLink(
     fun stop() {
         runCatching { socket?.close() }
         socket = null
-        watchdog.shutdownNow()
+        watchdog.shutdown()
     }
 
     private fun serve(client: Socket) {

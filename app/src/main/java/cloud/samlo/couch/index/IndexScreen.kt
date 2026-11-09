@@ -67,6 +67,8 @@ class IndexScreen(
     /** The rail's Inputs menu while it is open. */
     private var inputMenu: InputMenu? = null
     private var channelMenu: AlertDialog? = null
+    /** False until the first bind has painted; what appears after it fades in. */
+    private var settled = false
     /** Placed once, on the first bind; later binds keep focus where it is. */
     private var placedFocus = false
     /** Set while [bind] moves focus itself, so the focus listener doesn't fill the column twice. */
@@ -80,6 +82,9 @@ class IndexScreen(
     private val buildMore = Runnable { selectedRow()?.entry?.takeIf { it.stripKey == stripKey }?.let { buildStep(it) } }
 
     init {
+        // Nothing shows until the first bind: a half-built screen with a stray focus ring reads as broken.
+        visibility = INVISIBLE
+        alpha = 0f
         spotlight.channelButton.setOnClickListener { chooseChannel() }
         spotlight.channelButton.setOnFocusChangeListener { _, has ->
             if (has) selectedRow()?.let {
@@ -146,7 +151,9 @@ class IndexScreen(
     fun bind(data: IndexData, config: Config) {
         this.data = data
         this.config = config
-        homeRow.bind(config)
+        val animate = settled
+        topBar.animate = animate
+        homeRow.bind(config, animate)
         layoutFor(homeRow.visibility == VISIBLE)
         // The inputs went away (unplugged, hidden): their item and menu go with them, so focus moves on.
         if (data.inputs.isEmpty()) {
@@ -156,11 +163,17 @@ class IndexScreen(
         // The accent is the one setting that changes how rows and cards are drawn.
         val rebuild = look != config.accent
         look = config.accent
-        rail.setHasInputs(data.inputs.isNotEmpty())
+        rail.setHasInputs(data.inputs.isNotEmpty(), animate)
         rail.paintBar()
         binding = true
-        list.bind(data.entries, rebuild) { it.requestFocus() }
+        list.bind(data.entries, rebuild, animate) { it.requestFocus() }
         val rows = list.rows()
+        if (!settled) {
+            // The whole screen arrives at once. One layer for the fade: rendered once, then only blended.
+            visibility = VISIBLE
+            animate().alpha(1f).setDuration(FIRST_FADE_MS).setInterpolator(Tokens.ease).withLayer().start()
+        }
+        settled = true
         if (rows.isEmpty()) {
             binding = false
             return
@@ -228,7 +241,7 @@ class IndexScreen(
 
     /** Fills the right column with [entry]: its channel row (or banner), the text above it, the week. */
     private fun show(entry: IndexEntry, deferStrip: Boolean) {
-        if (data == null) return
+        val data = data ?: return
         removeCallbacks(fillStrip)
         if (deferStrip) {
             // Another app's cards must not linger under this one while the row waits.
@@ -239,7 +252,8 @@ class IndexScreen(
         }
         showProgram(entry, (activity.currentFocus as? Card)?.takeIf { programs.isAncestorOf(it) }?.tile)
         banner.setImageBitmap(entry.app.banner)
-        banner.visibility = if (entry.programs.isEmpty() && entry.app.banner != null) VISIBLE else GONE
+        // While the channels load, no banner: it would only flash before the app's cards.
+        banner.visibility = if (data.channelsKnown && entry.programs.isEmpty() && entry.app.banner != null) VISIBLE else GONE
         removeCallbacks(statsLater)
         if (deferStrip) post(statsLater) else showStats(entry)
     }
@@ -289,7 +303,8 @@ class IndexScreen(
         if (tile != null) {
             spotlight.showProgram(entry.channelTitle.orEmpty(), tile, entry.channels.size > 1)
         } else {
-            spotlight.showApp(entry.app, activity.getString(R.string.index_no_channel, entry.app.label))
+            // While the channels load, the app's name alone: not yet "no channel".
+            spotlight.showApp(entry.app, if (data?.channelsKnown == false) "" else activity.getString(R.string.index_no_channel, entry.app.label))
         }
     }
 
@@ -336,9 +351,9 @@ class IndexScreen(
                 }
             }
             inStrip -> when (direction) {
-                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else leaveStrip(row) ?: focused
-                FOCUS_DOWN -> leaveStrip(row) ?: focused
-                FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) leaveStrip(row) ?: focused else super.focusSearch(focused, direction)
+                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else row ?: focused
+                FOCUS_DOWN -> row ?: focused
+                FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) row ?: focused else super.focusSearch(focused, direction)
                 else -> super.focusSearch(focused, direction)
             }
             focused === spotlight.channelButton -> when (direction) {
@@ -357,13 +372,15 @@ class IndexScreen(
                 FOCUS_RIGHT -> row ?: focused
                 else -> focused
             }
-            inTop -> if (direction == FOCUS_DOWN) row ?: focused else super.focusSearch(focused, direction)?.takeIf { topBar.isAncestorOf(it) } ?: focused
+            inTop -> when (direction) {
+                FOCUS_DOWN -> row ?: focused
+                // Left past the first chip returns to the Home Assistant row's last pill.
+                else -> super.focusSearch(focused, direction)?.takeIf { topBar.isAncestorOf(it) }
+                    ?: homeRow.lastPill().takeIf { direction == FOCUS_LEFT && homeLayout } ?: focused
+            }
             else -> super.focusSearch(focused, direction)
         }
     }
-
-    /** Back to the selected app; its focus listener puts the panel back on the first program. */
-    private fun leaveStrip(row: AppRow?): View? = row
 
     /** The first chip at the top right that is showing, reached from the apps (no Home Assistant row) or its end. */
     private fun firstTopTarget(): View? = listOf<View>(topBar.inputOffer, topBar.nowPlaying, topBar.update)
@@ -429,6 +446,7 @@ class IndexScreen(
         /** Between the Home Assistant row and the top bar's first item. */
         const val HOME_ROW_GAP = 16
         const val STRIP_SETTLE_MS = 160L
+        const val FIRST_FADE_MS = 260L
         const val CARDS_PER_FRAME = 2
         const val SCREEN_W = 960
     }

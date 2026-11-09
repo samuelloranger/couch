@@ -87,6 +87,7 @@ class WallpaperGalleryActivity : Activity() {
     }
 
     private fun load() {
+        if (isDestroyed) return
         worker.execute {
             val entries = runCatching { WallpaperLibrary(checkNotNull(files.dir)).entries() }.getOrNull()
             runOnUiThread {

@@ -66,7 +66,14 @@ public final class BackupStore: @unchecked Sendable {
 
     public func load() -> [ConfigBackup] {
         lock.lock(); defer { lock.unlock() }
-        guard let data = try? Data(contentsOf: url), let list = try? JSONDecoder().decode([ConfigBackup].self, from: data) else { return [] }
+        guard let data = try? Data(contentsOf: url) else { return [] }
+        guard let list = try? JSONDecoder().decode([ConfigBackup].self, from: data) else {
+            // Kept aside so the next add or remove cannot overwrite backups that may still be recoverable.
+            let bad = url.appendingPathExtension("bad")
+            try? FileManager.default.removeItem(at: bad)
+            try? FileManager.default.moveItem(at: url, to: bad)
+            return []
+        }
         return list.sorted { $0.date > $1.date }
     }
 

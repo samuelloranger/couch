@@ -69,9 +69,12 @@ class Server(
                 val client = try {
                     bound.accept()
                 } catch (e: IOException) {
-                    return@thread
+                    if (bound.isClosed) return@thread
+                    Thread.sleep(ACCEPT_RETRY_MS) // e.g. out of descriptors: try again rather than go deaf
+                    continue
                 }
-                if (live.incrementAndGet() > MAX_CONNECTIONS) {
+                val from = client.inetAddress
+                if (live.incrementAndGet() > MAX_CONNECTIONS || !admit(from)) {
                     live.decrementAndGet()
                     runCatching { client.close() }
                     continue
@@ -86,11 +89,25 @@ class Server(
                         // A phone session owns its socket now, and no longer counts against the short-connection budget.
                         if (!kept) runCatching { client.close() }
                         live.decrementAndGet()
+                        release(from)
                     }
                 }
             }
         }
         return bound.localPort
+    }
+
+    /** One host can't hold every slot with idle sockets. */
+    private val perHost = HashMap<java.net.InetAddress, Int>()
+
+    private fun admit(from: java.net.InetAddress): Boolean = synchronized(perHost) {
+        val n = perHost[from] ?: 0
+        if (n >= MAX_PER_HOST) false else { perHost[from] = n + 1; true }
+    }
+
+    private fun release(from: java.net.InetAddress) = synchronized(perHost) {
+        val n = (perHost[from] ?: 1) - 1
+        if (n <= 0) perHost.remove(from) else perHost[from] = n
     }
 
     @Synchronized fun stop() {
@@ -245,6 +262,8 @@ class Server(
         const val PORT = 47820
         const val NONCE_BYTES = 16
         private const val MAX_CONNECTIONS = 6
+        private const val MAX_PER_HOST = 2
+        private const val ACCEPT_RETRY_MS = 500L
         private const val READ_MS = 10_000
         private const val HANDSHAKE_MS = 15_000L
         private const val EXCHANGE_MS = 3_000

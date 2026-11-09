@@ -62,7 +62,8 @@ android {
         minSdk = 28
         targetSdk = 36
         versionCode = (semver[0] * 10_000 + semver[1] * 100 + semver[2]).coerceAtLeast(1)
-        versionName = semver.joinToString(".")
+        // Keeps a pre-release suffix (`0.3.0-beta.1`), so the update check can tell a beta from its final release.
+        versionName = gitTag.removePrefix("v")
     }
 
     signingConfigs {

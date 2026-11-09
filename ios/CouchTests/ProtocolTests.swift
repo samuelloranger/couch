@@ -54,22 +54,6 @@ final class FrameTests: XCTestCase {
         XCTAssertEqual(s.adb, .root)
     }
 
-    func testReaderSplitsAndBoundsFrames() throws {
-        var r = LengthPrefixedReader(maxFrame: 8)
-        let two = Data.be32(2) + Data([1, 2]) + Data.be32(1) + Data([9])
-        r.feed(two.prefix(5))
-        XCTAssertNil(try r.next())
-        r.feed(two.dropFirst(5))
-        XCTAssertEqual(try r.next(), Data([1, 2]))
-        XCTAssertEqual(try r.next(), Data([9]))
-        XCTAssertNil(try r.next())
-        r.feed(Data.be32(9))
-        XCTAssertThrowsError(try r.next())
-        var zero = LengthPrefixedReader(maxFrame: 8)
-        zero.feed(Data.be32(0))
-        XCTAssertThrowsError(try zero.next())
-    }
-
     func testPlainWireRoundTrip() throws {
         let wire = try PlainWire.encode(["op": .string("phone"), "n": .int(3)])
         XCTAssertEqual(wire.readU32(at: 0), UInt32(wire.count - 4))

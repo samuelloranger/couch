@@ -33,7 +33,7 @@ internal object FreeCache {
         when (engine.connect()) {
             Engine.State.GRANTED -> try {
                 val before = freeBytes()
-                engine.trimCaches()
+                engine.run("pm trim-caches 999G", TRIM_WAIT_MS)
                 val gained = freeBytes() - before
                 if (gained < MEANINGFUL) activity.getString(R.string.cache_nothing)
                 else activity.getString(R.string.cache_freed, Formatter.formatShortFileSize(activity, gained))
@@ -47,5 +47,8 @@ internal object FreeCache {
         }
 
     /** Below a megabyte the counter only moves because something else wrote meanwhile. */
+    /** `pm trim-caches` can print nothing for minutes on a full disk. */
+    private const val TRIM_WAIT_MS = 300_000
+
     private const val MEANINGFUL = 1024L * 1024L
 }

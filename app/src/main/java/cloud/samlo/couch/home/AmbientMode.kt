@@ -13,6 +13,8 @@ import cloud.samlo.couch.ui.Ambient
 class AmbientMode(
     private val ambient: Ambient,
     private val isResumed: () -> Boolean,
+    /** Called with true after the overlay shows and false when it starts hiding. */
+    private val onShown: (Boolean) -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
     private var idleSince = 0L
@@ -25,6 +27,7 @@ class AmbientMode(
     private val enter = Runnable {
         if (!isResumed() || minutes <= 0) return@Runnable
         ambient.show(pictures, weatherLine)
+        onShown(true)
     }
 
     /** Arms the timer; [activity] means the user just did something. */
@@ -42,14 +45,20 @@ class AmbientMode(
     /** Leaving home: no timer, no overlay. */
     fun cancel() {
         main.removeCallbacks(enter)
-        if (ambient.showing) ambient.hide()
+        if (ambient.showing) {
+            ambient.hide()
+            onShown(false)
+        }
     }
 
     /** Counts the key as activity; while ambient shows, any key only wakes the screen. */
     fun consumesKey(event: KeyEvent): Boolean {
         schedule(activity = true)
         if (!ambient.showing) return false
-        if (event.action == KeyEvent.ACTION_UP) ambient.hide()
+        if (event.action == KeyEvent.ACTION_UP) {
+            ambient.hide()
+            onShown(false)
+        }
         return true
     }
 }

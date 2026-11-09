@@ -64,7 +64,9 @@ object IndexTokens {
     val barOff = Color.parseColor("#2C3532")
     val markerIdle = Color.parseColor("#3D4A45")
     val description = Color.parseColor("#8E9894")
-    val footerValue = Color.parseColor("#BFC7C4")
+    /** The footer's quiet text on the window background: 5.1:1 for labels, 8.5:1 for values. */
+    val footerLabel = Color.parseColor("#7A8481")
+    val footerValue = Color.parseColor("#A3ADAA")
     val pillText = Color.parseColor("#C4CCC9")
     /** Tokens.surface at 70%. */
     val pill = Color.parseColor("#B31A201E")

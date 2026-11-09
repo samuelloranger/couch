@@ -36,8 +36,10 @@ class RelayLink(private val onLine: (String) -> Unit, private val onClosed: (Rel
                 return false
             }
             client.soTimeout = HELLO_MS
-            val hello = runCatching { client.getInputStream().bufferedReader().readLine() }.getOrNull()
-            if (hello != "hello $token") {
+            // Any app can reach this port: read only as many bytes as the hello is long.
+            val expected = "hello $token\n".toByteArray()
+            val hello = runCatching { ByteArray(expected.size).also { java.io.DataInputStream(client.getInputStream()).readFully(it) } }.getOrNull()
+            if (hello == null || !hello.contentEquals(expected)) {
                 runCatching { client.close() }
                 continue
             }

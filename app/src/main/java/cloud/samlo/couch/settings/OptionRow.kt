@@ -84,13 +84,6 @@ class OptionRow(
         refresh()
     }
 
-    /** Puts [text] where the value or control is, until the next [refresh]. */
-    fun mark(text: String) {
-        value.text = text
-        value.visibility = VISIBLE
-        control?.visibility = GONE
-    }
-
     fun refresh() {
         value.text = valueOf().let { text ->
             // Roboto draws the arrow small; it is the only thing saying the row leaves Couch.

@@ -134,12 +134,18 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
         session++
         main.removeCallbacks(rotate)
         wanted = null
+        val mine = session
         animate().alpha(0f).setDuration(220).setInterpolator(Tokens.ease).withEndAction {
             visibility = View.GONE
             below.animate().cancel()
             above.animate().cancel()
             belowDrift.cancel()
             aboveDrift.cancel()
+            // A show() that raced in owns the pictures now.
+            if (session == mine) {
+                below.setImageDrawable(null)
+                above.setImageDrawable(null)
+            }
         }.start()
     }
 

@@ -3,8 +3,8 @@ package cloud.samlo.couch.data
 import android.content.SharedPreferences
 
 /**
- * Current conditions from Open-Meteo (free, no key). The resolved place name is always shown so
- * a wrong guess is easy to spot. Called from the loader thread; the last good answer is kept in
+ * Current conditions from Open-Meteo (free, no key). The resolved place name is shown on the ambient
+ * screen so a wrong guess is easy to spot. Called from the loader thread; the last good answer is kept in
  * preferences so a flaky connection still shows something.
  */
 class Weather(private val fetcher: Fetcher, private val prefs: SharedPreferences) {
@@ -17,7 +17,7 @@ class Weather(private val fetcher: Fetcher, private val prefs: SharedPreferences
         if (System.currentTimeMillis() - cachedAt < FRESH_MS) cached(cacheKey)?.let { return it }
         val place = places.find(config.weatherCity) ?: return cached(cacheKey)
         val json = fetcher.text(forecastUrl(place, config.fahrenheit)) ?: return cached(cacheKey)
-        val now = WeatherNow.fromForecast(place.name, json) ?: return null
+        val now = WeatherNow.fromForecast(place.name, json) ?: return cached(cacheKey)
         prefs.edit().putString(cacheKey, now.serialize()).putLong("$cacheKey:at", System.currentTimeMillis()).apply()
         return now
     }
