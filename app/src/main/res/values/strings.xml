@@ -8,6 +8,7 @@
 
     <!-- Home -->
     <string name="section_inputs">Inputs</string>
+    <string name="index_home">Home</string>
     <string name="section_apps">Apps</string>
     <string name="input_offer">Switch to %1$s</string>
     <string name="input_disconnected">Disconnected</string>
@@ -32,7 +33,7 @@
     <string name="index_not_opened">Not opened this week</string>
     <string name="index_no_channel">%1$s has no channel on this TV. Press OK to open it.</string>
     <string name="index_no_usage">Screen time shows here once Couch has usage access. The setup guide shows how to turn it on.</string>
-    <string name="index_place_range">%1$s\n%2$d° / %3$d°</string>
+    <string name="index_range">%1$d° / %2$d°</string>
     <string name="index_ethernet">Ethernet</string>
     <string name="index_wifi">Wi-Fi</string>
     <string name="index_offline">Offline</string>

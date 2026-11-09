@@ -21,16 +21,16 @@ import cloud.samlo.couch.ui.dpf
  */
 @SuppressLint("ViewConstructor")
 class Spotlight(context: Context) : LinearLayout(context) {
-    val channelButton = text(12f, 600, Tokens.accent, 1f).apply {
+    val channelButton = text(9.5f, 600, Tokens.accent, 1f).apply {
         maxLines = 1
-        minimumHeight = context.dp(24)
+        minimumHeight = context.dp(CHANNEL_H)
         gravity = android.view.Gravity.CENTER_VERTICAL
     }
-    private val title = text(30f, 600, Tokens.textPrimary, 1.1f).apply {
+    private val title = text(22f, 600, Tokens.textPrimary, 1.1f).apply {
         maxLines = 1
         letterSpacing = -0.02f
     }
-    private val description = text(15f, 400, IndexTokens.description, 1.45f).apply { maxLines = 2 }
+    private val description = text(12f, 400, IndexTokens.description, 1.45f).apply { maxLines = 2 }
     private val progressFill = GradientDrawable().apply { cornerRadius = context.dpf(1.5f) }
     private val progress = FrameLayout(context).apply {
         background = GradientDrawable().apply {
@@ -44,8 +44,8 @@ class Spotlight(context: Context) : LinearLayout(context) {
     init {
         orientation = VERTICAL
         addView(channelButton, channelButton.stack(LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)))
-        addView(title, title.stack(LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT), top = context.dp(6)))
-        addView(description, description.stack(LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT), top = context.dp(10)))
+        addView(title, title.stack(LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT), top = context.dp(5)))
+        addView(description, description.stack(LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT), top = context.dp(7)))
         addView(progress, LayoutParams(context.dp(PROGRESS_W), context.dp(3)).apply { topMargin = context.dp(12) })
     }
 
@@ -103,5 +103,7 @@ class Spotlight(context: Context) : LinearLayout(context) {
 
     private companion object {
         const val PROGRESS_W = 150
+        /** The channel line is a button when there are several channels: tall enough for its focus box. */
+        const val CHANNEL_H = 18
     }
 }

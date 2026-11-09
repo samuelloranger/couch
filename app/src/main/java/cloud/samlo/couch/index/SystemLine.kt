@@ -15,7 +15,6 @@ import cloud.samlo.couch.data.SystemInfo
 import cloud.samlo.couch.data.SystemReading
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
-import cloud.samlo.couch.ui.dp
 import java.util.Locale
 
 /**
@@ -26,6 +25,8 @@ class SystemLine(context: Context) : LinearLayout(context) {
     private val info = SystemInfo(context)
     private val main = Handler(Looper.getMainLooper())
     private val items = List(6) { item() }
+    /** " · " before each item but the first; one goes with its item when the item hides. */
+    private val dots = List(items.size - 1) { item().apply { text = SEPARATOR } }
 
     /** How far the text views stand below the design's line box, for placing the line. */
     val inset: Int get() = items[0].inset
@@ -38,8 +39,10 @@ class SystemLine(context: Context) : LinearLayout(context) {
 
     init {
         orientation = HORIZONTAL
+        alpha = OPACITY
         items.forEachIndexed { i, view ->
-            addView(view, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { if (i > 0) marginStart = context.dp(20) })
+            if (i > 0) addView(dots[i - 1], LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
+            addView(view, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT))
         }
     }
 
@@ -82,6 +85,7 @@ class SystemLine(context: Context) : LinearLayout(context) {
         set(4, uptime, c.getString(R.string.index_uptime))
         set(5, if (r.adb) c.getString(R.string.index_adb) else "", c.getString(R.string.index_adb_on), Tokens.accent)
         items[5].visibility = if (r.adb) VISIBLE else GONE
+        dots[4].visibility = items[5].visibility
     }
 
     /** "value label", the value bold and brighter. Unchanged text is left alone. */
@@ -91,7 +95,7 @@ class SystemLine(context: Context) : LinearLayout(context) {
             text.append(value)
             text.setSpan(ForegroundColorSpan(valueColor), 0, value.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             text.setSpan(TypefaceSpan(Fonts.hanken(context, 600)), 0, value.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            if (label.isNotEmpty()) text.append("  ")
+            if (label.isNotEmpty()) text.append(" ")
         }
         text.append(label)
         if (items[i].text.toString() != text.toString()) items[i].text = text
@@ -102,12 +106,14 @@ class SystemLine(context: Context) : LinearLayout(context) {
     /** A real minus sign reads better than a hyphen. */
     private fun minus(value: Int) = if (value < 0) "−${-value}" else value.toString()
 
-    private fun item() = IndexText(context, 10f, 500, IndexTokens.hours).apply {
+    private fun item() = IndexText(context, 9f, 500, IndexTokens.hours).apply {
         fontFeatureSettings = "tnum"
         maxLines = 1
     }
 
     private companion object {
         const val REFRESH_MS = 3_000L
+        const val SEPARATOR = " · "
+        const val OPACITY = 0.55f
     }
 }

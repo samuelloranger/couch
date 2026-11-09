@@ -190,6 +190,7 @@ class HomeScreen(private val activity: Activity) {
         config = data.config
         if (accentChanged) Tokens.applyAccent(config.accent)
         views.ambient.setTimeFormat(if (config.clock24h) "HH:mm" else "h:mm")
+        views.index.topBar.setClock24h(config.clock24h)
         // Not while the result card is up: the panel would sit under it.
         if (card == null) hud.enable(hudUnit())
         // Godmode locked costs one boolean here; unlocked, a couple of cached settings reads.

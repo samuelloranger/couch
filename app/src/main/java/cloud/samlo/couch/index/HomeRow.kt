@@ -42,7 +42,7 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
         clipToPadding = false
         groups.forEachIndexed { i, group ->
             if (i > 0) {
-                addView(dividers[i - 1], LayoutParams(context.dp(1), context.dp(16)).apply {
+                addView(dividers[i - 1], LayoutParams(context.dp(1), context.dp(13)).apply {
                     marginStart = context.dp(DIVIDER_SPACE)
                     marginEnd = context.dp(DIVIDER_SPACE)
                 })
@@ -175,8 +175,8 @@ class HomeRow(context: Context, hass: HomeAssistant) : LinearLayout(context), Ho
     }
 
     private companion object {
-        const val PILL_H = 36
-        const val GAP = 8
-        const val DIVIDER_SPACE = 12
+        const val PILL_H = IndexTokens.HOME_ROW_H
+        const val GAP = 6
+        const val DIVIDER_SPACE = 9
     }
 }

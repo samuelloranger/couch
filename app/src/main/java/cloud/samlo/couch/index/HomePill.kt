@@ -81,17 +81,17 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
     }
     private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Fonts.hanken(context, 500)
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 12f, resources.displayMetrics)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 9f, resources.displayMetrics)
     }
     private val small = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Fonts.hanken(context, 500)
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 10f, resources.displayMetrics)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 7.5f, resources.displayMetrics)
     }
     private val rect = RectF()
     private val padStart = context.dpf(4f)
-    private val disc = context.dpf(22f)
-    private val gap = context.dpf(7f)
-    private val padEnd = context.dpf(12f)
+    private val disc = context.dpf(20f)
+    private val gap = context.dpf(5f)
+    private val padEnd = context.dpf(9f)
     /** Widest the name may draw, in pixels; a longer one ends in an ellipsis. */
     var labelLimit = Int.MAX_VALUE
         set(value) {
@@ -160,7 +160,7 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         fill.color = disc(state)
         canvas.drawCircle(cx, cy, disc / 2, fill)
         val glyph = if (on) lit else off
-        val half = context.dpf(7.5f)
+        val half = context.dpf(6.5f)
         glyph.setBounds((cx - half).toInt(), (cy - half).toInt(), (cx + half).toInt(), (cy + half).toInt())
         glyph.setTint(icon(state))
         glyph.draw(canvas)
@@ -259,7 +259,7 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
 
     companion object {
         /** Hanken's line box is roomy: the two lines sit this much closer than it would put them. */
-        private const val LINE_OVERLAP = 4f
+        private const val LINE_OVERLAP = 3f
         private const val OFF = 0
         private const val LIT = 1
         private const val POWERED = 2
