@@ -31,11 +31,10 @@ the two commands to run from a computer instead, with this TV's address already 
 
 ## Your TV
 
-- **Put my TV back** — undoes every TV setting Godmode changed, exactly as it was. It records
-  each setting's original value before the first change. Removed apps have their own list.
-- **Animations** — Android's window and transition speed: off, half or normal.
-- **Ad blocking** — Android's private DNS for the whole TV, through AdGuard's free resolver or a
-  server of your own. It blocks what most apps load, but not the ads inside YouTube videos.
+- **Put my TV back** — undoes every TV setting Godmode changed, exactly as it was. Earlier
+  versions could change the animation speed and private DNS; those now live only in Android's own
+  settings (developer options, and Network → Private DNS), but what Godmode changed before can still
+  be put back here. Removed apps have their own list.
 - **Close background apps** — closes what Android would close anyway when memory runs low.
 - **Close idle apps** — does the same by itself every 15 minutes, for the apps you haven't opened
   in 30 minutes to 4 hours. What's on screen and music still playing are left alone. It reads when
