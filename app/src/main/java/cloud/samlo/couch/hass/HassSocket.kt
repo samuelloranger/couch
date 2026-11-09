@@ -132,7 +132,7 @@ class HassSocket(
     }
 
     /** The next whole text message, answering pings on the way; null when the server closes. */
-    private fun readMessage(input: InputStream, output: OutputStream): String? {
+    internal fun readMessage(input: InputStream, output: OutputStream): String? {
         val message = ByteArrayOutputStream()
         while (true) {
             val b0 = input.read()
@@ -146,7 +146,7 @@ class HassSocket(
             } else if (length == 127L) {
                 length = (0 until 8).fold(0L) { acc, _ -> (acc shl 8) or readByte(input).toLong() }
             }
-            if (length > MAX_MESSAGE) throw java.io.IOException("Message too large")
+            if (length < 0 || length > MAX_MESSAGE) throw java.io.IOException("Message too large")
             val mask = if (b1 and 0x80 != 0) ByteArray(4) { readByte(input).toByte() } else null
             val payload = ByteArray(length.toInt())
             var read = 0

@@ -10,6 +10,54 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class HassSocketTest {
+    private val socket = HassSocket("http://x", "t", emptyList(), {}, {})
+
+    /** A server frame: unmasked, [first] byte carrying FIN and opcode. */
+    private fun server(first: Int, payload: String) = byteArrayOf(first.toByte(), payload.length.toByte()) + payload.toByteArray()
+
+    /** Hands out one byte per read, as a slow network would. */
+    private fun trickle(bytes: ByteArray) = object : java.io.InputStream() {
+        var at = 0
+        override fun read() = if (at < bytes.size) bytes[at++].toInt() and 0xFF else -1
+        override fun read(b: ByteArray, off: Int, len: Int): Int {
+            val c = read()
+            if (c < 0) return -1
+            b[off] = c.toByte()
+            return 1
+        }
+    }
+
+    @Test
+    fun fragmentsJoinAndAPingBetweenThemIsAnswered() {
+        val wire = server(0x01, "{\"a\":") + server(0x89, "hi") + server(0x80, "1}")
+        val sent = java.io.ByteArrayOutputStream()
+        assertEquals("{\"a\":1}", socket.readMessage(trickle(wire), sent))
+        // The pong echoes the ping's payload, masked: 2 header bytes, 4 mask bytes, 2 payload bytes.
+        val pong = sent.toByteArray()
+        assertEquals(8, pong.size)
+        assertEquals(0x8A, pong[0].toInt() and 0xFF)
+        assertEquals(0x80 or 2, pong[1].toInt() and 0xFF)
+    }
+
+    @Test
+    fun closeEndsTheStream() {
+        assertEquals(null, socket.readMessage(java.io.ByteArrayInputStream(server(0x88, "")), java.io.ByteArrayOutputStream()))
+    }
+
+    @Test
+    fun oversizedOrNegativeLengthsAreRejected() {
+        val huge = byteArrayOf(0x81.toByte(), 127) + ByteArray(8).also { it[4] = 0x7F } // ~2 GB
+        val negative = byteArrayOf(0x81.toByte(), 127) + ByteArray(8).also { it[0] = 0x80.toByte() }
+        for (wire in listOf(huge, negative)) {
+            try {
+                socket.readMessage(java.io.ByteArrayInputStream(wire), java.io.ByteArrayOutputStream())
+                org.junit.Assert.fail("accepted")
+            } catch (e: java.io.IOException) {
+                // Rejected before any payload was allocated.
+            }
+        }
+    }
+
     @Test
     fun acceptKeyMatchesTheRfcExample() {
         assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", HassSocket.acceptFor("dGhlIHNhbXBsZSBub25jZQ=="))

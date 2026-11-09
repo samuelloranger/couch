@@ -30,7 +30,7 @@ object InputItems {
         val files = UserFiles(context)
         val config = Config.load(files.dir)
         Tokens.applyAccent(config.accent)
-        val data = IndexBuilder.build(context, config, files.icons)
+        val data = IndexBuilder.build(context, config, files.icons, withChannels = false)
         val inputs = context.getString(R.string.section_inputs)
         val apps = context.getString(R.string.section_apps)
 

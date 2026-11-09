@@ -465,8 +465,8 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="bench_p90">P90</string>
     <string name="bench_p99">P99</string>
     <string name="bench_median">MÉDIANE</string>
-    <string name="bench_low_10">10 %% BAS</string>
-    <string name="bench_low_1">1 %% BAS</string>
+    <string name="bench_low_10" formatted="false">10 % BAS</string>
+    <string name="bench_low_1" formatted="false">1 % BAS</string>
     <string name="bench_fps">%1$d i/s</string>
     <!-- Other TVs -->
     <string name="settings_tvs">Autres téléviseurs</string>

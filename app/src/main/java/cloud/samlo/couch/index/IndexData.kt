@@ -50,13 +50,14 @@ class IndexData(
 
 /** Builds [IndexData] on the loader thread. */
 object IndexBuilder {
-    fun build(context: Context, config: Config, iconsDir: File?): IndexData {
+    /** [withChannels] false skips the preview-channel queries and the other-TV merge, for callers that list only apps and inputs. */
+    fun build(context: Context, config: Config, iconsDir: File?, withChannels: Boolean = true): IndexData {
         val apps = AppSource.tiles(
             context, config, iconsDir,
             context.dp(IndexTokens.cardWidth(-1)), context.dp(IndexTokens.CARD_H), context.dpf(IndexTokens.CARD_RADIUS),
         )
-        val usage = Usage.lastWeek(context)?.let { if (config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
-        val channels = Programs.channels(context, config).groupBy { it.packageName }
+        val usage = Usage.lastWeek(context)?.let { if (withChannels && config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
+        val channels = if (withChannels) Programs.channels(context, config).groupBy { it.packageName } else emptyMap()
         val byKey = apps.associateBy { it.key }
         val ordered = AppOrder.sorted(apps.map { it.key }, config, usage?.mapValues { it.value.weekMs })
         val entries = ordered.map { key ->
