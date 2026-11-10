@@ -69,10 +69,13 @@ object Sync {
         }
     }
 
-    private var shared: SharedSettings? = null
+    @Volatile private var shared: SharedSettings? = null
+    private val sharedLock = Any()
 
-    @Synchronized private fun shared(context: Context): SharedSettings =
+    /** Its own lock: every save asks for it on the caller's thread, often the main one, which must never wait on network setup. */
+    private fun shared(context: Context): SharedSettings = shared ?: synchronized(sharedLock) {
         shared ?: SharedSettings(File(context.applicationContext.filesDir, "shared-settings.json")).also { shared = it }
+    }
 
     /** One swap at a time, and a burst of changes or TVs coming into view makes one more, not one each. */
     private val settingsOps = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
@@ -86,6 +89,7 @@ object Sync {
         if (!sharing || !swapQueued.compareAndSet(false, true)) return
         settingsOps.execute {
             swapQueued.set(false)
+            if (!sharing) return@execute
             val me = peers ?: return@execute
             for (peer in me.tvs()) {
                 val at = found().firstOrNull { it.id == peer.id } ?: continue
@@ -97,25 +101,28 @@ object Sync {
     private fun mySettings(context: Context): JSONObject =
         shared(context).outgoing(ConfigJson.encode(Config.load(UserFiles(context).dir)))
 
-    private val mergeLock = Any()
-
-    /** Takes the settings from [theirs] that are newer than this TV's, then reloads home and tells the phones. */
-    private fun merge(context: Context, me: Peers, theirId: String, theirs: JSONObject) = synchronized(mergeLock) {
-        val dir = UserFiles(context).dir ?: return@synchronized
+    /**
+     * Takes the settings from [theirs] that are newer than this TV's, then reloads home and tells the
+     * phones. Reading, deciding and writing hold off local saves, so none lands in between and is lost.
+     */
+    private fun merge(context: Context, me: Peers, theirId: String, theirs: JSONObject) {
+        val dir = UserFiles(context).dir ?: return
         val store = shared(context)
-        val current = Config.load(dir)
-        val (patch, at) = store.winners(me.id, theirId, theirs, ConfigJson.encode(current))
-        if (patch.length() == 0) return@synchronized store.took(at)
-        val next = try {
-            ConfigPatch.apply(current, patch)
-        } catch (e: JSONException) {
-            return@synchronized // a value of the wrong type: the whole answer is ignored
-        }
-        // Quiet: these changes came from another TV, and sending them back would only echo.
-        next.save(dir, quiet = true)
-        store.took(at)
+        val saved = Config.locked {
+            val current = Config.load(dir)
+            val (patch, at) = store.winners(me.id, theirId, theirs, ConfigJson.encode(current), System.currentTimeMillis())
+            val next = try {
+                if (patch.length() == 0) null else ConfigPatch.apply(current, patch)
+            } catch (e: JSONException) {
+                return@locked null // a value of the wrong type: the whole answer is ignored
+            }
+            // Quiet: these changes came from another TV, and sending them back would only echo.
+            next?.save(dir, quiet = true)
+            if (next != null || patch.length() == 0) store.took(at)
+            next
+        } ?: return
         HomeReload.listener?.invoke()
-        Phones.configChanged(Config.load(dir))
+        Phones.configChanged(saved)
     }
 
     @Synchronized private fun reconcile(context: Context) {

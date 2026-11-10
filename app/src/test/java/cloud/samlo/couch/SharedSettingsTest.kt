@@ -96,16 +96,47 @@ class SharedSettingsTest {
             .put("channels", JSONObject().put("v", JSONObject()).put("at", 99))
             .put("fahrenheit", JSONObject().put("v", true).put("at", 0))
         val here = JSONObject().put("weatherCity", "Montréal")
-        val (patch, at) = store.winners("me", "them", incoming, here)
+        val (patch, at) = store.winners("me", "them", incoming, here, 100)
         assertEquals(setOf("weatherCity"), patch.keys().asSequence().toSet())
         assertEquals(mapOf("weatherCity" to 7L), at)
         // Not recorded until taken: the same answer wins again.
-        assertEquals(1, store.winners("me", "them", incoming, here).first.length())
+        assertEquals(1, store.winners("me", "them", incoming, here, 100).first.length())
         store.took(at)
         // Taken, and a tie with the same value applied: nothing more to do, even for the larger id.
-        val (again, againAt) = store.winners("me", "them", incoming, here.put("weatherCity", "Québec"))
+        val (again, againAt) = store.winners("me", "them", incoming, here.put("weatherCity", "Québec"), 100)
         assertEquals(0, again.length())
         assertEquals(mapOf("weatherCity" to 7L), againAt)
+    }
+
+    @Test
+    fun aTimeFromTheFutureCountsAsNow() {
+        val store = SharedSettings(null)
+        val incoming = JSONObject().put("accent", JSONObject().put("v", "teal").put("at", Long.MAX_VALUE))
+        val (_, at) = store.winners("me", "them", incoming, JSONObject(), 100)
+        assertEquals(mapOf("accent" to 100L), at)
+        store.took(at)
+        // A change made here later still wins.
+        store.changed(setOf("accent"), 101)
+        assertEquals(101L, store.outgoing(JSONObject().put("accent", "x")).getJSONObject("accent").getLong("at"))
+    }
+
+    @Test
+    fun takingAnOlderTimeKeepsTheNewerOne() {
+        val store = SharedSettings(null)
+        store.changed(setOf("accent"), 50)
+        store.took(mapOf("accent" to 20L))
+        assertEquals(50L, store.outgoing(JSONObject().put("accent", "x")).getJSONObject("accent").getLong("at"))
+    }
+
+    @Test
+    fun aConfigBuiltFromScratchWritesOnlyWhatDiffersFromTheDefaults() {
+        val dir = folder.newFolder()
+        Config().apply { weatherCity = "Montréal" }.save(dir)
+        // Home's placeholder before its first load: saving it must not wipe the file back to defaults.
+        Config().apply { godmode = true }.save(dir)
+        val now = Config.load(dir)
+        assertEquals("Montréal", now.weatherCity)
+        assertTrue(now.godmode)
     }
 
     @Test

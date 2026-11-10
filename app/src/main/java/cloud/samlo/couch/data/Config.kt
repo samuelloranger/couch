@@ -92,19 +92,18 @@ class Config {
      * Written atomically, one writer at a time, so a half-written file never wipes the user's setup;
      * a failed write keeps the old file. A loaded config writes only the keys it changed since, over
      * the file as it is now: a page left open doesn't put back what a phone or another TV changed
-     * meanwhile. [quiet] keeps the change from [onSaved], for one that came from another TV.
+     * meanwhile; one built from scratch changed what differs from the defaults. [quiet] keeps the
+     * change from [onSaved], for one that came from another TV.
      */
     fun save(dir: File?, quiet: Boolean = false) {
         dir ?: return
         val mine = ConfigJson.encode(this)
-        val changed: Set<String>
         synchronized(lock) {
             val file = File(dir, FILE)
             val disk = runCatching { org.json.JSONObject(file.readText()) }.getOrNull()
-            // A TV saving for the first time changed only what differs from the defaults.
-            val was = base ?: disk ?: ConfigJson.encode(Config())
-            changed = mine.keys().asSequence().filter { was?.opt(it)?.toString() != mine.opt(it)?.toString() }.toSet()
-            val out = if (base == null || disk == null) mine else disk.also { d -> changed.forEach { d.put(it, mine.get(it)) } }
+            val was = base ?: ConfigJson.encode(Config())
+            val changed = mine.keys().asSequence().filter { was.opt(it)?.toString() != mine.opt(it)?.toString() }.toSet()
+            val out = disk?.also { d -> changed.forEach { d.put(it, mine.get(it)) } } ?: mine
             try {
                 writeAtomically(file, Config().also { ConfigJson.decode(out, it) }.toJson())
             } catch (e: java.io.IOException) {
@@ -112,8 +111,9 @@ class Config {
                 return
             }
             base = mine
+            // Heard under the lock, so a change is timed before anything else can write the file.
+            if (!quiet && changed.isNotEmpty()) onSaved?.invoke(changed)
         }
-        if (!quiet && changed.isNotEmpty()) onSaved?.invoke(changed)
     }
 
     fun toJson(): String = ConfigJson.encode(this).toString(2)
@@ -122,8 +122,11 @@ class Config {
         private const val FILE = "config.json"
         private val lock = Any()
 
-        /** Hears the keys of every change saved on this TV, after the file is written. */
+        /** Hears the keys of every change saved on this TV, after the file is written; keep it quick. */
         @Volatile var onSaved: ((Set<String>) -> Unit)? = null
+
+        /** Runs [block] with no save in between, for reading the file and writing it back as one step. */
+        fun <T> locked(block: () -> T): T = synchronized(lock, block)
 
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
         const val HUD_OFF = "off"

@@ -37,15 +37,16 @@ class SharedSettings(private val file: File?) {
     /**
      * The settings in [incoming] that win over this TV's [current] ones, as a patch of those whose
      * value differs, and the times of all that won. Nothing is recorded until [took], so a patch
-     * that fails to apply leaves this TV as it was.
+     * that fails to apply leaves this TV as it was. A time later than [now] counts as [now]: a TV whose
+     * clock runs ahead can't keep every later change from winning.
      */
-    @Synchronized fun winners(myId: String, theirId: String, incoming: JSONObject, current: JSONObject): Pair<JSONObject, Map<String, Long>> {
+    @Synchronized fun winners(myId: String, theirId: String, incoming: JSONObject, current: JSONObject, now: Long): Pair<JSONObject, Map<String, Long>> {
         val patch = JSONObject()
         val at = HashMap<String, Long>()
         for (k in incoming.keys()) {
             if (k !in KEYS) continue
             val entry = incoming.optJSONObject(k) ?: continue
-            val theirs = entry.optLong("at")
+            val theirs = entry.optLong("at").coerceAtMost(now)
             if (theirs <= 0 || !entry.has("v") || !wins(theirs, theirId, stamps[k] ?: 0L, myId)) continue
             val value = entry.get("v")
             // Already the same here: only its time is taken, so nothing is saved or reloaded.
@@ -58,7 +59,7 @@ class SharedSettings(private val file: File?) {
     /** Records the times of settings taken from another TV, once they are saved. */
     @Synchronized fun took(at: Map<String, Long>) {
         if (at.isEmpty()) return
-        stamps.putAll(at)
+        at.forEach { (k, t) -> stamps[k] = maxOf(stamps[k] ?: 0L, t) }
         save()
     }
 
