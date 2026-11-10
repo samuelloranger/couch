@@ -109,8 +109,9 @@ class IndexScreen(
         })
         place(banner, IndexTokens.COLUMN_X, IndexTokens.STRIP_Y, IndexTokens.cardWidth(-1), IndexTokens.CARD_H)
         place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
+        // From the list's edge, not the column's: a full address and longer labels outgrow the column.
         addView(systemLine, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-            leftMargin = activity.dp(IndexTokens.COLUMN_X)
+            leftMargin = activity.dp(IndexTokens.LIST_X)
             topMargin = activity.dp(IndexTokens.FOOTER_Y) - systemLine.inset
         })
         addView(topBar, LayoutParams(LayoutParams.WRAP_CONTENT, activity.dp(IndexTokens.TOP_H), Gravity.TOP or Gravity.END).apply {
