@@ -85,17 +85,35 @@ class Config {
     /** Godmode's frame HUD on the home screen: [HUD_OFF], [HUD_MS] or [HUD_FPS]. */
     var hud = HUD_OFF
 
-    /** Written atomically, one writer at a time, so a half-written file never wipes the user's setup; a failed write keeps the old file. */
-    fun save(dir: File?) {
+    /** The file's shape when this was loaded or last saved; null for a config built from scratch. */
+    internal var base: org.json.JSONObject? = null
+
+    /**
+     * Written atomically, one writer at a time, so a half-written file never wipes the user's setup;
+     * a failed write keeps the old file. A loaded config writes only the keys it changed since, over
+     * the file as it is now: a page left open doesn't put back what a phone or another TV changed
+     * meanwhile. [quiet] keeps the change from [onSaved], for one that came from another TV.
+     */
+    fun save(dir: File?, quiet: Boolean = false) {
         dir ?: return
-        val text = toJson()
+        val mine = ConfigJson.encode(this)
+        val changed: Set<String>
         synchronized(lock) {
+            val file = File(dir, FILE)
+            val disk = runCatching { org.json.JSONObject(file.readText()) }.getOrNull()
+            // A TV saving for the first time changed only what differs from the defaults.
+            val was = base ?: disk ?: ConfigJson.encode(Config())
+            changed = mine.keys().asSequence().filter { was?.opt(it)?.toString() != mine.opt(it)?.toString() }.toSet()
+            val out = if (base == null || disk == null) mine else disk.also { d -> changed.forEach { d.put(it, mine.get(it)) } }
             try {
-                writeAtomically(File(dir, FILE), text)
+                writeAtomically(file, Config().also { ConfigJson.decode(out, it) }.toJson())
             } catch (e: java.io.IOException) {
                 // The old file stays; losing one change beats crashing a click handler.
+                return
             }
+            base = mine
         }
+        if (!quiet && changed.isNotEmpty()) onSaved?.invoke(changed)
     }
 
     fun toJson(): String = ConfigJson.encode(this).toString(2)
@@ -103,6 +121,10 @@ class Config {
     companion object {
         private const val FILE = "config.json"
         private val lock = Any()
+
+        /** Hears the keys of every change saved on this TV, after the file is written. */
+        @Volatile var onSaved: ((Set<String>) -> Unit)? = null
+
         const val DEFAULT_SUBREDDIT = "WidescreenWallpaper"
         const val HUD_OFF = "off"
 
@@ -140,7 +162,10 @@ class Config {
                 keepAside(file)
                 return Config()
             }
-            return Config().also { ConfigJson.decode(json, it) }
+            return Config().also {
+                ConfigJson.decode(json, it)
+                it.base = ConfigJson.encode(it)
+            }
         }
 
         /** Unreadable or malformed text gives the defaults, never a crash. */

@@ -458,10 +458,10 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="settings_tvs">Autres téléviseurs</string>
     <string name="settings_tvs_help">Partage le temps d\'écran avec les autres téléviseurs de la maison, sur votre réseau local seulement. Rien ne passe par Internet.</string>
     <string name="tvs_title">Autres téléviseurs</string>
-    <string name="tvs_hint">Le temps d\'écran par appli, rien d\'autre. Il est chiffré et passe directement d\'un téléviseur à l\'autre.</string>
+    <string name="tvs_hint">Le temps d\'écran par appli, et les réglages qui ne sont pas propres à un téléviseur. Tout est chiffré et passe directement d\'un téléviseur à l\'autre.</string>
     <string name="tvs_group">Partage</string>
-    <string name="tvs_share">Partager le temps d\'écran</string>
-    <string name="tvs_share_help">Permet aux téléviseurs jumelés de voir la durée d\'utilisation de chaque appli ici, et vous montre la leur. Désactivé par défaut; le désactiver arrête tout.</string>
+    <string name="tvs_share">Partager avec les autres téléviseurs</string>
+    <string name="tvs_share_help">Permet aux téléviseurs jumelés de voir la durée d\'utilisation de chaque appli ici, et garde les réglages pareils sur tous : un changement sur l\'un se rend aux autres. Les chaînes, les entrées et la télécommande restent propres à chaque téléviseur. Désactivé par défaut; le désactiver arrête tout.</string>
     <string name="tvs_scope">Le temps d\'écran montre</string>
     <string name="tvs_scope_help">Dans Index, soit ce téléviseur seul, soit tous les téléviseurs jumelés additionnés. Les applis se reconnaissent par leur paquet, ou par leur nom quand le paquet diffère.</string>
     <string name="tvs_scope_this">Ce téléviseur</string>

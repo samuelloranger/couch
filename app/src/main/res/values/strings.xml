@@ -452,10 +452,10 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="settings_tvs">Other TVs</string>
     <string name="settings_tvs_help">Share screen time with the other TVs in the house, over your home network only. Nothing goes through the internet.</string>
     <string name="tvs_title">Other TVs</string>
-    <string name="tvs_hint">Screen time only, per app. It is encrypted and goes straight between your TVs.</string>
+    <string name="tvs_hint">Screen time per app, and the settings that aren\'t tied to one TV. It is encrypted and goes straight between your TVs.</string>
     <string name="tvs_group">Sharing</string>
-    <string name="tvs_share">Share screen time</string>
-    <string name="tvs_share_help">Lets the TVs you pair see how long each app was used here, and shows you theirs. Off by default; turning it off stops all of it.</string>
+    <string name="tvs_share">Share with other TVs</string>
+    <string name="tvs_share_help">Lets the TVs you pair see how long each app was used here, and keeps settings the same on all of them: a change on one reaches the others. Channels, inputs and the remote stay per TV. Off by default; turning it off stops all of it.</string>
     <string name="tvs_scope">Screen time shows</string>
     <string name="tvs_scope_help">In Index, either this TV alone or every paired TV added together. Apps match by package, or by name when the package differs.</string>
     <string name="tvs_scope_this">This TV</string>

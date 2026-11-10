@@ -4,17 +4,23 @@ import android.content.Context
 import android.os.Build
 import cloud.samlo.couch.data.AppUsage
 import cloud.samlo.couch.data.Config
+import cloud.samlo.couch.data.ConfigJson
 import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.data.UserFiles
+import cloud.samlo.couch.phone.ConfigPatch
+import cloud.samlo.couch.phone.HomeReload
 import cloud.samlo.couch.phone.Phones
+import org.json.JSONException
+import org.json.JSONObject
 import java.io.File
 import java.time.LocalDate
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 
 /**
- * Screen time shared between this TV and the ones it is paired with, on the home network only,
- * and the server the phone app connects to. One instance of everything per process: the server
+ * Screen time and settings shared between this TV and the ones it is paired with, on the home
+ * network only, and the server the phone app connects to. A settings change goes to every paired
+ * TV in sight at once, and a TV that comes into view swaps settings, so one that was off catches up. One instance of everything per process: the server
  * answers while the launcher's process lives, and a TV is asked again for its snapshot when it
  * comes into view and the last answer is stale. The server runs while sharing is on, a phone is
  * paired, or pairing is open.
@@ -48,12 +54,68 @@ object Sync {
     /** Brings the server up while it is wanted (sharing, a phone, open pairing), and down when it isn't. Cheap to call again. */
     fun start(context: Context) {
         val context = context.applicationContext
+        // Every change is timed as it is saved, sharing or not, so turning sharing on sends the latest.
+        Config.onSaved = { keys ->
+            if (shared(context).changed(keys, System.currentTimeMillis())) swapSettings()
+        }
         thread(name = "couch-sync-start") {
             val config = Config.load(UserFiles(context).dir)
             sharing = config.syncEnabled
             reconcile(context)
-            if (config.syncEnabled) pullStale()
+            if (config.syncEnabled) {
+                pullStale()
+                swapSettings()
+            }
         }
+    }
+
+    private var shared: SharedSettings? = null
+
+    @Synchronized private fun shared(context: Context): SharedSettings =
+        shared ?: SharedSettings(File(context.applicationContext.filesDir, "shared-settings.json")).also { shared = it }
+
+    /** One swap at a time, and a burst of changes or TVs coming into view makes one more, not one each. */
+    private val settingsOps = java.util.concurrent.Executors.newSingleThreadExecutor { r ->
+        Thread(r, "couch-sync-settings").apply { isDaemon = true }
+    }
+    private val swapQueued = java.util.concurrent.atomic.AtomicBoolean()
+
+    /** Swaps settings with every paired TV in sight: each merges the other's, newest change winning. */
+    private fun swapSettings() {
+        val context = app ?: return
+        if (!sharing || !swapQueued.compareAndSet(false, true)) return
+        settingsOps.execute {
+            swapQueued.set(false)
+            val me = peers ?: return@execute
+            for (peer in me.tvs()) {
+                val at = found().firstOrNull { it.id == peer.id } ?: continue
+                Client.settings(at.host, at.port, me, peer, mySettings(context))?.let { merge(context, me, peer.id, it) }
+            }
+        }
+    }
+
+    private fun mySettings(context: Context): JSONObject =
+        shared(context).outgoing(ConfigJson.encode(Config.load(UserFiles(context).dir)))
+
+    private val mergeLock = Any()
+
+    /** Takes the settings from [theirs] that are newer than this TV's, then reloads home and tells the phones. */
+    private fun merge(context: Context, me: Peers, theirId: String, theirs: JSONObject) = synchronized(mergeLock) {
+        val dir = UserFiles(context).dir ?: return@synchronized
+        val store = shared(context)
+        val current = Config.load(dir)
+        val (patch, at) = store.winners(me.id, theirId, theirs, ConfigJson.encode(current))
+        if (patch.length() == 0) return@synchronized store.took(at)
+        val next = try {
+            ConfigPatch.apply(current, patch)
+        } catch (e: JSONException) {
+            return@synchronized // a value of the wrong type: the whole answer is ignored
+        }
+        // Quiet: these changes came from another TV, and sending them back would only echo.
+        next.save(dir, quiet = true)
+        store.took(at)
+        HomeReload.listener?.invoke()
+        Phones.configChanged(Config.load(dir))
     }
 
     @Synchronized private fun reconcile(context: Context) {
@@ -72,13 +134,17 @@ object Sync {
             }
             it.phones = Phones
             it.shares = { sharing }
+            it.onSettings = { peer, theirs ->
+                merge(context, me, peer.id, theirs)
+                mySettings(context)
+            }
             server = it
         }
         applyPairing()
         val port = srv.start()
         val disc = discovery ?: Discovery(context).also { discovery = it }
         disc.announce(me.id, me.name, port, wantedAsk != null)
-        disc.start { listener?.invoke(); pullStale() }
+        disc.start { listener?.invoke(); pullStale(); swapSettings() }
     }
 
     @Synchronized private fun down() {

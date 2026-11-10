@@ -53,7 +53,7 @@ Couch instead of the stock home screen.
 - HOME button takeover on TVs that hardwire HOME to the stock launcher (Google TV, Fire TV, Sony
   Bravia and others), repairing itself if Android drops it.
 - Updates itself: an Update button appears when a new release is out, one confirmation installs it.
-- **Other TVs**: share screen time between the TVs in the house, over your home network only,
+- **Other TVs**: share screen time and settings between the TVs in the house, over your home network only,
   paired by comparing six digits on both screens. See [the docs](https://samlo.cloud/couch/sync).
 - **Phone**: the Couch app for iPhone, paired the same way: a remote with a keyboard, every setting
   (live, both ways), apps and inputs, screen time across your TVs, and a live picture of the screen.

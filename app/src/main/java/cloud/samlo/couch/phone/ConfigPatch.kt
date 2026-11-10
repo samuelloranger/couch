@@ -23,6 +23,8 @@ object ConfigPatch {
         }
         val out = Config()
         ConfigJson.decode(merged, out)
+        // Saved as a change to [current], so only the patched keys go over the file.
+        out.base = current.base
         // The TV shows the subreddit as r/name and takes either; an empty one means the default.
         out.subreddit = out.subreddit.trim().removePrefix("r/").ifEmpty { Config.DEFAULT_SUBREDDIT }
         out.ambientMinutes = out.ambientMinutes.coerceIn(0, MAX_AMBIENT_MINUTES)

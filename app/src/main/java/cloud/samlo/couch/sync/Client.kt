@@ -9,7 +9,7 @@ import java.io.IOException
 import java.net.InetSocketAddress
 import java.net.Socket
 
-/** The asking side of [Server]: fetch a paired TV's snapshot, or pair with a TV that has pairing open. */
+/** The asking side of [Server]: fetch a paired TV's snapshot, swap settings with it, or pair with a TV that has pairing open. */
 object Client {
     private const val CONNECT_MS = 4_000
     private const val READ_MS = 10_000
@@ -33,6 +33,26 @@ object Client {
             )
             val sealed = Wire.unb64(Wire.read(input).getString("data"))
             Crypto.open(peer.key, sealed, nonce)?.let { Snapshot.fromJson(String(it)) }?.takeIf { it.deviceId == peer.id }
+        }
+    } catch (e: Exception) {
+        null
+    }
+
+    /**
+     * Sends this TV's shared settings ([mine]) to a paired TV, which merges them, and returns that
+     * TV's as they then stand; null when it can't be reached, doesn't answer as that peer, or sends junk.
+     */
+    fun settings(host: String, port: Int, me: Peers, peer: Peer, mine: JSONObject): JSONObject? = try {
+        connect(host, port) { _, input, output ->
+            val nonce = Crypto.random(Server.NONCE_BYTES)
+            Wire.write(
+                output,
+                JSONObject().put("op", "settings").put("id", me.id).put("nonce", Wire.b64(nonce))
+                    .put("proof", Wire.b64(Crypto.requestProof(peer.key, nonce, me.id))),
+            )
+            Wire.write(output, JSONObject().put("data", Wire.b64(Crypto.seal(peer.key, mine.toString().toByteArray(), nonce))))
+            val sealed = Wire.unb64(Wire.read(input, Server.MAX_SETTINGS).getString("data"))
+            Crypto.open(peer.key, sealed, Server.replyAad(nonce))?.let { JSONObject(String(it)) }
         }
     } catch (e: Exception) {
         null

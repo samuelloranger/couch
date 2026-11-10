@@ -1,20 +1,28 @@
 # Other TVs
 
 Couch can add up screen time across the TVs in your house, so Index shows how long you used an app
-on all of them, not just this one. It is off until you turn it on, and it only ever talks to TVs
+on all of them, not just this one, and keep their settings the same: a change on one TV reaches the
+others. It is off until you turn it on, and it only ever talks to TVs
 you paired yourself, on your home network. Nothing goes through the internet and no account is
 involved.
 
 ## What is shared
 
 Per app, the last seven days of screen time, how many times it was opened, and when it was last
-used, plus the app's name. Nothing else: no apps list beyond those with usage, no viewing history,
-no settings. Each answer is encrypted for the one TV that asked, with a key only the two paired TVs
-hold.
+used, plus the app's name.
+
+Settings that aren't tied to one TV: the accent and clock, ambient mode (picture source, subreddit,
+how often it changes, idle minutes), weather, the apps' order, pins, hidden apps and names, the Home
+Assistant address, and update checks. Channels, inputs and their icons, the remote's buttons, the
+Home Assistant devices in the row, Godmode, and sharing itself stay on each TV. Custom images
+(icons, ambient pictures) are files, not settings, and stay where they were added.
+
+Nothing else: no apps list beyond those with usage, no viewing history. Everything is encrypted for
+the one TV it is meant for, with a key only the two paired TVs hold.
 
 ## Turning it on
 
-1. On each TV: **Customize → Other TVs → Share screen time**. Usage access has to be granted, as
+1. On each TV: **Customize → Other TVs → Share with other TVs**. Usage access has to be granted, as
    for Index's screen time.
 2. On both TVs: **Add a TV**.
 3. On one of them, pick the other from the list. Both screens show the same six digits.
@@ -43,8 +51,20 @@ asks each paired one it can see, when Couch is opened and the last answer is mor
 minutes old. A TV that is off or asleep keeps its last answer, and the row shows how long ago that
 was. Forgetting a TV removes its key and its figures on the spot.
 
+A settings change, made on the TV or from the phone, goes to every paired TV in sight as soon as it
+is saved. When two paired TVs see each other (Couch opening, a TV coming back on) they swap
+settings, so a TV that was off catches up. Each setting keeps the time of its last change, and the
+newest change wins, one setting at a time: changing the accent on one TV and the weather city on
+another keeps both.
+
+A setting nobody has changed since sharing arrived on a TV isn't sent, so pairing never replaces a
+TV's setup with another's. To bring two TVs in line, change the setting once on the one that is
+right, or use the phone's **Copy settings**.
+
 ## Limits
 
 - Both TVs must be on the same network and awake for a first sync.
 - Totals don't change a TV's own figures: each one always uses its own live usage.
 - Opens from another TV are added whole, even if only part of its week is still inside this one.
+- The newest change is judged by each TV's clock, so a TV whose clock is far off can win or lose a
+  change it shouldn't.
