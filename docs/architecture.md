@@ -125,7 +125,10 @@ Both are off until the user turns them on, and neither costs the home screen any
   `Snapshot` and `Merge` are plain Kotlin with no Android in them: a snapshot pins its days to
   dates, and the merge adds peers to this TV's live figures, matching apps by package and then by
   name. `Server` and `Client` speak a small framed protocol over TCP; `Discovery` uses the
-  platform's own mDNS. See [Other TVs](sync.md) for what is shared and how pairing works.
+  platform's own mDNS. It also keeps the shared settings the same: `Config.save` writes only the
+  keys a caller changed and reports them, `SharedSettings` times each change, and two TVs swap
+  their timed settings, the newest of each winning. See [Other TVs](sync.md) for what is shared and
+  how pairing works.
 - **Phone** (`phone/`) answers the iPhone app on the same port. A phone pairs like a TV, then each
   session derives its own keys from the pairing key and seals every frame with AES-GCM, counting
   frames per direction. Keys go through the relay's virtual keyboard (else `input keyevent`), and

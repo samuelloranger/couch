@@ -44,7 +44,13 @@ class Server(
     /** Where authenticated phone sessions go; null answers none. */
     @Volatile var phones: PhoneHost? = null
 
-    /** Whether snapshots are shared right now: the server also runs for phones alone. */
+    /**
+     * A paired TV's shared settings arriving: merges them into this TV's and returns this TV's as
+     * they now stand, for that TV to merge in turn. Null answers none.
+     */
+    @Volatile var onSettings: ((Peer, JSONObject) -> JSONObject)? = null
+
+    /** Whether snapshots and settings are shared right now: the server also runs for phones alone. */
     @Volatile var shares: () -> Boolean = { true }
 
     private val watchdog = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
@@ -126,6 +132,7 @@ class Server(
             val request = Wire.read(input, Wire.MAX_REQUEST)
             when (request.getString("op")) {
                 "snapshot" -> snapshot(request, output)
+                "settings" -> settings(request, input, output)
                 "pair1" -> pair(client, limit, request, input, output)
                 "phone" -> return phone(client, request, input, output)
             }
@@ -149,17 +156,33 @@ class Server(
         }
     }
 
+    /** The paired TV asking and its nonce, when it proves it holds the key; null for anyone else. */
+    private fun proven(request: JSONObject): Pair<Peer, ByteArray>? {
+        val id = request.getString("id")
+        // Phones are never asked for snapshots or settings, and nobody is while sharing is off.
+        val peer = peers.get(id)?.takeIf { !it.isPhone && shares() } ?: return null
+        val nonce = Wire.unb64(request.getString("nonce"))
+        if (nonce.size != NONCE_BYTES) return null
+        val proof = Wire.unb64(request.getString("proof"))
+        if (!MessageDigest.isEqual(proof, Crypto.requestProof(peer.key, nonce, id))) return null
+        return peer to nonce
+    }
+
     /** An unknown or unproven asker gets silence; a proven one gets the snapshot only it can read. */
     private fun snapshot(request: JSONObject, output: DataOutputStream) {
-        val id = request.getString("id")
-        // Phones are never asked for snapshots, and nobody is while sharing is off.
-        val peer = peers.get(id)?.takeIf { !it.isPhone && shares() } ?: return
-        val nonce = Wire.unb64(request.getString("nonce"))
-        if (nonce.size != NONCE_BYTES) return
-        val proof = Wire.unb64(request.getString("proof"))
-        if (!MessageDigest.isEqual(proof, Crypto.requestProof(peer.key, nonce, id))) return
+        val (peer, nonce) = proven(request) ?: return
         val sealed = Crypto.seal(peer.key, current().toByteArray(), nonce)
         Wire.write(output, JSONObject().put("data", Wire.b64(sealed)))
+    }
+
+    /** A proven TV's settings, sealed for the request, are merged here; this TV's go back sealed for the reply. */
+    private fun settings(request: JSONObject, input: DataInputStream, output: DataOutputStream) {
+        val (peer, nonce) = proven(request) ?: return
+        val merge = onSettings ?: return
+        val sealed = Wire.unb64(Wire.read(input, MAX_SETTINGS).getString("data"))
+        val theirs = Crypto.open(peer.key, sealed, nonce)?.let { JSONObject(String(it)) } ?: return
+        val mine = merge(peer, theirs)
+        Wire.write(output, JSONObject().put("data", Wire.b64(Crypto.seal(peer.key, mine.toString().toByteArray(), replyAad(nonce)))))
     }
 
     /**
@@ -261,6 +284,8 @@ class Server(
         /** Fixed, so a TV that mDNS can't find can still be reached by its address. */
         const val PORT = 47820
         const val NONCE_BYTES = 16
+        /** Every shared setting at once, app lists and names included, with room to spare. */
+        const val MAX_SETTINGS = 256 * 1024
         private const val MAX_CONNECTIONS = 6
         private const val MAX_PER_HOST = 2
         private const val ACCEPT_RETRY_MS = 500L
@@ -272,5 +297,8 @@ class Server(
         private const val CACHE_MS = 30_000L
         /** Long enough for two people to look at two screens. */
         const val ANSWER_MS = 130_000
+
+        /** What ties a settings reply to its request, distinct from the request's own, so a request can't be sent back as the reply. */
+        fun replyAad(nonce: ByteArray) = nonce + "reply".toByteArray()
     }
 }
