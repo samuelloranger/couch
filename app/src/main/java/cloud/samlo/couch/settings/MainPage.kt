@@ -67,7 +67,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         val inPage = inPage()
         val focus = (ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString()
         build()
-        if (inPage) refocus(focus) else focusStart()
+        // Only the update buttons are focusable without being rows; Check now is always there.
+        if (inPage && focus == null) checkNowButton?.requestFocus() else if (inPage) refocus(focus) else focusStart()
     }
 
     /** A Back press that started in the options; its repeats and release are swallowed too. */
@@ -268,6 +269,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
 
     /** Brings the update status and buttons up to date; null until the Couch group was shown. */
     private var showUpdate: (() -> Unit)? = null
+    private var checkNowButton: View? = null
 
     /** Rawkoon TV's layout: the daily check, then what the last check found, then Check now and Install. */
     private fun updates() {
@@ -308,14 +310,18 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 check.failed -> activity.getString(R.string.update_unreachable, date())
                 else -> activity.getString(R.string.update_current, date())
             }
-            install.visibility = if (found != null && !Installer.running) View.VISIBLE else View.GONE
+            val offer = found != null && !Installer.running
+            // Focus would otherwise fall to whatever Android finds once the button is gone.
+            if (!offer && install.hasFocus()) checkNow.requestFocus()
+            install.visibility = if (offer) View.VISIBLE else View.GONE
             found?.let { install.text = activity.getString(R.string.update_install, it.version) }
             rail.refresh(Group.COUCH)
         }
         showUpdate = show
+        checkNowButton = checkNow
         show()
         checkNow.setOnClickListener {
-            if (checking) return@setOnClickListener
+            if (checking || Installer.running) return@setOnClickListener
             checking = true
             show()
             thread(name = "update-check") {
@@ -331,8 +337,6 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         }
         install.setOnClickListener {
             val found = check.found() ?: return@setOnClickListener
-            // Focus would otherwise fall to whatever Android finds once the button is gone.
-            checkNow.requestFocus()
             Installer(activity, fetcher).install(found) { message ->
                 message?.let { Toast.makeText(activity, it, Toast.LENGTH_LONG).show() }
                 if (!activity.isDestroyed) showUpdate?.invoke()
