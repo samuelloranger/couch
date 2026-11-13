@@ -188,13 +188,14 @@
     <string name="update_failed">Couldn’t install the update. Try again later.</string>
     <string name="update_corrupt">The download didn’t match its checksum, so it wasn’t installed.</string>
     <string name="update_signature">This version is signed with a different key. Uninstall Couch, then install it.</string>
-    <string name="update_row">Couch update</string>
-    <string name="update_row_help">OK asks GitHub for Couch’s latest release now, even with the daily check off. Once a newer one is found, OK installs it.</string>
+    <string name="updates_header">Updates</string>
+    <string name="update_available">Version %1$s is available.</string>
+    <string name="update_never">Not checked yet.</string>
     <string name="update_check_now">Check now</string>
     <string name="update_checking">Checking…</string>
     <string name="update_install">Install %1$s</string>
-    <string name="update_current">Up to date, checked %1$s</string>
-    <string name="update_unreachable">Couldn’t reach GitHub on %1$s</string>
+    <string name="update_current">Up to date, checked %1$s.</string>
+    <string name="update_unreachable">Couldn’t reach GitHub on %1$s.</string>
     <string name="icon_auto_guess">Automatic · %1$s</string>
     <!-- Godmode: reached by seven OK presses on About. -->
     <string name="godmode">Godmode</string>

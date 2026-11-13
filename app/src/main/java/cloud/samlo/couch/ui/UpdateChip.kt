@@ -39,14 +39,18 @@ class UpdateChip(context: Context) : TextView(context) {
 }
 
 /** The top bar's accent pill (update, input offers); built on each show so it follows the accent. */
-fun accentChip(context: Context) = StateListDrawable().apply {
-    val pill = { fill: Int, stroke: Int ->
-        GradientDrawable().apply {
-            cornerRadius = context.dp(20).toFloat()
-            setColor(fill)
-            setStroke(context.dp(2), stroke)
-        }
-    }
-    addState(intArrayOf(android.R.attr.state_focused), pill(0x33FFFFFF, Tokens.ring))
-    addState(intArrayOf(), pill((Tokens.accent and 0x00FFFFFF) or 0x26000000, Tokens.accent))
+fun accentChip(context: Context) = chip(context, (Tokens.accent and 0x00FFFFFF) or 0x26000000, Tokens.accent)
+
+/** The same pill without the accent, for a secondary action beside an accent one. */
+fun plainChip(context: Context) = chip(context, 0x24FFFFFF, 0x00000000)
+
+private fun chip(context: Context, fill: Int, stroke: Int) = StateListDrawable().apply {
+    addState(intArrayOf(android.R.attr.state_focused), pill(context, 0x33FFFFFF, Tokens.ring))
+    addState(intArrayOf(), pill(context, fill, stroke))
+}
+
+private fun pill(context: Context, fill: Int, stroke: Int) = GradientDrawable().apply {
+    cornerRadius = context.dp(20).toFloat()
+    setColor(fill)
+    setStroke(context.dp(2), stroke)
 }
