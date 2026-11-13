@@ -4,6 +4,7 @@ import android.content.Intent
 import android.view.KeyEvent
 import android.view.View
 import android.provider.Settings
+import android.text.format.DateFormat
 import android.widget.Toast
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Accents
@@ -18,6 +19,7 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.update.Installer
 import cloud.samlo.couch.update.UpdateCheck
 import cloud.samlo.couch.update.Versions
+import kotlin.concurrent.thread
 
 /**
  * "Customize": the groups down the left, the focused group's options on the right. Up and down
@@ -232,6 +234,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             open(RemotePage.PAGE)
         }
         o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
+        updateRow()
         about()
         if (config.godmode) godmodeRow()
         o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
@@ -252,6 +255,53 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     /** The hidden page, once seven OKs on About found it. */
     private fun godmodeRow() {
         o.page(ctx.str(R.string.godmode), ctx.str(R.string.godmode_help)) { open(GodmodePage.page) }
+    }
+
+    /** True while the manual check runs; kept here so the row says so after switching groups. */
+    private var checking = false
+
+    /** OK asks GitHub now, or installs what a check found; the value says where things stand. */
+    private fun updateRow() {
+        val fetcher = Fetcher(ctx.activity)
+        val check = UpdateCheck(ctx.activity, fetcher)
+        val updated = {
+            o.rows().forEach { it.refresh() }
+            rail.refresh(current)
+        }
+        o.link(ctx.str(R.string.update_row), ctx.str(R.string.update_row_help), {
+            val found = check.found()
+            val date = { DateFormat.getMediumDateFormat(ctx.activity).format(check.checkedAt) }
+            when {
+                checking -> ctx.str(R.string.update_checking)
+                Installer.running -> ctx.str(R.string.update_downloading)
+                found != null -> ctx.activity.getString(R.string.update_install, found.version)
+                check.checkedAt == 0L -> ctx.str(R.string.update_check_now)
+                check.failed -> ctx.activity.getString(R.string.update_unreachable, date())
+                else -> ctx.activity.getString(R.string.update_current, date())
+            }
+        }) {
+            if (checking || Installer.running) return@link
+            val found = check.found()
+            if (found != null) {
+                Installer(ctx.activity, fetcher).install(found) { message ->
+                    message?.let { Toast.makeText(ctx.activity, it, Toast.LENGTH_LONG).show() }
+                    updated()
+                }
+            } else {
+                checking = true
+                thread(name = "update-check") {
+                    try {
+                        check.refresh(config, force = true)
+                    } finally {
+                        ctx.activity.runOnUiThread {
+                            checking = false
+                            if (!ctx.activity.isDestroyed) updated()
+                        }
+                    }
+                }
+            }
+            updated()
+        }
     }
 
     /** The installed version; OK installs a newer one when the last daily check found it. */
