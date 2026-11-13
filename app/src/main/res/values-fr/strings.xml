@@ -189,7 +189,7 @@
     <string name="update_corrupt">Le téléchargement ne correspond pas à sa somme de contrôle : il n’a pas été installé.</string>
     <string name="update_signature">Cette version est signée avec une autre clé. Désinstalle Couch, puis installe-la.</string>
     <string name="update_row">Mise à jour de Couch</string>
-    <string name="update_row_help">OK demande tout de suite à GitHub la dernière version de Couch, même sans la vérification quotidienne, et l’installe s’il y en a une plus récente.</string>
+    <string name="update_row_help">OK demande tout de suite à GitHub la dernière version de Couch, même sans la vérification quotidienne. Une fois une version plus récente trouvée, OK l’installe.</string>
     <string name="update_check_now">Vérifier</string>
     <string name="update_checking">Vérification…</string>
     <string name="update_install">Installer %1$s</string>

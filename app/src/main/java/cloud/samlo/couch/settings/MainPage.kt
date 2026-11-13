@@ -290,10 +290,13 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             } else {
                 checking = true
                 thread(name = "update-check") {
-                    check.refresh(config, force = true)
-                    ctx.activity.runOnUiThread {
-                        checking = false
-                        updated()
+                    try {
+                        check.refresh(config, force = true)
+                    } finally {
+                        ctx.activity.runOnUiThread {
+                            checking = false
+                            if (!ctx.activity.isDestroyed) updated()
+                        }
                     }
                 }
             }

@@ -189,7 +189,7 @@
     <string name="update_corrupt">The download didn’t match its checksum, so it wasn’t installed.</string>
     <string name="update_signature">This version is signed with a different key. Uninstall Couch, then install it.</string>
     <string name="update_row">Couch update</string>
-    <string name="update_row_help">OK asks GitHub for Couch’s latest release now, even with the daily check off, and installs it when there is a newer one.</string>
+    <string name="update_row_help">OK asks GitHub for Couch’s latest release now, even with the daily check off. Once a newer one is found, OK installs it.</string>
     <string name="update_check_now">Check now</string>
     <string name="update_checking">Checking…</string>
     <string name="update_install">Install %1$s</string>
