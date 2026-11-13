@@ -1,10 +1,14 @@
 package cloud.samlo.couch.settings
 
 import android.content.Intent
+import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.provider.Settings
 import android.text.format.DateFormat
+import android.widget.LinearLayout
+import android.widget.TextView
 import android.widget.Toast
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Accents
@@ -15,7 +19,9 @@ import cloud.samlo.couch.godmode.PRESSES
 import cloud.samlo.couch.godmode.Unlock
 import cloud.samlo.couch.sync.Sync
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.accentChip
 import cloud.samlo.couch.ui.dp
+import cloud.samlo.couch.ui.plainChip
 import cloud.samlo.couch.update.Installer
 import cloud.samlo.couch.update.UpdateCheck
 import cloud.samlo.couch.update.Versions
@@ -54,13 +60,15 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         ctx.config = Config.load(ctx.files.dir)
         if (off == offCount()) {
             o.rows().forEach { it.refresh() }
+            if (current == Group.COUCH) showUpdate?.invoke()
             rail.refresh()
             return
         }
         val inPage = inPage()
         val focus = (ctx.activity.currentFocus as? OptionRow)?.label?.text?.toString()
         build()
-        if (inPage) refocus(focus) else focusStart()
+        // Only the update buttons are focusable without being rows; Check now is always there.
+        if (inPage && focus == null) checkNowButton?.requestFocus() else if (inPage) refocus(focus) else focusStart()
     }
 
     /** A Back press that started in the options; its repeats and release are swallowed too. */
@@ -80,7 +88,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         return true
     }
 
-    private fun inPage() = ctx.activity.currentFocus?.parent == ctx.layout.list
+    private fun inPage() = ctx.layout.list.hasFocus()
 
     private fun enter() {
         o.rows().firstOrNull()?.requestFocus()
@@ -106,7 +114,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         val all = o.rows()
         all.forEach { it.nextFocusLeftId = back }
         all.firstOrNull()?.let { it.nextFocusUpId = it.id }
-        all.lastOrNull()?.let { it.nextFocusDownId = it.id }
+        all.lastOrNull()?.let { if (it.nextFocusDownId == View.NO_ID) it.nextFocusDownId = it.id }
     }
 
     private fun offCount() = Setup.items.count { !it.isOn(ctx.activity) }
@@ -233,13 +241,12 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.page(ctx.str(R.string.remote_title), ctx.str(R.string.remote_link_help), { ctx.str(if (config.remoteButtons) R.string.yes else R.string.no) }) {
             open(RemotePage.PAGE)
         }
-        o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
-        updateRow()
         about()
         if (config.godmode) godmodeRow()
         o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
             ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
+        updates()
     }
 
     private fun phoneValue(): String {
@@ -257,51 +264,98 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.page(ctx.str(R.string.godmode), ctx.str(R.string.godmode_help)) { open(GodmodePage.page) }
     }
 
-    /** True while the manual check runs; kept here so the row says so after switching groups. */
+    /** True while the manual check runs; kept here so the status says so after switching groups. */
     private var checking = false
 
-    /** OK asks GitHub now, or installs what a check found; the value says where things stand. */
-    private fun updateRow() {
-        val fetcher = Fetcher(ctx.activity)
-        val check = UpdateCheck(ctx.activity, fetcher)
-        val updated = {
-            o.rows().forEach { it.refresh() }
-            rail.refresh(current)
+    /** Brings the update status and buttons up to date; null until the Couch group was shown. */
+    private var showUpdate: (() -> Unit)? = null
+    private var checkNowButton: View? = null
+
+    /** Rawkoon TV's layout: the daily check, then what the last check found, then Check now and Install. */
+    private fun updates() {
+        o.header(ctx.str(R.string.updates_header))
+        val toggle = o.toggle(ctx.str(R.string.check_updates), ctx.str(R.string.check_updates_help), { config.checkUpdates }, { config.checkUpdates = it })
+        val activity = ctx.activity
+        val fetcher = Fetcher(activity)
+        val check = UpdateCheck(activity, fetcher)
+        val status = TextView(activity).apply {
+            textSize = 15f
+            setTextColor(Tokens.textMuted)
+            setPadding(activity.dp(20), activity.dp(6), activity.dp(20), activity.dp(10))
         }
-        o.link(ctx.str(R.string.update_row), ctx.str(R.string.update_row_help), {
+        val checkNow = pill(ctx.str(R.string.update_check_now), accent = false)
+        val install = pill("", accent = true)
+        // The buttons end the page: Down stays put, Left from Check now goes back to the rail like a row.
+        toggle.nextFocusDownId = checkNow.id
+        checkNow.nextFocusLeftId = rail.item(Group.COUCH).id
+        listOf(checkNow, install).forEach { it.nextFocusDownId = it.id }
+        val buttons = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            addView(checkNow, LinearLayout.LayoutParams(WRAP_CONTENT, activity.dp(44)))
+            addView(install, LinearLayout.LayoutParams(WRAP_CONTENT, activity.dp(44)).apply { marginStart = activity.dp(12) })
+        }
+        ctx.layout.list.addView(status)
+        ctx.layout.list.addView(buttons, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+            marginStart = activity.dp(20)
+            bottomMargin = activity.dp(8)
+        })
+        val show = {
             val found = check.found()
-            val date = { DateFormat.getMediumDateFormat(ctx.activity).format(check.checkedAt) }
-            when {
+            val date = { DateFormat.getMediumDateFormat(activity).format(check.checkedAt) }
+            status.text = when {
                 checking -> ctx.str(R.string.update_checking)
                 Installer.running -> ctx.str(R.string.update_downloading)
-                found != null -> ctx.activity.getString(R.string.update_install, found.version)
-                check.checkedAt == 0L -> ctx.str(R.string.update_check_now)
-                check.failed -> ctx.activity.getString(R.string.update_unreachable, date())
-                else -> ctx.activity.getString(R.string.update_current, date())
+                found != null -> activity.getString(R.string.update_available, found.version)
+                check.checkedAt == 0L -> ctx.str(R.string.update_never)
+                check.failed -> activity.getString(R.string.update_unreachable, date())
+                else -> activity.getString(R.string.update_current, date())
             }
-        }) {
-            if (checking || Installer.running) return@link
-            val found = check.found()
-            if (found != null) {
-                Installer(ctx.activity, fetcher).install(found) { message ->
-                    message?.let { Toast.makeText(ctx.activity, it, Toast.LENGTH_LONG).show() }
-                    updated()
-                }
-            } else {
-                checking = true
-                thread(name = "update-check") {
-                    try {
-                        check.refresh(config, force = true)
-                    } finally {
-                        ctx.activity.runOnUiThread {
-                            checking = false
-                            if (!ctx.activity.isDestroyed) updated()
-                        }
+            val offer = found != null && !Installer.running
+            // Focus would otherwise fall to whatever Android finds once the button is gone.
+            if (!offer && install.hasFocus()) checkNow.requestFocus()
+            install.visibility = if (offer) View.VISIBLE else View.GONE
+            found?.let { install.text = activity.getString(R.string.update_install, it.version) }
+            rail.refresh(Group.COUCH)
+        }
+        showUpdate = show
+        checkNowButton = checkNow
+        show()
+        checkNow.setOnClickListener {
+            if (checking || Installer.running) return@setOnClickListener
+            checking = true
+            show()
+            thread(name = "update-check") {
+                try {
+                    check.refresh(config, force = true)
+                } finally {
+                    activity.runOnUiThread {
+                        checking = false
+                        if (!activity.isDestroyed) showUpdate?.invoke()
                     }
                 }
             }
-            updated()
         }
+        install.setOnClickListener {
+            val found = check.found() ?: return@setOnClickListener
+            Installer(activity, fetcher).install(found) { message ->
+                message?.let { Toast.makeText(activity, it, Toast.LENGTH_LONG).show() }
+                if (!activity.isDestroyed) showUpdate?.invoke()
+            }
+            show()
+        }
+    }
+
+    /** A pill like the home screen's Update chip; [accent] marks the main action. */
+    private fun pill(text: String, accent: Boolean) = TextView(ctx.activity).apply {
+        this.text = text
+        textSize = 16f
+        gravity = Gravity.CENTER
+        id = View.generateViewId()
+        isFocusable = true
+        isClickable = true
+        setTextColor(if (accent) Tokens.accent else Tokens.textPrimary)
+        background = if (accent) accentChip(ctx.activity) else plainChip(ctx.activity)
+        setPadding(ctx.activity.dp(20), 0, ctx.activity.dp(20), 0)
     }
 
     /** The installed version; OK installs a newer one when the last daily check found it. */
