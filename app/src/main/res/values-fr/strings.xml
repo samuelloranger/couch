@@ -188,6 +188,13 @@
     <string name="update_failed">Impossible d’installer la mise à jour. Réessaie plus tard.</string>
     <string name="update_corrupt">Le téléchargement ne correspond pas à sa somme de contrôle : il n’a pas été installé.</string>
     <string name="update_signature">Cette version est signée avec une autre clé. Désinstalle Couch, puis installe-la.</string>
+    <string name="update_row">Mise à jour de Couch</string>
+    <string name="update_row_help">OK demande tout de suite à GitHub la dernière version de Couch, même sans la vérification quotidienne, et l’installe s’il y en a une plus récente.</string>
+    <string name="update_check_now">Vérifier</string>
+    <string name="update_checking">Vérification…</string>
+    <string name="update_install">Installer %1$s</string>
+    <string name="update_current">À jour, vérifié le %1$s</string>
+    <string name="update_unreachable">GitHub injoignable le %1$s</string>
     <string name="icon_auto_guess">Automatique · %1$s</string>
     <!-- Godmode : s’ouvre avec sept appuis sur OK dans À propos. -->
     <string name="godmode">Godmode</string>
