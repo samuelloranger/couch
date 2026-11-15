@@ -202,6 +202,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             listOf(Option(ctx.str(R.string.sort_usage), "usage"), Option(ctx.str(R.string.sort_manual), "manual"), Option(ctx.str(R.string.sort_alphabetical), "alphabetical")),
             { config.appSort }, { config.appSort = it },
         )
+        o.toggle(ctx.str(R.string.continue_watching), ctx.str(R.string.continue_watching_help), { config.continueWatching }, { config.continueWatching = it })
         o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
         o.page(ctx.str(R.string.settings_visibility), ctx.str(R.string.settings_visibility_help)) { open(SettingsActivity.PAGE_APPS) }
         o.page(ctx.str(R.string.settings_inputs), ctx.str(R.string.settings_inputs_help)) { open(SettingsActivity.PAGE_INPUTS) }

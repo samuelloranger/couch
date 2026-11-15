@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.ImageView
 import cloud.samlo.couch.R
+import cloud.samlo.couch.data.AppLabels
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Images
 import cloud.samlo.couch.data.Prefs
@@ -195,7 +196,7 @@ class IndexScreen(
     /** The Home Assistant row streams changes only while the home screen is in front. */
     fun live(on: Boolean) = homeRow.live(on)
 
-    fun appTiles(): List<Tile> = data?.entries.orEmpty().map { it.app }
+    fun appTiles(): List<Tile> = data?.entries.orEmpty().filterNot { it.continues }.map { it.app }
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */
     fun consumesKey(event: KeyEvent): Boolean {
@@ -222,9 +223,15 @@ class IndexScreen(
 
     private fun row(entry: IndexEntry) = AppRow(activity, entry).apply {
         setOnFocusChangeListener { v, has -> if (has && !binding) select(v as AppRow, refresh = false) }
-        setOnClickListener { this.entry.app.launch(activity) }
+        // Read this.entry, not the one this row was made with: the list reuses a row across rebinds.
+        setOnClickListener {
+            val entry = this.entry
+            // Continue watching has no app to open: OK resumes the first program.
+            if (entry.continues) entry.programs.firstOrNull()?.launch(activity) else entry.app.launch(activity)
+        }
         setOnLongClickListener {
-            onAppMenu(this.entry.app)
+            // The row is Couch's own: there is no app to pin, hide or move.
+            if (!this.entry.continues) onAppMenu(this.entry.app)
             true
         }
     }
@@ -261,6 +268,9 @@ class IndexScreen(
 
     private fun showStats(entry: IndexEntry) {
         val data = data ?: return
+        // The screen time under the week belongs to apps; Continue watching has none to show.
+        stats.visibility = if (entry.continues) GONE else VISIBLE
+        if (entry.continues) return
         stats.show(entry, data.usageKnown, System.currentTimeMillis(), config.clock24h)
     }
 
@@ -302,7 +312,14 @@ class IndexScreen(
     private fun showProgram(entry: IndexEntry, program: Tile?) {
         val tile = program ?: entry.programs.firstOrNull()
         if (tile != null) {
-            spotlight.showProgram(entry.channelTitle.orEmpty(), tile, entry.channels.size > 1)
+            // Continue watching's channel is Couch's own, so the line above the title names the app
+            // the program comes from; an app's own row names its channel.
+            val source = if (entry.continues) {
+                tile.packageName?.let { AppLabels.of(activity, it) }.orEmpty()
+            } else {
+                entry.channelTitle.orEmpty()
+            }
+            spotlight.showProgram(source, tile, entry.channels.size > 1)
         } else {
             // While the channels load, the app's name alone: not yet "no channel".
             spotlight.showApp(entry.app, if (data?.channelsKnown == false) "" else activity.getString(R.string.index_no_channel, entry.app.label))

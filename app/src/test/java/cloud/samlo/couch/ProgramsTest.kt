@@ -2,7 +2,9 @@ package cloud.samlo.couch
 
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Programs
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -21,5 +23,24 @@ class ProgramsTest {
         assertFalse(Programs.ChannelInfo(7, "app.example", "Hidden", true).shown(config))
         assertTrue(Programs.ChannelInfo(8, "app.example", "Shown", false).shown(config))
         assertTrue(Programs.ChannelInfo(9, "app.example", "New", false).shown(config))
+    }
+
+    @Test
+    fun anEpisodeLineLeadsWithItsNumbers() {
+        assertEquals("S3 E4 · The Bear", Programs.episodeLine("3", "4", "The Bear"))
+    }
+
+    @Test
+    fun anEpisodeWithoutASynopsisKeepsItsNumbers() {
+        assertEquals("S3 E4", Programs.episodeLine("3", "4", null))
+        assertEquals("S3 E4", Programs.episodeLine("3", "4", "  "))
+    }
+
+    @Test
+    fun aFilmOrAnUnnumberedEpisodeHasNoLine() {
+        assertNull(Programs.episodeLine(null, null, "Past Lives"))
+        assertNull(Programs.episodeLine("3", null, "The Bear"))
+        assertNull(Programs.episodeLine(null, "4", "The Bear"))
+        assertNull(Programs.episodeLine("", "4", "The Bear"))
     }
 }

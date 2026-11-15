@@ -6,7 +6,8 @@ import android.database.Cursor
 
 /** Turns one preview-program row into a card. */
 internal object ProgramTile {
-    fun from(context: Context, c: Cursor, pkg: String): Tile? {
+    /** [keyPrefix] keeps an app's channel cards and its Watch Next cards apart; [description] replaces the row's own. */
+    fun from(context: Context, c: Cursor, pkg: String, keyPrefix: String = "pp:", description: String? = null): Tile? {
         val title = c.string("title")?.takeIf { it.isNotBlank() } ?: return null
         val intent = launchIntent(context, c, pkg) ?: return null
 
@@ -18,13 +19,13 @@ internal object ProgramTile {
         val started = duration > 0 && position > 0
 
         return Tile(
-            key = "pp:" + c.long("_id"),
+            key = keyPrefix + c.long("_id"),
             kind = Tile.Kind.PROGRAM,
             label = title,
             packageName = pkg,
             imageUrl = poster ?: thumb,
             imageRatio = ratio,
-            description = c.string("short_description") ?: c.string("long_description"),
+            description = description ?: c.string("short_description") ?: c.string("long_description"),
             progress = if (started) (position.toFloat() / duration).coerceIn(0f, 1f) else -1f,
             intent = intent,
         )

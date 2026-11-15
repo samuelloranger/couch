@@ -8,6 +8,7 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
@@ -16,6 +17,9 @@ import cloud.samlo.couch.ui.dpf
  * One app in the list: icon, name, and its screen time on the right. Selecting it only swaps
  * the text colours; the background and accent marker belong to [AppList], which glides them
  * between rows. No size changes, so no layout pass.
+ *
+ * The Continue watching row borrows it: a semibold name, and the number of programs where the
+ * screen time would be.
  */
 @SuppressLint("ViewConstructor")
 class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
@@ -67,16 +71,24 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
         contentDescription = entry.app.label
         icon.setImageBitmap(entry.icon)
         name.text = entry.app.label
-        hours.text = entry.usage?.let { Formats.short(context, it.weekMs) }.orEmpty()
+        name.typeface = Fonts.hanken(context, if (entry.continues) CONTINUE_WEIGHT else WEIGHT)
+        hours.text = if (entry.continues) {
+            entry.programs.size.toString()
+        } else {
+            entry.usage?.let { Formats.short(context, it.weekMs) }.orEmpty()
+        }
         restyle()
     }
 
     private fun restyle() {
         name.setTextColor(if (chosen) Tokens.textPrimary else Tokens.textMuted)
-        hours.setTextColor(if (chosen) Tokens.accent else IndexTokens.hours)
+        // The program count always reads as Couch's own row, not as an app's screen time.
+        hours.setTextColor(if (chosen || entry.continues) Tokens.accent else IndexTokens.hours)
     }
 
     companion object {
         const val ICON_RADIUS = 5f
+        private const val WEIGHT = 500
+        private const val CONTINUE_WEIGHT = 600
     }
 }

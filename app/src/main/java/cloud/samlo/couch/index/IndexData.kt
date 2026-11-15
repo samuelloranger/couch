@@ -1,8 +1,13 @@
 package cloud.samlo.couch.index
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.RectF
+import cloud.samlo.couch.R
 import cloud.samlo.couch.data.AppSource
 import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.AppUsage
@@ -13,6 +18,7 @@ import cloud.samlo.couch.data.Programs
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.sync.Sync
+import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 import java.io.File
@@ -21,6 +27,9 @@ import java.io.File
  * One app in the list: its launch [app] tile (banner rendered at card size, shown where the
  * channel would be when it has none), a small rounded [icon], its available channels,
  * and its last week of use.
+ *
+ * The Continue watching row is the one entry that is not an app: its key is [CONTINUE] and its
+ * single channel holds Watch Next programs from every app.
  */
 class IndexChannel(val id: Long, val title: String, val programs: List<Tile>)
 
@@ -39,6 +48,14 @@ class IndexEntry(
     val signature: String = "${app.signature}|${icon?.generationId}|${channel?.id}|" +
         "${usage?.perDayMs?.joinToString(",")}|${usage?.opens}|${usage?.lastUsed}|" +
         channels.joinToString(";") { "${it.id}|${it.title}|" + it.programs.joinToString(";") { tile -> tile.signature } }
+
+    /** True for the Continue watching row, which stands for no app: OK resumes its first program. */
+    val continues: Boolean get() = key == CONTINUE
+
+    companion object {
+        /** The Continue watching row's key: never an app, so nothing that lists apps may keep it. */
+        const val CONTINUE = "couch:continue"
+    }
 }
 
 class IndexData(
@@ -48,6 +65,8 @@ class IndexData(
     val inputs: List<Tile>,
     /** False while the channels are still being read: the column waits rather than say an app has none. */
     val channelsKnown: Boolean = true,
+    /** Watch Next programs from every app, shown as the Continue watching row while the setting is on. */
+    val watchNext: List<Tile> = emptyList(),
 )
 
 /** Builds [IndexData] on the loader thread. */
@@ -86,7 +105,45 @@ object IndexBuilder {
                 usage = e.usage,
             )
         }
-        return IndexData(entries, data.usageKnown, data.inputs)
+        // Watch Next changed since the quick part: it is read here, with the channels, off the main thread.
+        val watchNext = if (config.continueWatching) Programs.watchNext(context, config) else emptyList()
+        val all = if (watchNext.isEmpty()) entries else listOf(continueEntry(context, watchNext)) + entries
+        return IndexData(all, data.usageKnown, data.inputs, watchNext = watchNext)
+    }
+
+    /** The row above the apps: Watch Next programs as one channel, under a play mark rather than an app's icon. */
+    private fun continueEntry(context: Context, watchNext: List<Tile>): IndexEntry {
+        val label = context.getString(R.string.continue_watching)
+        return IndexEntry(
+            app = Tile(key = IndexEntry.CONTINUE, kind = Tile.Kind.APP, label = label, intent = Intent()),
+            icon = continueIcon(context),
+            channels = listOf(IndexChannel(CONTINUE_CHANNEL, label, watchNext)),
+            preferredChannel = null,
+            usage = null,
+        )
+    }
+
+    /** The Continue watching icon: the accent at 20% over the surface, with a play mark on it. */
+    private fun continueIcon(context: Context): Bitmap? {
+        val size = context.dp(IndexTokens.LIST_ICON)
+        // Part of the key, so Customize's new accent renders again.
+        return Banners.memoized("continue|$size|${Tokens.accent}") {
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val radius = context.dpf(AppRow.ICON_RADIUS)
+            val square = RectF(0f, 0f, size.toFloat(), size.toFloat())
+            canvas.drawRoundRect(square, radius, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Tokens.surface })
+            canvas.drawRoundRect(square, radius, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = (Tokens.accent and 0x00FFFFFF) or 0x33000000
+            })
+            val triangle = context.getDrawable(R.drawable.ic_continue)?.mutate() ?: return@memoized bitmap
+            triangle.setTint(Tokens.accent)
+            val art = size * 55 / 100
+            val top = (size - art) / 2
+            triangle.setBounds(top, top, top + art, top + art)
+            triangle.draw(canvas)
+            bitmap
+        }
     }
 
     /** The app's launcher icon as a small rounded square, rendered once per app version. */
@@ -106,4 +163,7 @@ object IndexBuilder {
             }
         }
     }
+
+    /** Continue watching is one channel, numbered below every app channel and recommendation channel. */
+    private const val CONTINUE_CHANNEL = -2L
 }

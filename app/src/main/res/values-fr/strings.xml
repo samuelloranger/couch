@@ -626,6 +626,8 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="channel_item_help">Affiche les programmes de cette chaîne à côté de son appli.</string>
     <string name="app_sort">Ordre des applis</string>
     <string name="app_sort_help">Les applis épinglées restent en premier. Utilisation trie les autres par temps d’écran; Manuel garde l’ordre choisi avec Déplacer dans le menu d’appui long.</string>
+    <string name="continue_watching">Reprendre l’écoute</string>
+    <string name="continue_watching_help">Les séries, films et épisodes commencés dans d’autres applis, en tête de liste.</string>
     <string name="sort_usage">Utilisation</string>
     <string name="sort_manual">Manuel</string>
     <string name="sort_alphabetical">Alphabétique</string>

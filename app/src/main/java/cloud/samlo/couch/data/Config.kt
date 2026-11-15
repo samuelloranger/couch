@@ -31,6 +31,8 @@ class Config {
     var accent: String = Accents.default
     var wallpaper: String = "daily"
     var clock24h = true
+    /** Show the programs apps publish as Watch Next, as the Index's first row. */
+    var continueWatching = true
 
     // Wallpaper: "daily" (Bing photo of the day), "reddit", "gradient" or "custom" (wallpapers/)
     var subreddit = DEFAULT_SUBREDDIT

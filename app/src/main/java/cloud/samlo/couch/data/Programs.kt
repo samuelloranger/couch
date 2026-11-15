@@ -15,6 +15,8 @@ import cloud.samlo.couch.R
 object Programs {
     const val READ_TV_LISTINGS = "android.permission.READ_TV_LISTINGS"
     private const val MAX_ROW = 15
+    /** [ProgramTile]'s key prefix for Watch Next cards, next to preview programs' "pp:". */
+    private const val WATCH_NEXT_KEY = "wn:"
 
     class Channel(val id: Long, val packageName: String, val name: String, val tiles: List<Tile>)
 
@@ -73,6 +75,37 @@ object Programs {
             if (c.int("browsable", 1) == 0) return@query null
             c.int("weight", 0) to ProgramTile.from(context, c, info.packageName)
         }.filterNotNull().sortedByDescending { it.first }.mapNotNull { it.second }.take(MAX_ROW)
+
+    /**
+     * What apps publish as Watch Next: episodes and films partway through, in any app, the most
+     * recently watched first. Empty without READ_TV_LISTINGS or when no app shares any.
+     */
+    fun watchNext(context: Context, config: Config): List<Tile> {
+        if (!canRead(context)) return emptyList()
+        val pm = context.packageManager
+        return query(context, TvContract.WatchNextPrograms.CONTENT_URI) { c ->
+            if (c.int("browsable", 1) == 0) return@query null
+            val pkg = c.string("package_name")?.takeIf { it.isNotBlank() } ?: return@query null
+            if (pkg in config.hiddenApps) return@query null
+            // Watch Next keeps entries after an app is uninstalled; its card would launch nothing.
+            if (runCatching { pm.getApplicationInfo(pkg, 0) }.isFailure) return@query null
+            val text = c.string("episode_title")?.takeIf { it.isNotBlank() }
+                ?: c.string("short_description") ?: c.string("long_description")
+            val description = episodeLine(c.string("season_display_number"), c.string("episode_display_number"), text)
+            c.long("last_engagement_time_utc_millis") to
+                ProgramTile.from(context, c, pkg, keyPrefix = WATCH_NEXT_KEY, description = description)
+        }.filterNotNull().sortedByDescending { it.first }.mapNotNull { it.second }.take(MAX_ROW)
+    }
+
+    /**
+     * "S3 E4 · The Bear", the line Watch Next cards describe an episode with; null for a film, or
+     * when the app gives no season or episode number.
+     */
+    fun episodeLine(season: String?, episode: String?, text: String?): String? {
+        if (season.isNullOrBlank() || episode.isNullOrBlank()) return null
+        val line = "S$season E$episode"
+        return if (text.isNullOrBlank()) line else "$line · $text"
+    }
 
     /** "App  ·  Channel", or just the channel when its name already says which app it is. */
     fun title(context: Context, packageName: String, channelName: String, separator: String): String {
