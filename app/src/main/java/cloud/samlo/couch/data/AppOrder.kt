@@ -33,5 +33,21 @@ object AppOrder {
         }
     }
 
+    /**
+     * The positions [pkg] can be moved to in [visible]: its own group's, pinned apps among pinned
+     * apps and the others among themselves. Empty when [pkg] isn't in the list.
+     */
+    fun group(visible: List<String>, pinned: List<String>, pkg: String): IntRange {
+        val at = visible.indexOf(pkg)
+        if (at < 0) return IntRange.EMPTY
+        val rowsPinned = pkg in pinned
+        fun sameGroup(i: Int) = (visible[i] in pinned) == rowsPinned
+        var first = at
+        var last = at
+        while (first > 0 && sameGroup(first - 1)) first--
+        while (last < visible.lastIndex && sameGroup(last + 1)) last++
+        return first..last
+    }
+
     private fun rank(order: List<String>, pkg: String) = order.indexOf(pkg).let { if (it < 0) Int.MAX_VALUE else it }
 }

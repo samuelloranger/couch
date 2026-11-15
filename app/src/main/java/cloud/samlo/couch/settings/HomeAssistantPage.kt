@@ -1,6 +1,5 @@
 package cloud.samlo.couch.settings
 
-import android.app.AlertDialog
 import android.view.Gravity
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -16,6 +15,7 @@ import cloud.samlo.couch.hass.HomeAssistant
 import cloud.samlo.couch.hass.PhoneLink
 import cloud.samlo.couch.hass.QrCode
 import cloud.samlo.couch.index.HomeStatus
+import cloud.samlo.couch.ui.Popover
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 import java.util.concurrent.Executors
@@ -34,7 +34,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     private var reading = false
     private var unreachable = false
     private var link: PhoneLink? = null
-    private var linkDialog: AlertDialog? = null
+    private var linkPopover: Popover? = null
 
     private val url get() = HassJson.baseUrl(config.homeAssistantUrl)
 
@@ -43,8 +43,9 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         ctx.layout.hint.text = ctx.str(R.string.hass_hint)
         val connected = hass.connected(url)
         o.header(ctx.str(R.string.hass_connection))
-        o.link(ctx.str(R.string.hass_connect), ctx.str(R.string.hass_connect_help), { if (connected) url else ctx.str(R.string.hass_not_connected) }) {
-            openLink()
+        lateinit var connect: OptionRow
+        connect = o.link(ctx.str(R.string.hass_connect), ctx.str(R.string.hass_connect_help), { if (connected) url else ctx.str(R.string.hass_not_connected) }) {
+            openLink(connect)
         }
         if (!connected) return
         o.link(ctx.str(R.string.hass_forget), ctx.str(R.string.hass_forget_help)) { forget() }
@@ -112,7 +113,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
 
     private var linkPending = false
 
-    private fun openLink() {
+    private fun openLink(anchor: OptionRow) {
         if (linkPending) return
         linkPending = true
         link?.stop()
@@ -131,12 +132,13 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
                     return@runOnUiThread
                 }
                 link = phone
-                showLink(address)
+                showLink(address, anchor)
             }
         }
     }
 
-    private fun showLink(address: String) {
+    /** The QR code beside [anchor], over the row it came from: Back closes it, and so does the phone. */
+    private fun showLink(address: String, anchor: OptionRow) {
         val activity = ctx.activity
         val qr = ImageView(activity).apply {
             setImageBitmap(QrCode.encode(address).bitmap(QR_SCALE))
@@ -151,8 +153,8 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         val body = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
-            val pad = activity.dp(20)
-            setPadding(pad, pad / 2, pad, 0)
+            val pad = activity.dp(BODY_PAD)
+            setPadding(pad, pad, pad, pad)
             addView(line(ctx.str(R.string.hass_link_steps), 13f, Tokens.textMuted))
             addView(qr, LinearLayout.LayoutParams(activity.dp(QR_DP), activity.dp(QR_DP)).apply {
                 topMargin = activity.dp(12)
@@ -161,12 +163,10 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
             addView(line(address, 15f, Tokens.textPrimary))
             addView(line(ctx.str(R.string.hass_link_wait), 12f, Tokens.textMuted).apply { setPadding(0, activity.dp(10), 0, 0) })
         }
-        linkDialog = AlertDialog.Builder(activity, Dialogs.THEME)
-            .setTitle(R.string.hass_link_title)
-            .setView(body)
-            .setNegativeButton(R.string.cancel, null)
-            .setOnDismissListener { stopLink() }
-            .show()
+        linkPopover = Popover(activity, anchor, body, QR_DP + 2 * BODY_PAD + 2 * PANEL_PAD).apply {
+            setOnDismissListener { stopLink() }
+            show()
+        }
     }
 
     private fun linked(newUrl: String) {
@@ -174,7 +174,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         config.save(ctx.files.dir)
         devices = null
         unreachable = false
-        linkDialog?.dismiss()
+        linkPopover?.dismiss()
         Toast.makeText(ctx.activity, R.string.hass_linked, Toast.LENGTH_SHORT).show()
         rebuild(null)
     }
@@ -182,7 +182,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     private fun stopLink() {
         link?.stop()
         link = null
-        linkDialog = null
+        linkPopover = null
     }
 
     private fun forget() {
@@ -213,7 +213,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     }
 
     override fun onDestroy() {
-        linkDialog?.dismiss()
+        linkPopover?.dismiss()
         stopLink()
         worker.shutdown()
     }
@@ -222,5 +222,8 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         const val DISCOVERY_MS = 2500L
         const val QR_SCALE = 8
         const val QR_DP = 180
+        /** The link panel's own padding, and the body's inside it. */
+        const val PANEL_PAD = 4
+        const val BODY_PAD = 10
     }
 }

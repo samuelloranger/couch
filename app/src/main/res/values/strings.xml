@@ -66,8 +66,6 @@
     <string name="menu_rename">Rename</string>
     <string name="menu_app_info">App info</string>
     <string name="menu_open_app">Open %1$s</string>
-    <string name="ok">OK</string>
-    <string name="cancel">Cancel</string>
 
     <!-- Icon picker -->
     <string name="picker_title">Icon for %1$s</string>
@@ -555,7 +553,8 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="remote_key">Key %1$d</string>
     <string name="remote_key_unset">Not set</string>
     <string name="remote_learn_unavailable">Turn on “Use Couch’s lists” first, and wait for Status to say Running.</string>
-    <string name="remote_learn_message">Press the button on the remote now. Back cancels.</string>
+    <string name="remote_learn_prompt">Press the button on your remote</string>
+    <string name="back_cancels">Back cancels</string>
     <string name="remote_needs_debugging">Couldn’t reach the TV’s ADB. Turn on network debugging, then allow Couch when the TV asks.</string>
     <string name="remote_state_off">Off</string>
     <string name="remote_state_service">Waiting for Couch’s accessibility service</string>
@@ -588,7 +587,6 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="remote_tv_paired">Paired</string>
     <string name="remote_tv_unpaired">Not paired</string>
     <string name="remote_tv_unavailable">Not on this TV</string>
-    <string name="remote_tv_pin_title">PIN shown on the TV</string>
     <string name="remote_tv_pin_hint">Four digits</string>
     <string name="remote_tv_pair_failed">The TV didn’t accept the pairing. Check that remote control over the network is on in the TV’s settings, then try again.</string>
     <string name="remote_tv_pair_done">Paired: picture and sound settings are in Couch’s quick settings.</string>
@@ -637,8 +635,14 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="menu_pin">Pin to top</string>
     <string name="menu_unpin">Unpin</string>
     <string name="menu_move">Move</string>
-    <string name="move_app_title">Move %1$s to position</string>
-    <string name="choose_channel">Choose channel</string>
+    <string name="menu_force_stop">Force stop</string>
+    <string name="menu_clear_cache">Clear cache</string>
+    <string name="menu_uninstall">Uninstall</string>
+    <string name="menu_stopped">Stopped</string>
+    <string name="menu_cache_cleared">Cache cleared</string>
+    <string name="menu_shell_failed">Couch can’t do that on this TV</string>
+    <string name="move_hint">▲▼ move · OK drop · Back undo</string>
+    <string name="text_popover_hint">OK saves · Back cancels</string>
     <string name="choose_channel_label">%1$s. Choose channel</string>
 
     <!-- Home Assistant -->
@@ -714,9 +718,9 @@ It lets Couch change the TV-wide settings on this page. It lasts until Couch is 
     <string name="gallery_selected">My images is selected for ambient mode.</string>
     <string name="gallery_empty">No images yet. Add a file or send photos from Couch on iPhone.</string>
     <string name="gallery_failed">Unable to complete this action. Try again with a JPEG, PNG or WebP image up to 20 MB and 16 megapixels.</string>
-    <string name="gallery_close">Close</string>
     <string name="gallery_delete">Delete image</string>
-    <string name="gallery_delete_confirm">Delete this image from the TV?</string>
+    <string name="gallery_delete_again">Press OK again to delete</string>
+    <string name="gallery_fullscreen">Full screen</string>
     <string name="gallery_phone_import">No file picker is available. Add photos from Couch on iPhone.</string>
     <string name="gallery_importing">Adding image…</string>
 </resources>

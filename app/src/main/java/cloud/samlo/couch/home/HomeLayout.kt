@@ -2,6 +2,7 @@ package cloud.samlo.couch.home
 
 import android.app.Activity
 import android.graphics.drawable.ColorDrawable
+import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.FrameLayout
 import cloud.samlo.couch.data.Images
@@ -17,11 +18,12 @@ class HomeViews(
     images: Images,
     onSettings: () -> Unit,
     onUpdate: () -> Unit,
-    onAppMenu: (Tile) -> Unit,
+    onAppMenu: (Tile, View) -> Unit,
     onProgramMenu: (Card) -> Unit,
     onChannelSelected: (String, Long) -> Unit,
+    onMoved: (List<String>, String, Int) -> Unit,
 ) {
-    val index = IndexScreen(activity, images, onSettings, onUpdate, onAppMenu, onProgramMenu, onChannelSelected)
+    val index = IndexScreen(activity, images, onSettings, onUpdate, onAppMenu, onProgramMenu, onChannelSelected, onMoved)
     val ambient = Ambient(activity, images)
 
     val root = FrameLayout(activity).apply {

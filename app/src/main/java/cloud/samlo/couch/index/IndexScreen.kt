@@ -2,7 +2,6 @@ package cloud.samlo.couch.index
 
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.app.AlertDialog
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
@@ -11,6 +10,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.AppLabels
+import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Images
 import cloud.samlo.couch.data.Prefs
@@ -19,6 +19,8 @@ import cloud.samlo.couch.hass.HomeAssistant
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.FocusRow
 import cloud.samlo.couch.ui.NowPlaying
+import cloud.samlo.couch.ui.Popover
+import cloud.samlo.couch.ui.Side
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
@@ -37,6 +39,9 @@ import cloud.samlo.couch.ui.dp
  * the cards returns to it. Left from the list (or the Home Assistant row) reaches the rail, right
  * from the rail returns to the selected app. Up from the first app reaches the Home Assistant row,
  * or else the chips at the top right.
+ *
+ * A manual move lifts the row itself: up and down take it through its group, OK drops it there and
+ * Back puts it back, with a hint beside it instead of a dialog in front of it.
  */
 @SuppressLint("ViewConstructor")
 class IndexScreen(
@@ -44,9 +49,14 @@ class IndexScreen(
     private val images: Images,
     onSettings: () -> Unit,
     onUpdate: () -> Unit,
-    private val onAppMenu: (Tile) -> Unit,
+    private val onAppMenu: (Tile, View) -> Unit,
     private val onProgramMenu: (Card) -> Unit,
     private val onChannelSelected: (String, Long) -> Unit,
+    /**
+     * Saves a dropped row: every visible key in order, the app that moved and its new place among
+     * its own group.
+     */
+    private val onMoved: (List<String>, String, Int) -> Unit,
 ) : FrameLayout(activity) {
     val topBar = IndexTopBar(activity, onUpdate)
     private val rail = IndexRail(activity, { openSearch() }, { pickInput() }, onSettings, { closeSearch() })
@@ -81,7 +91,17 @@ class IndexScreen(
     private var stripKey: String? = null
     /** The rail's Inputs menu while it is open. */
     private var inputMenu: InputMenu? = null
-    private var channelMenu: AlertDialog? = null
+    private var channelMenu: Popover? = null
+    /** The app lifted out of the list for a manual move; null when the list is only a list. */
+    private var moving: String? = null
+    /** Where the lifted row started, and how many places down it has been moved. */
+    private var moveFrom = 0
+    private var moveBy = 0
+    /** The lifted row and the hint beside it, which follows the row. */
+    private var moveRow: AppRow? = null
+    private var moveHint: Popover? = null
+    /** The hint is re-placed once the rows settle: a glide moves its anchor after the call. */
+    private val followHint = Runnable { moveRow?.let { row -> moveHint?.follow(row) } }
     /** False until the first bind has painted; what appears after it fades in. */
     private var settled = false
     /** Placed once, on the first bind; later binds keep focus where it is. */
@@ -163,6 +183,8 @@ class IndexScreen(
     }
 
     fun bind(data: IndexData, config: Config) {
+        // A reload can reorder the list under a lift: the move ends, keeping the saved order.
+        endMove(focus = false)
         this.data = data
         this.config = config
         val animate = settled
@@ -213,6 +235,8 @@ class IndexScreen(
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */
     fun consumesKey(event: KeyEvent): Boolean {
+        // A lifted row owns the remote until it is dropped or put back.
+        if (moving != null) return moveKey(event)
         // The remote's search key opens the panel from anywhere on the Index, and closes it again.
         if (event.keyCode == KeyEvent.KEYCODE_SEARCH) {
             if (event.action == KeyEvent.ACTION_DOWN) if (searchOpen) closeSearch() else openSearch()
@@ -235,6 +259,7 @@ class IndexScreen(
 
     /** HOME while home: back to the first app. */
     fun reset() {
+        endMove()
         closeSearch()
         homeRow.stopDimming()
         inputMenu?.dismiss()
@@ -291,7 +316,7 @@ class IndexScreen(
         }
         setOnLongClickListener {
             // The row is Couch's own: there is no app to pin, hide or move.
-            if (!this.entry.continues) onAppMenu(this.entry.app)
+            if (!this.entry.continues) onAppMenu(this.entry.app, this)
             true
         }
     }
@@ -526,23 +551,106 @@ class IndexScreen(
     private fun chooseChannel() {
         val entry = selectedRow()?.entry ?: return
         if (entry.channels.size < 2 || channelMenu != null) return
-        channelMenu = AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(R.string.choose_channel)
-            .setSingleChoiceItems(entry.channels.map { it.title }.toTypedArray(), entry.channels.indexOf(entry.channel)) { dialog, which ->
-                onChannelSelected(entry.key, entry.channels[which].id)
-                dialog.dismiss()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .create().apply {
-                setOnDismissListener { channelMenu = null }
-                show()
-            }
+        val items = entry.channels.map { channel ->
+            // A check marks the channel the app is showing; the others keep its room.
+            val icon = if (channel.id == entry.channel?.id) R.drawable.ic_menu_check else 0
+            Popover.Item(icon, channel.title) { onChannelSelected(entry.key, channel.id) }
+        }
+        channelMenu = Popover(activity, spotlight.channelButton, items, side = Side.BELOW).apply {
+            setOnDismissListener { if (channelMenu === this) channelMenu = null }
+            show()
+        }
+    }
+
+    /**
+     * Lifts the app [key] out of the list, the dialog-free Move: up and down take it through its
+     * own group (pinned apps among pinned apps, the others among themselves), OK drops it there
+     * and Back puts it back. The long-press menu offers it only where its group has two apps.
+     */
+    fun startMove(key: String) {
+        if (moving != null) return
+        val rows = list.rows()
+        val row = rows.firstOrNull { it.entry.key == key } ?: return
+        if (moveGroup(key).count() < 2) return
+        moving = key
+        moveFrom = rows.indexOf(row)
+        moveBy = 0
+        moveRow = row
+        row.requestFocus()
+        list.lift(row)
+        list.shift(0, animate = false)
+        // The hint is anchored to the row but takes no keys: the lift keeps the remote.
+        moveHint = Popover.hint(activity, row, activity.getString(R.string.move_hint)).apply { show() }
+    }
+
+    /** While an app is lifted, the remote moves it: up and down, OK drops, Back puts it back. */
+    private fun moveKey(event: KeyEvent): Boolean {
+        val down = event.action == KeyEvent.ACTION_DOWN
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> if (down) shift(-1)
+            KeyEvent.KEYCODE_DPAD_DOWN -> if (down) shift(1)
+            // On release, so the press's other half doesn't open the app.
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (!down) drop()
+            KeyEvent.KEYCODE_BACK -> if (down) endMove()
+            // Left and right have nowhere to lift it: the list keeps the row.
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT -> Unit
+            // Volume and the rest still work; the move owns only the list's own keys.
+            else -> return false
+        }
+        return true
+    }
+
+    /** Moves the lifted row one place [by], when its group has room, and the hint follows. */
+    private fun shift(by: Int) {
+        val key = moving ?: return
+        if (moveFrom + moveBy + by !in moveGroup(key)) return
+        moveBy += by
+        list.shift(moveBy)
+        // The row may have left the visible rows: the list glides to keep it in sight.
+        list.reveal(moveFrom + moveBy)
+        removeCallbacks(followHint)
+        postDelayed(followHint, Tokens.GLIDE_MS)
+    }
+
+    /** Drops the lifted row where it is: the order is saved and the list reloads in it. */
+    private fun drop() {
+        val key = moving ?: return
+        // The order saves positions within a group, not within the whole list.
+        val at = moveFrom + moveBy - moveGroup(key).first
+        // Continue watching is Couch's own row: it has no place in the saved order.
+        val keys = list.rows().map { it.entry.key }.filterNot { it == IndexEntry.CONTINUE }
+        endMove()
+        onMoved(keys, key, at)
+    }
+
+    /** The rows [key] can be moved through: its group's, never above Couch's own Continue watching row. */
+    private fun moveGroup(key: String): IntRange {
+        val keys = list.rows().map { it.entry.key }
+        val group = AppOrder.group(keys, config.pinnedApps, key)
+        val first = group.firstOrNull { keys[it] != IndexEntry.CONTINUE } ?: return IntRange.EMPTY
+        return first..group.last
+    }
+
+    /** Ends a lift without saving: the rows go back where they were and the hint goes away. */
+    private fun endMove(focus: Boolean = true) {
+        val key = moving ?: return
+        moving = null
+        removeCallbacks(followHint)
+        moveHint?.dismiss()
+        moveHint = null
+        list.endLift()
+        // Focus stays on the row that was lifted, wherever it now sits.
+        if (focus) list.rows().firstOrNull { it.entry.key == key }?.requestFocus()
+        moveRow = null
+        moveBy = 0
     }
 
     // The activity is going away: a dialog left open would leak its window.
     override fun onDetachedFromWindow() {
         inputMenu?.dismiss()
         channelMenu?.dismiss()
+        // The hint is a window of its own, and would outlive the screen that shows it.
+        endMove(focus = false)
         super.onDetachedFromWindow()
     }
 

@@ -66,8 +66,6 @@
     <string name="menu_rename">Renommer</string>
     <string name="menu_app_info">Infos sur l’appli</string>
     <string name="menu_open_app">Ouvrir %1$s</string>
-    <string name="ok">OK</string>
-    <string name="cancel">Annuler</string>
 
     <!-- Icon picker -->
     <string name="picker_title">Icône pour %1$s</string>
@@ -561,7 +559,8 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="remote_key">Touche %1$d</string>
     <string name="remote_key_unset">Non configuré</string>
     <string name="remote_learn_unavailable">Active d’abord « Utiliser les listes de Couch », puis attends que l’état indique Actif.</string>
-    <string name="remote_learn_message">Appuie maintenant sur le bouton de la télécommande. Retour annule.</string>
+    <string name="remote_learn_prompt">Appuie sur un bouton de la télécommande</string>
+    <string name="back_cancels">Retour annule</string>
     <string name="remote_needs_debugging">Impossible de joindre l’ADB du téléviseur. Active le débogage réseau, puis autorise Couch quand le téléviseur le demande.</string>
     <string name="remote_state_off">Désactivé</string>
     <string name="remote_state_service">En attente du service d’accessibilité de Couch</string>
@@ -594,7 +593,6 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="remote_tv_paired">Jumelé</string>
     <string name="remote_tv_unpaired">Non jumelé</string>
     <string name="remote_tv_unavailable">Pas sur ce téléviseur</string>
-    <string name="remote_tv_pin_title">NIP affiché sur le téléviseur</string>
     <string name="remote_tv_pin_hint">Quatre chiffres</string>
     <string name="remote_tv_pair_failed">Le téléviseur n’a pas accepté le jumelage. Vérifie que le contrôle à distance par le réseau est activé dans ses réglages, puis réessaie.</string>
     <string name="remote_tv_pair_done">Jumelé : les réglages d’image et de son sont dans les réglages rapides de Couch.</string>
@@ -646,8 +644,14 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="menu_pin">Épingler en haut</string>
     <string name="menu_unpin">Désépingler</string>
     <string name="menu_move">Déplacer</string>
-    <string name="move_app_title">Déplacer %1$s à la position</string>
-    <string name="choose_channel">Choisir une chaîne</string>
+    <string name="menu_force_stop">Forcer l’arrêt</string>
+    <string name="menu_clear_cache">Vider le cache</string>
+    <string name="menu_uninstall">Désinstaller</string>
+    <string name="menu_stopped">Arrêtée</string>
+    <string name="menu_cache_cleared">Cache vidé</string>
+    <string name="menu_shell_failed">Couch ne peut pas faire ça sur cette télé</string>
+    <string name="move_hint">▲▼ déplacer · OK déposer · Retour annuler</string>
+    <string name="text_popover_hint">OK enregistre · Retour annule</string>
     <string name="choose_channel_label">%1$s. Choisir une chaîne</string>
 
     <!-- Home Assistant -->
@@ -723,9 +727,9 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="gallery_selected">Mes images est sélectionné pour la veille.</string>
     <string name="gallery_empty">Aucune image. Ajoutez un fichier ou envoyez des photos depuis Couch sur iPhone.</string>
     <string name="gallery_failed">Impossible de terminer cette action. Réessayez avec une image JPEG, PNG ou WebP de 20 Mo et 16 mégapixels maximum.</string>
-    <string name="gallery_close">Fermer</string>
     <string name="gallery_delete">Supprimer l’image</string>
-    <string name="gallery_delete_confirm">Supprimer cette image de la TV ?</string>
+    <string name="gallery_delete_again">Appuie sur OK encore pour supprimer</string>
+    <string name="gallery_fullscreen">Plein écran</string>
     <string name="gallery_phone_import">Aucun sélecteur de fichiers disponible. Ajoutez des photos depuis Couch sur iPhone.</string>
     <string name="gallery_importing">Ajout de l’image…</string>
 </resources>

@@ -10,6 +10,7 @@ import android.widget.Toast
 import cloud.samlo.couch.HomeAccessibilityService
 import cloud.samlo.couch.MediaListener
 import cloud.samlo.couch.R
+import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Fetcher
 import cloud.samlo.couch.data.Images
@@ -42,10 +43,15 @@ class HomeScreen(private val activity: Activity) {
     private val images = Images(activity, fetcher)
     private val views: HomeViews = HomeViews(
         activity, images, { openSettings() }, { installUpdate() },
-        onAppMenu = { menus.show(it) },
+        onAppMenu = { tile, anchor -> menus.show(tile, anchor) },
         onProgramMenu = { menus.show(it) },
         onChannelSelected = { pkg, id ->
             config.preferredChannels = config.preferredChannels + (pkg to id.toString())
+            config.save(files.dir)
+            load()
+        },
+        onMoved = { visible, key, index ->
+            AppOrder.move(config, visible, key, index)
             config.save(files.dir)
             load()
         },
@@ -63,7 +69,10 @@ class HomeScreen(private val activity: Activity) {
         if (resumed) if (shown) stopLive() else startLive()
     }
         .also { it.minutes = config.ambientMinutes }
-    private val menus: CardMenus = CardMenus(activity, { config }, files, { views.index.appTiles() }) { load() }
+    private val menus: CardMenus = CardMenus(
+        activity, { config }, files, { views.index.appTiles() },
+        onMove = { views.index.startMove(it.key) },
+    ) { load() }
     private val loader = HomeLoader(
         activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded, ::onExtras,
     )
@@ -108,6 +117,7 @@ class HomeScreen(private val activity: Activity) {
         measuring.cancel()
         closeCard()
         swallowUp = false
+        menus.dismiss()
         stopLive()
         ambientMode.cancel()
         views.index.topBar.inputOffer.hide()
@@ -122,6 +132,7 @@ class HomeScreen(private val activity: Activity) {
     fun onHomePressed() {
         if (!resumed) return
         measuring.cancel()
+        menus.dismiss()
         views.index.reset()
     }
 
