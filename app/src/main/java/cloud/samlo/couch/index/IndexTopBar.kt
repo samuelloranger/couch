@@ -14,19 +14,17 @@ import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.GodBadge
 import cloud.samlo.couch.ui.InputChip
-import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.UpdateChip
 import cloud.samlo.couch.ui.appear
 import cloud.samlo.couch.ui.dp
 
 /**
- * Top right: an input that just turned on, what's playing, an update when there is one, then the
- * weather and the clock, at the top row's height.
+ * Top right: an input that just turned on, an update when there is one, then the weather and
+ * the clock, at the top row's height.
  */
 @SuppressLint("ViewConstructor")
 class IndexTopBar(context: Context, onUpdate: () -> Unit) : LinearLayout(context) {
-    val nowPlaying = NowPlaying(context)
     val inputOffer = InputChip(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
     val god = GodBadge(context, 9.5f)
@@ -54,7 +52,6 @@ class IndexTopBar(context: Context, onUpdate: () -> Unit) : LinearLayout(context
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         addView(inputOffer, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(12) })
-        addView(nowPlaying, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(12) })
         addView(update, LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(26)).apply { marginEnd = context.dp(12) })
         addView(god, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { marginEnd = context.dp(12) })
         // Meteocons leave a margin around the drawing; 30dp draws the sky at about 20dp.

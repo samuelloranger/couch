@@ -18,6 +18,10 @@
     <string name="launch_failed">Couldn’t open %1$s</string>
     <string name="settings">Settings</string>
     <string name="now_playing_paused">Paused</string>
+    <string name="now_playing_previous">Previous</string>
+    <string name="now_playing_play_pause">Play or pause</string>
+    <string name="now_playing_next">Next</string>
+    <string name="now_playing_time">%1$s / %2$s</string>
     <string name="channel_recommended">Recommended</string>
 
     <!-- Index layout -->

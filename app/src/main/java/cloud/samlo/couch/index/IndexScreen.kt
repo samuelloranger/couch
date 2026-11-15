@@ -17,16 +17,19 @@ import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.hass.HomeAssistant
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.FocusRow
+import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
  * The Index layout: a rail of Inputs and Settings down the left edge, the apps listed beside it;
  * on the right, what the selected app offers (the focused program's text over its chosen
- * channel's cards), its last week of use, and the TV's readings along the bottom.
+ * channel's cards), its last week of use, and the TV's readings along the bottom. What's playing
+ * sits in a dock under the week.
  *
  * D-pad: up/down walks the list, right enters the app's channel row, left (from its first card),
- * down comes back. With several channels, right reaches the channel picker first and up from
+ * down comes back; while something plays, down from the cards reaches the dock's buttons and up
+ * or back returns. With several channels, right reaches the channel picker first and up from
  * the cards returns to it. Left from the list (or the Home Assistant row) reaches the rail, right
  * from the rail returns to the selected app. Up from the first app reaches the Home Assistant row,
  * or else the chips at the top right.
@@ -53,6 +56,8 @@ class IndexScreen(
     /** The app's banner, in the channel row's place when the app has no channel. */
     private val banner = ImageView(activity).apply { scaleType = ImageView.ScaleType.FIT_XY }
     private val stats = StatsBar(activity)
+    /** What's playing, under the week: hidden when nothing does. */
+    val nowPlaying = NowPlaying(activity)
     val systemLine = SystemLine(activity)
     /** Lights and plugs from Home Assistant, top of the right column; gone until some are chosen. */
     private val homeRow = HomeRow(activity, HomeAssistant(Prefs.of(activity)))
@@ -110,6 +115,9 @@ class IndexScreen(
         })
         place(banner, IndexTokens.COLUMN_X, IndexTokens.STRIP_Y, IndexTokens.cardWidth(-1), IndexTokens.CARD_H)
         place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
+        place(nowPlaying, IndexTokens.COLUMN_X, IndexTokens.DOCK_Y, IndexTokens.COLUMN_W, IndexTokens.DOCK_H)
+        // Nothing playing takes the dock away: focus comes back to the app the column describes.
+        nowPlaying.onHide = { selectedRow()?.requestFocus() }
         // From the list's edge, not the column's: a full address and longer labels outgrow the column.
         addView(systemLine, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
             leftMargin = activity.dp(IndexTokens.LIST_X)
@@ -143,20 +151,13 @@ class IndexScreen(
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
-    /** What's playing gives way to the Home Assistant row when it shows: its devices matter more there. */
-    private fun layoutFor(home: Boolean) {
-        if (home == homeLayout) return
-        homeLayout = home
-        topBar.nowPlaying.suppressed = home
-    }
-
     fun bind(data: IndexData, config: Config) {
         this.data = data
         this.config = config
         val animate = settled
         topBar.animate = animate
         homeRow.bind(config, animate)
-        layoutFor(homeRow.visibility == VISIBLE)
+        homeLayout = homeRow.visibility == VISIBLE
         // The inputs went away (unplugged, hidden): their item and menu go with them, so focus moves on.
         if (data.inputs.isEmpty()) {
             inputMenu?.dismiss()
@@ -204,7 +205,7 @@ class IndexScreen(
         if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
         val focused = activity.currentFocus ?: return false
         val elsewhere = programs.isAncestorOf(focused) || topBar.isAncestorOf(focused) || homeRow.isAncestorOf(focused) ||
-            rail.isAncestorOf(focused) || focused === spotlight.channelButton
+            rail.isAncestorOf(focused) || nowPlaying.isAncestorOf(focused) || focused === spotlight.channelButton
         if (!elsewhere) return false
         if (event.action == KeyEvent.ACTION_UP) selectedRow()?.requestFocus()
         return true
@@ -352,6 +353,7 @@ class IndexScreen(
         val inTop = focused != null && topBar.isAncestorOf(focused)
         val inHome = focused != null && homeRow.isAncestorOf(focused)
         val inRail = focused != null && rail.isAncestorOf(focused)
+        val inDock = focused != null && nowPlaying.isAncestorOf(focused)
         return when {
             focused is AppRow -> {
                 val rows = list.rows()
@@ -363,20 +365,31 @@ class IndexScreen(
                     FOCUS_RIGHT -> {
                         // Right before the row has filled: fill it now.
                         if (stripKey != focused.entry.stripKey) fill(focused.entry)
-                        if (spotlight.channelButton.isFocusable) spotlight.channelButton else programs.cards().firstOrNull() ?: focused
+                        // An app with no channel has no cards: what's playing is still worth reaching.
+                        if (spotlight.channelButton.isFocusable) spotlight.channelButton else programs.cards().firstOrNull() ?: nowPlaying.entry() ?: focused
                     }
                     else -> focused
                 }
             }
             inStrip -> when (direction) {
                 FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else row ?: focused
-                FOCUS_DOWN -> row ?: focused
+                // Down past the cards reaches what's playing, when anything is.
+                FOCUS_DOWN -> nowPlaying.entry() ?: row ?: focused
                 FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) row ?: focused else super.focusSearch(focused, direction)
                 else -> super.focusSearch(focused, direction)
             }
             focused === spotlight.channelButton -> when (direction) {
-                FOCUS_DOWN, FOCUS_RIGHT -> programs.cards().firstOrNull() ?: row ?: focused
+                FOCUS_DOWN -> programs.cards().firstOrNull() ?: nowPlaying.entry() ?: row ?: focused
+                FOCUS_RIGHT -> programs.cards().firstOrNull() ?: row ?: focused
                 else -> row ?: focused
+            }
+            inDock -> when (direction) {
+                // The dock sits at the bottom: down stays, up returns to the cards, back to the list.
+                FOCUS_DOWN -> focused
+                FOCUS_UP -> programs.cards().firstOrNull() ?: row ?: focused
+                FOCUS_LEFT -> nowPlaying.neighbour(focused, FOCUS_LEFT) ?: row ?: focused
+                FOCUS_RIGHT -> nowPlaying.neighbour(focused, FOCUS_RIGHT) ?: focused
+                else -> focused
             }
             inHome -> when (direction) {
                 FOCUS_DOWN -> row ?: focused
@@ -401,7 +414,7 @@ class IndexScreen(
     }
 
     /** The first chip at the top right that is showing, reached from the apps (no Home Assistant row) or its end. */
-    private fun firstTopTarget(): View? = listOf<View>(topBar.inputOffer, topBar.nowPlaying, topBar.update)
+    private fun firstTopTarget(): View? = listOf<View>(topBar.inputOffer, topBar.update)
         .firstOrNull { it.visibility == VISIBLE && it.isFocusable }
 
     /** The rail item level with [from]'s middle. */

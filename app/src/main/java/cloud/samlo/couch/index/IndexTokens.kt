@@ -56,6 +56,9 @@ object IndexTokens {
     const val CARD_GAP = 10
     const val CARD_RADIUS = 6f
     const val STATS_Y = 345
+    /** The Now Playing dock at the foot of the right column, in the space the week leaves. */
+    const val DOCK_Y = 420
+    const val DOCK_H = 52
     const val FOOTER_Y = 505
 
     val hours = Color.parseColor("#5E6865")
