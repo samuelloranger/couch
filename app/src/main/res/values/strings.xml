@@ -67,6 +67,23 @@
     <string name="menu_app_info">App info</string>
     <string name="menu_open_app">Open %1$s</string>
 
+    <!-- Folders in the app list -->
+    <string name="menu_add_to_folder">Add to folder</string>
+    <string name="menu_remove_from_folder">Remove from folder</string>
+    <string name="menu_new_folder">New folder</string>
+    <string name="menu_remove_folder">Remove folder</string>
+    <string name="folder_default_name">Folder</string>
+    <string name="folder_name_hint">Folder name</string>
+    <string name="folder_spotlight_help">Press Right to pick an app. Long-press the folder to rename it or remove it.</string>
+    <plurals name="folder_apps">
+        <item quantity="one">1 app</item>
+        <item quantity="other">%1$d apps</item>
+    </plurals>
+    <plurals name="folder_spotlight">
+        <item quantity="one">Folder · 1 app</item>
+        <item quantity="other">Folder · %1$d apps</item>
+    </plurals>
+
     <!-- Icon picker -->
     <string name="picker_title">Icon for %1$s</string>
     <string name="picker_hint">Pick a card. Automatic guesses from the input’s name.</string>

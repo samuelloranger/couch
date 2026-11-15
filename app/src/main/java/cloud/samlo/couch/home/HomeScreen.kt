@@ -44,6 +44,7 @@ class HomeScreen(private val activity: Activity) {
     private val views: HomeViews = HomeViews(
         activity, images, { openSettings() }, { installUpdate() },
         onAppMenu = { tile, anchor -> menus.show(tile, anchor) },
+        onFolderMenu = { entry, anchor -> entry.folderId?.let { menus.showFolder(it, entry.app.label, anchor) } },
         onProgramMenu = { menus.show(it) },
         onChannelSelected = { pkg, id ->
             config.preferredChannels = config.preferredChannels + (pkg to id.toString())

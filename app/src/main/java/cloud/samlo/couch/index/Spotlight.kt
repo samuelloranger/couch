@@ -93,6 +93,22 @@ class Spotlight(context: Context) : LinearLayout(context) {
         progress.visibility = GONE
     }
 
+    /** A folder: its app count where a program's app and channel sit, its name, and what the keys do. */
+    fun showFolder(name: String, apps: Int) {
+        // The line above a title is not a button here: a folder has no channel to choose.
+        channelLook = null
+        channelButton.visibility = VISIBLE
+        channelButton.setTextColor(Tokens.accent)
+        channelButton.text = context.resources.getQuantityString(R.plurals.folder_spotlight, apps, apps)
+        channelButton.contentDescription = null
+        channelButton.isFocusable = false
+        channelButton.isClickable = false
+        channelButton.background = null
+        title.text = name
+        setDescription(context.getString(R.string.folder_spotlight_help))
+        progress.visibility = GONE
+    }
+
     private fun setDescription(text: String?) {
         description.text = text.orEmpty()
         description.visibility = if (text == null) GONE else VISIBLE

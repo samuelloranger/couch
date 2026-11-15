@@ -63,6 +63,8 @@ object IndexTokens {
     const val FOOTER_Y = 505
 
     val hours = Color.parseColor("#5E6865")
+    /** The 2x2 icon of a folder row: a shade darker than an app's own icon square. */
+    val folderIcon = Color.parseColor("#2A3330")
     val railIdle = Color.parseColor("#7D8784")
     val railActive = Color.parseColor("#F4F6F5")
     val barOff = Color.parseColor("#2C3532")
