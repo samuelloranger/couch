@@ -42,7 +42,7 @@ class HomeScreen(private val activity: Activity) {
     private val images = Images(activity, fetcher)
     private val views: HomeViews = HomeViews(
         activity, images, { openSettings() }, { installUpdate() },
-        onAppMenu = { menus.show(it) },
+        onAppMenu = { tile, anchor -> menus.show(tile, anchor) },
         onProgramMenu = { menus.show(it) },
         onChannelSelected = { pkg, id ->
             config.preferredChannels = config.preferredChannels + (pkg to id.toString())
@@ -108,6 +108,7 @@ class HomeScreen(private val activity: Activity) {
         measuring.cancel()
         closeCard()
         swallowUp = false
+        menus.dismiss()
         stopLive()
         ambientMode.cancel()
         views.index.topBar.inputOffer.hide()
@@ -122,6 +123,7 @@ class HomeScreen(private val activity: Activity) {
     fun onHomePressed() {
         if (!resumed) return
         measuring.cancel()
+        menus.dismiss()
         views.index.reset()
     }
 

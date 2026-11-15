@@ -629,6 +629,12 @@ Elle permet à Couch de changer les réglages de toute la télé sur cette page.
     <string name="menu_pin">Épingler en haut</string>
     <string name="menu_unpin">Désépingler</string>
     <string name="menu_move">Déplacer</string>
+    <string name="menu_force_stop">Forcer l’arrêt</string>
+    <string name="menu_clear_cache">Vider le cache</string>
+    <string name="menu_uninstall">Désinstaller</string>
+    <string name="menu_stopped">Arrêtée</string>
+    <string name="menu_cache_cleared">Cache vidé</string>
+    <string name="menu_shell_failed">Couch ne peut pas faire ça sur cette télé</string>
     <string name="move_app_title">Déplacer %1$s à la position</string>
     <string name="choose_channel">Choisir une chaîne</string>
     <string name="choose_channel_label">%1$s. Choisir une chaîne</string>

@@ -36,7 +36,7 @@ class IndexScreen(
     private val images: Images,
     onSettings: () -> Unit,
     onUpdate: () -> Unit,
-    private val onAppMenu: (Tile) -> Unit,
+    private val onAppMenu: (Tile, View) -> Unit,
     private val onProgramMenu: (Card) -> Unit,
     private val onChannelSelected: (String, Long) -> Unit,
 ) : FrameLayout(activity) {
@@ -224,7 +224,7 @@ class IndexScreen(
         setOnFocusChangeListener { v, has -> if (has && !binding) select(v as AppRow, refresh = false) }
         setOnClickListener { this.entry.app.launch(activity) }
         setOnLongClickListener {
-            onAppMenu(this.entry.app)
+            onAppMenu(this.entry.app, this)
             true
         }
     }
