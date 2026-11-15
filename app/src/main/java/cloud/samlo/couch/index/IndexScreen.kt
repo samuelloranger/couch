@@ -6,6 +6,7 @@ import android.app.AlertDialog
 import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import cloud.samlo.couch.R
@@ -22,10 +23,13 @@ import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
 
 /**
- * The Index layout: a rail of Inputs and Settings down the left edge, the apps listed beside it;
- * on the right, what the selected app offers (the focused program's text over its chosen
- * channel's cards), its last week of use, and the TV's readings along the bottom. What's playing
- * sits in a dock under the week.
+ * The Index layout: a rail of Search, Home, Inputs and Settings down the left edge, the apps
+ * listed beside it; on the right, what the selected app offers (the focused program's text over
+ * its chosen channel's cards), its last week of use, and the TV's readings along the bottom.
+ * What's playing sits in a dock under the week.
+ *
+ * Search takes the app list's place while it is open: the field, then voice, the TV's own search,
+ * the matching apps and Continue watching titles, with the rail's bar on Search.
  *
  * D-pad: up/down walks the list, right enters the app's channel row, left (from its first card),
  * down comes back; while something plays, down from the cards reaches the dock's buttons and up
@@ -45,8 +49,9 @@ class IndexScreen(
     private val onChannelSelected: (String, Long) -> Unit,
 ) : FrameLayout(activity) {
     val topBar = IndexTopBar(activity, onUpdate)
-    private val rail = IndexRail(activity, { pickInput() }, onSettings)
+    private val rail = IndexRail(activity, { openSearch() }, { pickInput() }, onSettings, { closeSearch() })
     private val list = AppList(activity) { entry -> row(entry) }
+    private val search = SearchPanel(activity, images, { from -> toRail(from)?.requestFocus() }, { entry, program -> preview(entry, program) })
     private val spotlight = Spotlight(activity)
     private val programs = FocusRow(activity).apply {
         gapDp = IndexTokens.CARD_GAP
@@ -63,6 +68,10 @@ class IndexScreen(
     private val homeRow = HomeRow(activity, HomeAssistant(Prefs.of(activity)))
     /** Whether the Home Assistant row is showing. */
     private var homeLayout = false
+    /** Whether Search has the app list's place. */
+    private var searchOpen = false
+    /** The app selected before Search opened: focus goes back to it when the panel closes. */
+    private var searchReturn: String? = null
 
     private var data: IndexData? = null
     private var config = Config()
@@ -102,10 +111,12 @@ class IndexScreen(
         // layer here covers the screen: each full-screen layer costs the TV's GPU.
         place(rail, 0, 0, IndexTokens.RAIL_W, LayoutParams.MATCH_PARENT)
         // Focus in the rail quietens the list's selection, as focus in the channel row does.
-        listOf(rail.inputs, rail.settings).forEach { item ->
+        listOf(rail.search, rail.inputs, rail.settings).forEach { item ->
             item.setOnFocusChangeListener { _, has -> if (has) selectedRow()?.let { list.select(it, inRow = true) } }
         }
         place(list, IndexTokens.LIST_X, IndexTokens.LIST_Y, IndexTokens.LIST_W, IndexTokens.LIST_H)
+        place(search, IndexTokens.LIST_X, IndexTokens.LIST_Y, IndexTokens.LIST_W, IndexTokens.LIST_H)
+        search.visibility = GONE
         place(spotlight, IndexTokens.COLUMN_X, IndexTokens.HEADER_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         // The row starts a little left of the column so a scaled card's ring isn't clipped.
         val cardTop = 10 + Tokens.RING_INSET
@@ -117,7 +128,7 @@ class IndexScreen(
         place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         place(nowPlaying, IndexTokens.COLUMN_X, IndexTokens.DOCK_Y, IndexTokens.COLUMN_W, IndexTokens.DOCK_H)
         // Nothing playing takes the dock away: focus comes back to the app the column describes.
-        nowPlaying.onHide = { selectedRow()?.requestFocus() }
+        nowPlaying.onHide = { returnTarget()?.requestFocus() }
         // From the list's edge, not the column's: a full address and longer labels outgrow the column.
         addView(systemLine, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
             leftMargin = activity.dp(IndexTokens.LIST_X)
@@ -170,6 +181,7 @@ class IndexScreen(
         rail.paintBar()
         binding = true
         list.bind(data.entries, rebuild, animate) { it.requestFocus() }
+        search.bind(data.entries, data.watchNext)
         val rows = list.rows()
         if (!settled) {
             // The whole screen arrives at once. One layer for the fade: rendered once, then only blended.
@@ -201,18 +213,29 @@ class IndexScreen(
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */
     fun consumesKey(event: KeyEvent): Boolean {
+        // The remote's search key opens the panel from anywhere on the Index, and closes it again.
+        if (event.keyCode == KeyEvent.KEYCODE_SEARCH) {
+            if (event.action == KeyEvent.ACTION_DOWN) if (searchOpen) closeSearch() else openSearch()
+            return true
+        }
+        // Back out of Search first: the list comes back as it was.
+        if (searchOpen && event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_DOWN) closeSearch()
+            return true
+        }
         if (homeRow.consumesKey(event)) return true
         if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
         val focused = activity.currentFocus ?: return false
         val elsewhere = programs.isAncestorOf(focused) || topBar.isAncestorOf(focused) || homeRow.isAncestorOf(focused) ||
             rail.isAncestorOf(focused) || nowPlaying.isAncestorOf(focused) || focused === spotlight.channelButton
         if (!elsewhere) return false
-        if (event.action == KeyEvent.ACTION_UP) selectedRow()?.requestFocus()
+        if (event.action == KeyEvent.ACTION_UP) returnTarget()?.requestFocus()
         return true
     }
 
     /** HOME while home: back to the first app. */
     fun reset() {
+        closeSearch()
         homeRow.stopDimming()
         inputMenu?.dismiss()
         channelMenu?.dismiss()
@@ -220,6 +243,42 @@ class IndexScreen(
         // Focus first: its listener selects the row, then the jump lands the selection with the list.
         first.requestFocus()
         list.reveal(0, animate = false)
+    }
+
+    /** OK on the rail's Search, or the remote's search key: the panel takes the app list's place. */
+    private fun openSearch() {
+        if (searchOpen) return
+        searchOpen = true
+        searchReturn = selectedKey
+        list.animate().cancel()
+        list.animate().alpha(0f).setDuration(Tokens.APPEAR_MS).setInterpolator(Tokens.ease).withEndAction {
+            // A reopen cancels this fade, which must not hide the list under the panel.
+            if (searchOpen) {
+                list.visibility = GONE
+                list.alpha = 1f
+            }
+        }.start()
+        rail.setSearch(true)
+        // The TV's keyboard drops over the screen without moving Couch's fixed layout.
+        activity.window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        search.open()
+    }
+
+    /** BACK on the panel, or OK on the rail's Home: the list comes back as it was. */
+    private fun closeSearch() {
+        if (!searchOpen) return
+        searchOpen = false
+        search.close()
+        rail.setSearch(false)
+        list.animate().cancel()
+        list.visibility = VISIBLE
+        list.alpha = 0f
+        list.animate().alpha(1f).setDuration(Tokens.APPEAR_MS).setInterpolator(Tokens.ease).start()
+        val rows = list.rows()
+        val back = rows.firstOrNull { it.entry.key == searchReturn } ?: rows.firstOrNull()
+        searchReturn = null
+        // Its focus listener selects it again, and the right column follows it.
+        back?.requestFocus()
     }
 
     private fun row(entry: IndexEntry) = AppRow(activity, entry).apply {
@@ -347,14 +406,37 @@ class IndexScreen(
 
     private fun selectedRow() = list.rows().firstOrNull { it.entry.key == selectedKey }
 
+    /** Where focus comes back to from the column, the rail or the top row: the panel's, or the selected app. */
+    private fun returnTarget(): View? = if (searchOpen) search.target() else selectedRow()
+
+    /** A search result has focus: the right column shows its app, and its program when it has one. */
+    private fun preview(entry: IndexEntry, program: Tile?) {
+        selectedKey = entry.key
+        list.rows().firstOrNull { it.entry.key == entry.key }?.let { list.select(it, inRow = false) }
+        // The result is already picked: its cards come at once rather than after the row's settle.
+        show(entry, deferStrip = false)
+        if (program != null) showProgram(entry, program)
+    }
+
     override fun focusSearch(focused: View?, direction: Int): View? {
-        val row = selectedRow()
+        // Where left and up lead back to: the search panel's row while it has the list's place.
+        val target = returnTarget()
+        val inSearch = focused != null && search.isAncestorOf(focused)
         val inStrip = focused != null && programs.isAncestorOf(focused)
         val inTop = focused != null && topBar.isAncestorOf(focused)
         val inHome = focused != null && homeRow.isAncestorOf(focused)
         val inRail = focused != null && rail.isAncestorOf(focused)
         val inDock = focused != null && nowPlaying.isAncestorOf(focused)
         return when {
+            inSearch -> when (direction) {
+                // Right from an app result reaches its channel's cards, as from the app list.
+                FOCUS_RIGHT -> search.entryOf(focused)?.let { entry ->
+                    if (stripKey != entry.stripKey) fill(entry)
+                    spotlight.channelButton.takeIf { it.isFocusable } ?: programs.cards().firstOrNull() ?: nowPlaying.entry() ?: target ?: focused
+                } ?: focused
+                // Clear of the results: up, down and left are the panel's own business.
+                else -> focused
+            }
             focused is AppRow -> {
                 val rows = list.rows()
                 val i = rows.indexOf(focused)
@@ -372,27 +454,27 @@ class IndexScreen(
                 }
             }
             inStrip -> when (direction) {
-                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else row ?: focused
+                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else target ?: focused
                 // Down past the cards reaches what's playing, when anything is.
-                FOCUS_DOWN -> nowPlaying.entry() ?: row ?: focused
-                FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) row ?: focused else super.focusSearch(focused, direction)
+                FOCUS_DOWN -> nowPlaying.entry() ?: target ?: focused
+                FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) target ?: focused else super.focusSearch(focused, direction)
                 else -> super.focusSearch(focused, direction)
             }
             focused === spotlight.channelButton -> when (direction) {
-                FOCUS_DOWN -> programs.cards().firstOrNull() ?: nowPlaying.entry() ?: row ?: focused
-                FOCUS_RIGHT -> programs.cards().firstOrNull() ?: row ?: focused
-                else -> row ?: focused
+                FOCUS_DOWN -> programs.cards().firstOrNull() ?: nowPlaying.entry() ?: target ?: focused
+                FOCUS_RIGHT -> programs.cards().firstOrNull() ?: target ?: focused
+                else -> target ?: focused
             }
             inDock -> when (direction) {
                 // The dock sits at the bottom: down stays, up returns to the cards, back to the list.
                 FOCUS_DOWN -> focused
-                FOCUS_UP -> programs.cards().firstOrNull() ?: row ?: focused
-                FOCUS_LEFT -> nowPlaying.neighbour(focused, FOCUS_LEFT) ?: row ?: focused
+                FOCUS_UP -> programs.cards().firstOrNull() ?: target ?: focused
+                FOCUS_LEFT -> nowPlaying.neighbour(focused, FOCUS_LEFT) ?: target ?: focused
                 FOCUS_RIGHT -> nowPlaying.neighbour(focused, FOCUS_RIGHT) ?: focused
                 else -> focused
             }
             inHome -> when (direction) {
-                FOCUS_DOWN -> row ?: focused
+                FOCUS_DOWN -> target ?: focused
                 FOCUS_LEFT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: toRail(focused)
                 FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: firstTopTarget() ?: focused
                 else -> focused
@@ -400,11 +482,11 @@ class IndexScreen(
             inRail -> when (direction) {
                 FOCUS_UP -> rail.neighbour(focused!!, down = false) ?: focused
                 FOCUS_DOWN -> rail.neighbour(focused!!, down = true) ?: focused
-                FOCUS_RIGHT -> row ?: focused
+                FOCUS_RIGHT -> target ?: focused
                 else -> focused
             }
             inTop -> when (direction) {
-                FOCUS_DOWN -> row ?: focused
+                FOCUS_DOWN -> target ?: focused
                 // Left past the first chip returns to the Home Assistant row's last pill.
                 else -> super.focusSearch(focused, direction)?.takeIf { topBar.isAncestorOf(it) }
                     ?: homeRow.lastPill().takeIf { direction == FOCUS_LEFT && homeLayout } ?: focused

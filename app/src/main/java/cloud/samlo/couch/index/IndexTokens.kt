@@ -8,14 +8,15 @@ import android.graphics.Color
  * never trigger a layout pass.
  */
 object IndexTokens {
-    // The rail: Home, Inputs and Settings, a strip down the left edge.
+    // The rail: Search, Home, Inputs and Settings, a strip down the left edge.
     const val RAIL_W = 60
     const val RAIL_ITEM_W = 48
     const val RAIL_ITEM_H = 48
     const val RAIL_ICON = 17
-    /** Home marks the current screen; Inputs sits one item below it. */
-    const val RAIL_HOME_Y = 75
-    const val RAIL_INPUTS_Y = 131
+    /** Search takes the list's place; Home marks the current screen, Inputs sits one item below it. */
+    const val RAIL_SEARCH_Y = 75
+    const val RAIL_HOME_Y = 131
+    const val RAIL_INPUTS_Y = 187
     const val RAIL_SETTINGS_Y = 450
     const val RAIL_BAR_W = 2
     const val RAIL_BAR_H = 18

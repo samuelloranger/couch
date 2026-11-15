@@ -53,6 +53,14 @@
     <string name="index_adb">ADB</string>
     <string name="index_adb_on">activé</string>
 
+    <!-- Search, in the app list's place -->
+    <string name="search">Rechercher</string>
+    <string name="search_hint">Tape, ou utilise le clavier de ton téléphone</string>
+    <string name="search_voice">Recherche vocale</string>
+    <string name="search_voice_unavailable">Cette télé n’a pas de recherche vocale</string>
+    <string name="search_tv_for">Rechercher « %1$s » sur la télé</string>
+    <string name="search_nothing">Rien sur cette télé ne correspond</string>
+
     <!-- Card menus and reordering -->
     <string name="menu_hide">Masquer</string>
     <string name="menu_rename">Renommer</string>

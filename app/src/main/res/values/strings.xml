@@ -53,6 +53,14 @@
     <string name="index_adb">ADB</string>
     <string name="index_adb_on">on</string>
 
+    <!-- Search, in the app list's place -->
+    <string name="search">Search</string>
+    <string name="search_hint">Type, or use your phone’s keyboard</string>
+    <string name="search_voice">Voice search</string>
+    <string name="search_voice_unavailable">This TV has no voice search</string>
+    <string name="search_tv_for">Search the TV for “%1$s”</string>
+    <string name="search_nothing">Nothing on this TV matches</string>
+
     <!-- Card menus and reordering -->
     <string name="menu_hide">Hide</string>
     <string name="menu_rename">Rename</string>
