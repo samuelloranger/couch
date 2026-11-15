@@ -12,6 +12,8 @@
     <string name="section_apps">Apps</string>
     <string name="input_offer">Switch to %1$s</string>
     <string name="input_disconnected">Disconnected</string>
+    <string name="input_live_tv">Live TV</string>
+    <string name="input_antenna">Antenna</string>
     <string name="input_menu_hint">"OK: switch  ·  Back: close"</string>
     <string name="launch_failed">Couldn’t open %1$s</string>
     <string name="settings">Settings</string>
@@ -85,6 +87,7 @@
     <string name="icon_sound">Soundbar</string>
     <string name="icon_camera">Camera</string>
     <string name="icon_hdmi">HDMI</string>
+    <string name="icon_antenna">Antenna</string>
 
     <!-- Weather -->
     <string name="weather_clear">Clear</string>
@@ -135,7 +138,7 @@
     <!-- Settings: home -->
     <string name="group_home">Home screen</string>
     <string name="settings_inputs">Inputs</string>
-    <string name="settings_inputs_help">The name and icon of each HDMI input, and which ones the home screen shows.</string>
+    <string name="settings_inputs_help">The name and icon of each HDMI input and of Live TV, and which ones the home screen shows.</string>
     <string name="settings_channels">App channels</string>
     <string name="settings_channels_help">The rows your apps publish (Jellyfin, YouTube…). Turn on the ones you want to see.</string>
     <string name="settings_visibility">Show or hide apps</string>

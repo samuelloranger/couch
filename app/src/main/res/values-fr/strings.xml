@@ -12,6 +12,8 @@
     <string name="section_apps">Applications</string>
     <string name="input_offer">Passer à %1$s</string>
     <string name="input_disconnected">Débranché</string>
+    <string name="input_live_tv">Télé en direct</string>
+    <string name="input_antenna">Antenne</string>
     <string name="input_menu_hint">"OK : changer  ·  Retour : fermer"</string>
     <string name="launch_failed">Impossible d’ouvrir %1$s</string>
     <string name="settings">Paramètres</string>
@@ -85,6 +87,7 @@
     <string name="icon_sound">Barre de son</string>
     <string name="icon_camera">Caméra</string>
     <string name="icon_hdmi">HDMI</string>
+    <string name="icon_antenna">Antenne</string>
 
     <!-- Weather -->
     <string name="weather_clear">Ciel dégagé</string>
@@ -135,7 +138,7 @@
     <!-- Settings: home -->
     <string name="group_home">Écran d’accueil</string>
     <string name="settings_inputs">Entrées</string>
-    <string name="settings_inputs_help">Le nom et l’icône de chaque entrée HDMI, et celles que l’accueil affiche.</string>
+    <string name="settings_inputs_help">Le nom et l’icône de chaque entrée HDMI et de la télé en direct, et celles que l’accueil affiche.</string>
     <string name="settings_channels">Chaînes des applis</string>
     <string name="settings_channels_help">Les rangées que publient tes applis (Jellyfin, YouTube…). Active celles que tu veux voir.</string>
     <string name="settings_visibility">Afficher ou masquer des applis</string>

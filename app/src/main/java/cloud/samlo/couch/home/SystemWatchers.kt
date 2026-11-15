@@ -5,6 +5,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.media.tv.TvInputInfo
 import android.media.tv.TvInputManager
 import android.os.Build
 import android.os.Handler
@@ -31,8 +32,11 @@ class SystemWatchers(
         override fun onInputStateChanged(inputId: String, state: Int) {
             val before = states.put(inputId, state)
             if (state == TvInputManager.INPUT_STATE_CONNECTED && before != null && before != state) {
+                val info = inputs?.getTvInputInfo(inputId)
+                // A tuner connecting is the TV's own source, not a device turning on: nothing to offer.
+                if (info?.type == TvInputInfo.TYPE_TUNER) return
                 // A CEC device reports as a child of its HDMI port; the input list knows the port.
-                onInputWoke(inputs?.getTvInputInfo(inputId)?.parentId ?: inputId)
+                onInputWoke(info?.parentId ?: inputId)
             }
         }
 

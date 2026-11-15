@@ -39,6 +39,13 @@ class InputIconTest {
     }
 
     @Test
+    fun tunerNamesGuessTheAntenna() {
+        assertEquals(InputIcon.ANTENNA, InputIcon.resolve(null, "Live TV"))
+        assertEquals(InputIcon.ANTENNA, InputIcon.resolve(null, "Télé en direct"))
+        assertEquals(InputIcon.ANTENNA, InputIcon.resolve(null, "Antenna"))
+    }
+
+    @Test
     fun idsAreUniqueAndLookUpBack() {
         assertEquals(InputIcon.entries.size, InputIcon.entries.map { it.id }.toSet().size)
         InputIcon.entries.forEach { assertEquals(it, InputIcon.of(it.id)) }
