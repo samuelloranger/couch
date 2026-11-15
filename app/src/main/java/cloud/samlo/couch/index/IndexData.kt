@@ -6,13 +6,15 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
 import android.graphics.RectF
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.AppSource
-import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.AppUsage
 import cloud.samlo.couch.data.Banners
 import cloud.samlo.couch.data.Config
+import cloud.samlo.couch.data.Folders
 import cloud.samlo.couch.data.InputSource
 import cloud.samlo.couch.data.Programs
 import cloud.samlo.couch.data.Tile
@@ -28,8 +30,9 @@ import java.io.File
  * channel would be when it has none), a small rounded [icon], its available channels,
  * and its last week of use.
  *
- * The Continue watching row is the one entry that is not an app: its key is [CONTINUE] and its
- * single channel holds Watch Next programs from every app.
+ * Two rows are not apps. The Continue watching row's key is [CONTINUE] and its single channel
+ * holds Watch Next programs from every app. A folder's key is [FOLDER] plus its id, and it holds
+ * the apps it stands for in [folderApps].
  */
 class IndexChannel(val id: Long, val title: String, val programs: List<Tile>)
 
@@ -39,6 +42,8 @@ class IndexEntry(
     val channels: List<IndexChannel>,
     preferredChannel: String?,
     val usage: AppUsage?,
+    /** The apps a folder row stands for, in the list's order; empty for an app. */
+    val folderApps: List<IndexEntry> = emptyList(),
 ) {
     val channel = channels.firstOrNull { it.id.toString() == preferredChannel } ?: channels.firstOrNull()
     val channelTitle get() = channel?.title
@@ -47,14 +52,30 @@ class IndexEntry(
     val stripKey: String get() = "$key|${channel?.id}"
     val signature: String = "${app.signature}|${icon?.generationId}|${channel?.id}|" +
         "${usage?.perDayMs?.joinToString(",")}|${usage?.opens}|${usage?.lastUsed}|" +
-        channels.joinToString(";") { "${it.id}|${it.title}|" + it.programs.joinToString(";") { tile -> tile.signature } }
+        channels.joinToString(";") { "${it.id}|${it.title}|" + it.programs.joinToString(";") { tile -> tile.signature } } +
+        folderApps.joinToString(";") { it.signature }
 
     /** True for the Continue watching row, which stands for no app: OK resumes its first program. */
     val continues: Boolean get() = key == CONTINUE
 
+    /** True for a folder row, which stands for its [folderApps]: OK opens the folder instead of an app. */
+    val isFolder: Boolean get() = isFolderKey(key)
+
+    /** The folder a folder row shows; null for an app. */
+    val folderId: String? get() = key.takeIf { isFolder }?.removePrefix(FOLDER)
+
     companion object {
         /** The Continue watching row's key: never an app, so nothing that lists apps may keep it. */
         const val CONTINUE = "couch:continue"
+
+        /** A folder row's key starts with this and its id follows: also never an app. */
+        const val FOLDER = "folder:"
+
+        /** True for a folder row's key: its id follows [FOLDER]. */
+        fun isFolderKey(key: String): Boolean = key.startsWith(FOLDER)
+
+        /** True for Couch's own rows, Continue watching and folders, which stand for no app. */
+        fun isOwn(key: String): Boolean = key == CONTINUE || isFolderKey(key)
     }
 }
 
@@ -85,10 +106,17 @@ object IndexBuilder {
         )
         val usage = Usage.lastWeek(context)?.let { if (otherTvs && config.syncEnabled && config.syncAllTvs) Sync.withOtherTvs(context, it) else it }
         val byKey = apps.associateBy { it.key }
-        val ordered = AppOrder.sorted(apps.map { it.key }, config, usage?.mapValues { it.value.weekMs })
-        val entries = ordered.map { key ->
-            val tile = byKey.getValue(key)
-            IndexEntry(app = tile, icon = icon(context, tile.key), channels = emptyList(), preferredChannel = null, usage = usage?.get(tile.key))
+        val folderUsage = config.folders.associate { folder ->
+            // Only the apps this TV still shows count: a hidden member is no part of the row.
+            folderKey(folder.id) to Folders.usage(folder.apps.filter { it in byKey }.mapNotNull { usage?.get(it) })
+        }
+        // A folder takes its apps' time together, so it sorts where that much use puts it.
+        val entries = Folders.arrange(apps.map { it.key }, config, usage?.mapValues { it.value.weekMs }, byKey.keys).map { slot ->
+            when (slot) {
+                is Folders.Slot.App ->
+                    IndexEntry(app = byKey.getValue(slot.key), icon = icon(context, slot.key), channels = emptyList(), preferredChannel = null, usage = usage?.get(slot.key))
+                is Folders.Slot.Group -> folderEntry(context, slot, byKey, folderUsage)
+            }
         }
         return IndexData(entries, usage != null, InputSource.tiles(context, config, iconsDir), channelsKnown = false)
     }
@@ -97,7 +125,8 @@ object IndexBuilder {
     fun withChannels(context: Context, config: Config, data: IndexData): IndexData {
         val channels = Programs.channels(context, config).groupBy { it.packageName }
         val entries = data.entries.map { e ->
-            IndexEntry(
+            // A folder row keeps the apps it stands for as they are: the grid never shows their channels.
+            if (e.isFolder) e else IndexEntry(
                 app = e.app,
                 icon = e.icon,
                 channels = channels[e.key].orEmpty().map { IndexChannel(it.id, Programs.title(context, it.packageName, it.name, ", "), it.tiles) },
@@ -146,6 +175,60 @@ object IndexBuilder {
         }
     }
 
+    /** A folder's row: its name, its members and their icons' 2x2 mark. */
+    private fun folderEntry(
+        context: Context,
+        group: Folders.Slot.Group,
+        byKey: Map<String, Tile>,
+        usage: Map<String, AppUsage>,
+    ): IndexEntry {
+        val members = group.members.mapNotNull(byKey::get).map { tile ->
+            IndexEntry(app = tile, icon = icon(context, tile.key), channels = emptyList(), preferredChannel = null, usage = null)
+        }
+        val key = folderKey(group.id)
+        return IndexEntry(
+            app = Tile(key = key, kind = Tile.Kind.APP, label = group.name, intent = Intent()),
+            icon = folderIcon(context, members),
+            channels = emptyList(),
+            preferredChannel = null,
+            usage = usage[key],
+            folderApps = members,
+        )
+    }
+
+    /** The row icon: up to four of the folder's apps over a darker square, rounded like an app's icon. */
+    private fun folderIcon(context: Context, members: List<IndexEntry>): Bitmap? {
+        val size = context.dp(IndexTokens.LIST_ICON)
+        val first = members.take(4)
+        // Part of the key, so a member's new icon or another first app renders again.
+        return Banners.memoized("folder|$size|" + first.joinToString(",") { "${it.key}|${it.icon?.generationId}" }) {
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            val square = RectF(0f, 0f, size.toFloat(), size.toFloat())
+            canvas.drawRoundRect(square, context.dpf(AppRow.ICON_RADIUS), context.dpf(AppRow.ICON_RADIUS),
+                Paint(Paint.ANTI_ALIAS_FLAG).apply { color = IndexTokens.folderIcon })
+            val pad = context.dpf(FOLDER_PAD)
+            val gap = context.dpf(FOLDER_GAP)
+            val cell = (size - 2 * pad - gap) / 2
+            val radius = context.dpf(FOLDER_CELL_RADIUS)
+            val path = Path()
+            val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+            first.forEachIndexed { i, member ->
+                val art = member.icon ?: return@forEachIndexed
+                val left = pad + (i % 2) * (cell + gap)
+                val top = pad + (i / 2) * (cell + gap)
+                path.reset()
+                path.addRoundRect(RectF(left, top, left + cell, top + cell), radius, radius, Path.Direction.CW)
+                canvas.save()
+                // The member's icon is already a rounded square at list size: shrink and square it off again.
+                canvas.clipPath(path)
+                canvas.drawBitmap(art, Rect(0, 0, art.width, art.height), Rect(left.toInt(), top.toInt(), (left + cell).toInt(), (top + cell).toInt()), paint)
+                canvas.restore()
+            }
+            bitmap
+        }
+    }
+
     /** The app's launcher icon as a small rounded square, rendered once per app version. */
     private fun icon(context: Context, pkg: String): Bitmap? {
         val pm = context.packageManager
@@ -166,4 +249,11 @@ object IndexBuilder {
 
     /** Continue watching is one channel, numbered below every app channel and recommendation channel. */
     private const val CONTINUE_CHANNEL = -2L
+
+    /** The folder icon's padding around its four apps, the gap between them and their corner. */
+    private const val FOLDER_PAD = 2.5f
+    private const val FOLDER_GAP = 1.5f
+    private const val FOLDER_CELL_RADIUS = 2f
+
+    private fun folderKey(id: String) = IndexEntry.FOLDER + id
 }

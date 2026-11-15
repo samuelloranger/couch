@@ -74,7 +74,7 @@ class SharedSettings(private val file: File?) {
             "accent", "clock24h", "continueWatching",
             "wallpaper", "subreddit", "wallpaperHours", "ambientMinutes",
             "weather", "weatherCity", "fahrenheit",
-            "pinnedApps", "appSort", "manualAppOrder", "hiddenApps", "names",
+            "pinnedApps", "appSort", "manualAppOrder", "hiddenApps", "names", "folders",
             "homeAssistantUrl", "checkUpdates",
         )
 

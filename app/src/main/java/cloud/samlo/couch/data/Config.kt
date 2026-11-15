@@ -20,6 +20,8 @@ class Config {
     var names: Map<String, String> = emptyMap()
     /** Input key to an [InputIcon] id. */
     var inputIcons: Map<String, String> = emptyMap()
+    /** Groups of apps, each shown as one row; an app belongs to at most one. */
+    var folders: List<Folder> = emptyList()
 
     // Channels
     /** Channel id to shown or not; channels without a choice are shown. */

@@ -12,6 +12,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.AppLabels
 import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.Config
+import cloud.samlo.couch.data.Folders
 import cloud.samlo.couch.data.Images
 import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.Tile
@@ -28,17 +29,18 @@ import cloud.samlo.couch.ui.dp
  * The Index layout: a rail of Search, Home, Inputs and Settings down the left edge, the apps
  * listed beside it; on the right, what the selected app offers (the focused program's text over
  * its chosen channel's cards), its last week of use, and the TV's readings along the bottom.
- * What's playing sits in a dock under the week.
+ * What's playing sits in a dock under the week. A folder row opens its apps there instead, as a
+ * grid of app cards in place of the channel row.
  *
  * Search takes the app list's place while it is open: the field, then voice, the TV's own search,
- * the matching apps and Continue watching titles, with the rail's bar on Search.
+ * the matching apps and folders and Continue watching titles, with the rail's bar on Search.
  *
- * D-pad: up/down walks the list, right enters the app's channel row, left (from its first card),
- * down comes back; while something plays, down from the cards reaches the dock's buttons and up
- * or back returns. With several channels, right reaches the channel picker first and up from
- * the cards returns to it. Left from the list (or the Home Assistant row) reaches the rail, right
- * from the rail returns to the selected app. Up from the first app reaches the Home Assistant row,
- * or else the chips at the top right.
+ * D-pad: up/down walks the list, right enters the app's channel row (or the folder's grid), left
+ * (from its first card), down comes back; while something plays, down from the cards reaches the
+ * dock's buttons and up or back returns. With several channels, right reaches the channel picker
+ * first and up from the cards returns to it. Left from the list (or the Home Assistant row)
+ * reaches the rail, right from the rail returns to the selected app. Up from the first app reaches
+ * the Home Assistant row, or else the chips at the top right.
  *
  * A manual move lifts the row itself: up and down take it through its group, OK drops it there and
  * Back puts it back, with a hint beside it instead of a dialog in front of it.
@@ -50,6 +52,8 @@ class IndexScreen(
     onSettings: () -> Unit,
     onUpdate: () -> Unit,
     private val onAppMenu: (Tile, View) -> Unit,
+    /** A folder row is long-pressed: its name and its id, for the folder's own menu. */
+    private val onFolderMenu: (IndexEntry, View) -> Unit,
     private val onProgramMenu: (Card) -> Unit,
     private val onChannelSelected: (String, Long) -> Unit,
     /**
@@ -61,13 +65,15 @@ class IndexScreen(
     val topBar = IndexTopBar(activity, onUpdate)
     private val rail = IndexRail(activity, { openSearch() }, { pickInput() }, onSettings, { closeSearch() })
     private val list = AppList(activity) { entry -> row(entry) }
-    private val search = SearchPanel(activity, images, { from -> toRail(from)?.requestFocus() }, { entry, program -> preview(entry, program) })
+    private val search = SearchPanel(activity, images, { from -> toRail(from)?.requestFocus() }, { entry, program -> preview(entry, program) }, { openFolder(it) })
     private val spotlight = Spotlight(activity)
     private val programs = FocusRow(activity).apply {
         gapDp = IndexTokens.CARD_GAP
         leavesAtStart = true
         setStartPadding(activity.dp(STRIP_START) - activity.dp(Tokens.RING_INSET))
     }
+    /** The selected folder's apps, in the channel row's place. */
+    private val folderGrid = FolderGrid(activity) { tile -> appCard(tile) }
     /** The app's banner, in the channel row's place when the app has no channel. */
     private val banner = ImageView(activity).apply { scaleType = ImageView.ScaleType.FIT_XY }
     private val stats = StatsBar(activity)
@@ -145,6 +151,12 @@ class IndexScreen(
             topMargin = activity.dp(IndexTokens.STRIP_Y - cardTop)
         })
         place(banner, IndexTokens.COLUMN_X, IndexTokens.STRIP_Y, IndexTokens.cardWidth(-1), IndexTokens.CARD_H)
+        // Placed like a rule of cards: its tiles start where the channel row's first card does.
+        place(
+            folderGrid, IndexTokens.COLUMN_X - Tokens.RING_INSET, IndexTokens.STRIP_Y - Tokens.RING_INSET,
+            FolderGrid.W, FolderGrid.H,
+        )
+        folderGrid.visibility = GONE
         place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         place(nowPlaying, IndexTokens.COLUMN_X, IndexTokens.DOCK_Y, IndexTokens.COLUMN_W, IndexTokens.DOCK_H)
         // Nothing playing takes the dock away: focus comes back to the app the column describes.
@@ -231,7 +243,7 @@ class IndexScreen(
     /** The Home Assistant row streams changes only while the home screen is in front. */
     fun live(on: Boolean) = homeRow.live(on)
 
-    fun appTiles(): List<Tile> = data?.entries.orEmpty().filterNot { it.continues }.map { it.app }
+    fun appTiles(): List<Tile> = data?.entries.orEmpty().filterNot { it.continues || it.isFolder }.map { it.app }
 
     /** Back from the channel row or the top pills returns to the selected app. True when handled. */
     fun consumesKey(event: KeyEvent): Boolean {
@@ -250,8 +262,9 @@ class IndexScreen(
         if (homeRow.consumesKey(event)) return true
         if (event.keyCode != KeyEvent.KEYCODE_BACK) return false
         val focused = activity.currentFocus ?: return false
-        val elsewhere = programs.isAncestorOf(focused) || topBar.isAncestorOf(focused) || homeRow.isAncestorOf(focused) ||
-            rail.isAncestorOf(focused) || nowPlaying.isAncestorOf(focused) || focused === spotlight.channelButton
+        val elsewhere = programs.isAncestorOf(focused) || folderGrid.isAncestorOf(focused) || topBar.isAncestorOf(focused) ||
+            homeRow.isAncestorOf(focused) || rail.isAncestorOf(focused) || nowPlaying.isAncestorOf(focused) ||
+            focused === spotlight.channelButton
         if (!elsewhere) return false
         if (event.action == KeyEvent.ACTION_UP) returnTarget()?.requestFocus()
         return true
@@ -311,12 +324,23 @@ class IndexScreen(
         // Read this.entry, not the one this row was made with: the list reuses a row across rebinds.
         setOnClickListener {
             val entry = this.entry
-            // Continue watching has no app to open: OK resumes the first program.
-            if (entry.continues) entry.programs.firstOrNull()?.launch(activity) else entry.app.launch(activity)
+            when {
+                // Continue watching has no app to open: OK resumes the first program.
+                entry.continues -> entry.programs.firstOrNull()?.launch(activity)
+                // A folder opens to its apps, which the right column is already showing.
+                entry.isFolder -> folderGrid.first()?.requestFocus()
+                else -> entry.app.launch(activity)
+            }
         }
         setOnLongClickListener {
-            // The row is Couch's own: there is no app to pin, hide or move.
-            if (!this.entry.continues) onAppMenu(this.entry.app, this)
+            val entry = this.entry
+            when {
+                // The row is Couch's own: there is no app to pin or hide.
+                entry.continues -> Unit
+                // A folder is renamed and removed, and its apps moved in and out of it.
+                entry.isFolder -> onFolderMenu(entry, this)
+                else -> onAppMenu(entry.app, this)
+            }
             true
         }
     }
@@ -325,7 +349,7 @@ class IndexScreen(
     private fun select(row: AppRow, refresh: Boolean) {
         val changed = row.entry.key != selectedKey
         selectedKey = row.entry.key
-        val inRow = programs.hasFocus() || spotlight.channelButton.hasFocus()
+        val inRow = programs.hasFocus() || spotlight.channelButton.hasFocus() || folderGrid.hasFocus()
         list.select(row, inRow)
         if (row.hasFocus()) list.reveal(list.rows().indexOf(row))
         if (changed || refresh) show(row.entry, deferStrip = changed && !refresh)
@@ -334,6 +358,11 @@ class IndexScreen(
 
     /** Fills the right column with [entry]: its channel row (or banner), the text above it, the week. */
     private fun show(entry: IndexEntry, deferStrip: Boolean) {
+        if (entry.isFolder) {
+            showFolder(entry)
+            return
+        }
+        folderGrid.visibility = GONE
         val data = data ?: return
         removeCallbacks(fillStrip)
         if (deferStrip) {
@@ -353,10 +382,31 @@ class IndexScreen(
 
     private fun showStats(entry: IndexEntry) {
         val data = data ?: return
-        // The screen time under the week belongs to apps; Continue watching has none to show.
-        stats.visibility = if (entry.continues) GONE else VISIBLE
-        if (entry.continues) return
+        // Screen time under the week belongs to apps: Continue watching and folders have none to show.
+        stats.visibility = if (entry.continues || entry.isFolder) GONE else VISIBLE
+        if (entry.continues || entry.isFolder) return
         stats.show(entry, data.usageKnown, System.currentTimeMillis(), config.clock24h)
+    }
+
+    /**
+     * The right column for a folder: its count and name above, its apps as app cards in place of
+     * the channel row. No banner and no week: a folder has no channel and no screen time of its own.
+     */
+    private fun showFolder(entry: IndexEntry) {
+        removeCallbacks(fillStrip)
+        removeCallbacks(statsLater)
+        removeCallbacks(buildMore)
+        if (stripKey != entry.stripKey) {
+            stripKey = entry.stripKey
+            programs.forget()
+        }
+        // Another app's cards must not linger under the folder's tiles.
+        programs.update(emptyList(), "") { error("no cards") }
+        spotlight.showFolder(entry.app.label, entry.folderApps.size)
+        folderGrid.show(entry.key, entry.folderApps, look)
+        folderGrid.visibility = VISIBLE
+        banner.visibility = GONE
+        stats.visibility = GONE
     }
 
     private fun fill(entry: IndexEntry) {
@@ -429,6 +479,25 @@ class IndexScreen(
         showProgram(row.entry, card.tile)
     }
 
+    /** One of a folder's apps: an app card, opened with OK and given the app's own long-press menu. */
+    private fun appCard(tile: Tile) = Card(
+        activity, tile, Tokens.APP_W, Tokens.APP_H, images,
+        showLabel = false, look = "folder|$look", onFocused = { onTileFocused() },
+        radiusDp = Tokens.CARD_RADIUS, thinRing = true,
+    ).apply {
+        isLongClickable = true
+        setOnLongClickListener {
+            onAppMenu(tile, this)
+            true
+        }
+    }
+
+    /** Focus is on one of the folder's tiles: the list keeps the folder row selected, quietened. */
+    private fun onTileFocused() {
+        val row = selectedRow() ?: return
+        list.select(row, inRow = true)
+    }
+
     private fun selectedRow() = list.rows().firstOrNull { it.entry.key == selectedKey }
 
     /** Where focus comes back to from the column, the rail or the top row: the panel's, or the selected app. */
@@ -443,11 +512,23 @@ class IndexScreen(
         if (program != null) showProgram(entry, program)
     }
 
+    /** A folder found by search: the list comes back with it selected, and focus moves into its tiles. */
+    private fun openFolder(entry: IndexEntry) {
+        closeSearch()
+        val rows = list.rows()
+        val row = rows.firstOrNull { it.entry.key == entry.key } ?: return
+        list.reveal(rows.indexOf(row))
+        // Its focus listener selects it, which fills the grid the tiles are reached from.
+        row.requestFocus()
+        folderGrid.first()?.requestFocus()
+    }
+
     override fun focusSearch(focused: View?, direction: Int): View? {
         // Where left and up lead back to: the search panel's row while it has the list's place.
         val target = returnTarget()
         val inSearch = focused != null && search.isAncestorOf(focused)
         val inStrip = focused != null && programs.isAncestorOf(focused)
+        val inTiles = focused != null && folderGrid.isAncestorOf(focused)
         val inTop = focused != null && topBar.isAncestorOf(focused)
         val inHome = focused != null && homeRow.isAncestorOf(focused)
         val inRail = focused != null && rail.isAncestorOf(focused)
@@ -456,8 +537,13 @@ class IndexScreen(
             inSearch -> when (direction) {
                 // Right from an app result reaches its channel's cards, as from the app list.
                 FOCUS_RIGHT -> search.entryOf(focused)?.let { entry ->
-                    if (stripKey != entry.stripKey) fill(entry)
-                    spotlight.channelButton.takeIf { it.isFocusable } ?: programs.cards().firstOrNull() ?: nowPlaying.entry() ?: target ?: focused
+                    if (entry.isFolder) {
+                        // The folder's tiles already have the column: Right lands on them.
+                        folderGrid.first() ?: focused
+                    } else {
+                        if (stripKey != entry.stripKey) fill(entry)
+                        spotlight.channelButton.takeIf { it.isFocusable } ?: programs.cards().firstOrNull() ?: nowPlaying.entry() ?: target ?: focused
+                    }
                 } ?: focused
                 // Clear of the results: up, down and left are the panel's own business.
                 else -> focused
@@ -469,7 +555,10 @@ class IndexScreen(
                     FOCUS_UP -> rows.getOrNull(i - 1) ?: homeRow.takeIf { homeLayout }?.entry() ?: firstTopTarget() ?: focused
                     FOCUS_DOWN -> rows.getOrNull(i + 1) ?: focused
                     FOCUS_LEFT -> toRail(focused)
-                    FOCUS_RIGHT -> {
+                    FOCUS_RIGHT -> if (focused.entry.isFolder) {
+                        // Right enters the folder's grid, which the column filled with the row.
+                        folderGrid.first() ?: focused
+                    } else {
                         // Right before the row has filled: fill it now.
                         if (stripKey != focused.entry.stripKey) fill(focused.entry)
                         // An app with no channel has no cards: what's playing is still worth reaching.
@@ -477,6 +566,12 @@ class IndexScreen(
                     }
                     else -> focused
                 }
+            }
+            inTiles -> when (val next = folderGrid.next(focused, direction)) {
+                // Left from the first column and up from the top row come back to the folder row.
+                null -> target ?: focused
+                // Down past the last row stays put; the grid's own focus change glides its rows.
+                else -> next
             }
             inStrip -> when (direction) {
                 FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else target ?: focused
@@ -571,7 +666,9 @@ class IndexScreen(
         if (moving != null) return
         val rows = list.rows()
         val row = rows.firstOrNull { it.entry.key == key } ?: return
-        if (moveGroup(key).count() < 2) return
+        // Continue watching and folders are Couch's own rows: they take no place in the saved order.
+        if (IndexEntry.isOwn(key)) return
+        if (group(key).count() < 2) return
         moving = key
         moveFrom = rows.indexOf(row)
         moveBy = 0
@@ -600,11 +697,18 @@ class IndexScreen(
         return true
     }
 
-    /** Moves the lifted row one place [by], when its group has room, and the hint follows. */
+    /**
+     * Moves the lifted row one app [by], when its group has room, and the hint follows. A folder or
+     * Continue watching row in the way is crossed in one step: it keeps its place in the list.
+     */
     private fun shift(by: Int) {
         val key = moving ?: return
-        if (moveFrom + moveBy + by !in moveGroup(key)) return
-        moveBy += by
+        val rows = list.rows()
+        val apps = rows.withIndex().filterNot { IndexEntry.isOwn(it.value.entry.key) }
+        val at = apps.indexOfFirst { it.value.entry.key == key }
+        val to = at + by
+        if (at < 0 || to !in group(key)) return
+        moveBy = apps[to].index - moveFrom
         list.shift(moveBy)
         // The row may have left the visible rows: the list glides to keep it in sight.
         list.reveal(moveFrom + moveBy)
@@ -615,20 +719,28 @@ class IndexScreen(
     /** Drops the lifted row where it is: the order is saved and the list reloads in it. */
     private fun drop() {
         val key = moving ?: return
-        // The order saves positions within a group, not within the whole list.
-        val at = moveFrom + moveBy - moveGroup(key).first
-        // Continue watching is Couch's own row: it has no place in the saved order.
-        val keys = list.rows().map { it.entry.key }.filterNot { it == IndexEntry.CONTINUE }
+        val rows = ArrayList(list.rows())
+        // The list only glides the lifted row, its column keeps it in place: read it where it now shows.
+        rows.add(moveFrom + moveBy, rows.removeAt(moveFrom))
+        val saved = Folders.drop(
+            rows.map { row ->
+                val entry = row.entry
+                when {
+                    entry.continues -> Folders.Row.Own
+                    entry.isFolder -> Folders.Row.Group(entry.folderApps.map { app -> app.key })
+                    else -> Folders.Row.App(entry.key)
+                }
+            },
+            config.pinnedApps, key,
+        )
         endMove()
-        onMoved(keys, key, at)
+        if (saved != null) onMoved(saved.order, key, saved.position)
     }
 
-    /** The rows [key] can be moved through: its group's, never above Couch's own Continue watching row. */
-    private fun moveGroup(key: String): IntRange {
-        val keys = list.rows().map { it.entry.key }
-        val group = AppOrder.group(keys, config.pinnedApps, key)
-        val first = group.firstOrNull { keys[it] != IndexEntry.CONTINUE } ?: return IntRange.EMPTY
-        return first..group.last
+    /** The apps [key] can be moved through, its own group's, in the order the list shows them. */
+    private fun group(key: String): IntRange {
+        val apps = list.rows().map { it.entry.key }.filterNot { IndexEntry.isOwn(it) }
+        return AppOrder.group(apps, config.pinnedApps, key)
     }
 
     /** Ends a lift without saving: the rows go back where they were and the hint goes away. */

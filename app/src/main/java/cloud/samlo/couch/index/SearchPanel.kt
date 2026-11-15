@@ -39,9 +39,9 @@ import cloud.samlo.couch.ui.reveal
 
 /**
  * Search in the app list's box: the field on top, then the panel's own rows (voice, the TV's
- * search), the apps whose names match, and Continue watching titles. Matching happens on the
- * labels Index already holds, so a keystroke runs no query; typing comes from the phone app or a
- * keyboard, rather than a letter grid pressed with the remote.
+ * search), the apps and folders whose names match, and Continue watching titles. Matching happens
+ * on the labels Index already holds, so a keystroke runs no query; typing comes from the phone app
+ * or a keyboard, rather than a letter grid pressed with the remote.
  *
  * It opens on the field. Down reaches the first result, up from it comes back here, and left
  * leaves for the rail from anywhere.
@@ -54,6 +54,8 @@ class SearchPanel(
     private val onLeave: (View) -> Unit,
     /** A result has focus: the right column shows its app, and its program when it has one. */
     private val onPreview: (IndexEntry, Tile?) -> Unit,
+    /** A folder result is opened: the list comes back with it selected and focus moves into its apps. */
+    private val onFolder: (IndexEntry) -> Unit,
 ) : FrameLayout(context) {
     private val field = EditText(context).apply {
         typeface = Fonts.hanken(context, 400)
@@ -301,11 +303,19 @@ class SearchPanel(
         track.animate().translationY(target).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
     }
 
-    private fun appRow(entry: IndexEntry, query: String) =
-        SearchRow(context, entry, null, highlight(entry.app.label, query), entry.usage?.let { Formats.short(context, it.weekMs) }.orEmpty()).apply {
-            setIconBitmap(entry.icon)
-            setOnClickListener { entry.app.launch(context) }
+    private fun appRow(entry: IndexEntry, query: String): SearchRow {
+        // A folder says how many apps it holds, where an app shows its screen time.
+        val meta = if (entry.isFolder) {
+            context.resources.getQuantityString(R.plurals.folder_apps, entry.folderApps.size, entry.folderApps.size)
+        } else {
+            entry.usage?.let { Formats.short(context, it.weekMs) }.orEmpty()
         }
+        return SearchRow(context, entry, null, highlight(entry.app.label, query), meta).apply {
+            setIconBitmap(entry.icon)
+            // A folder opens to its apps rather than launching one: it has no app of its own.
+            setOnClickListener { if (entry.isFolder) onFolder(entry) else entry.app.launch(context) }
+        }
+    }
 
     private fun continueRow(program: Tile, query: String): SearchRow {
         val app = program.packageName?.let { AppLabels.of(context, it) }.orEmpty()

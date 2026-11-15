@@ -54,6 +54,7 @@ features:
 
 - Your apps ordered by screen time, beside what the selected one offers: its preview channel,
   the program's title and synopsis, and your week with it.
+- Folders: group apps into one row with a 2×2 icon, and open it to their tiles beside it.
 - An Inputs list with brand logos (PlayStation, Xbox, Nintendo Switch, Apple TV…).
 - Wallpaper: Bing photo of the day, the best images of a subreddit, a gradient, or your own.
 - Weather (Open-Meteo, located automatically or by city), now playing.

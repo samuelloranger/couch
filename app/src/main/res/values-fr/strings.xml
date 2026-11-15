@@ -67,6 +67,25 @@
     <string name="menu_app_info">Infos sur l’appli</string>
     <string name="menu_open_app">Ouvrir %1$s</string>
 
+    <!-- Folders in the app list -->
+    <string name="menu_add_to_folder">Ajouter à un dossier</string>
+    <string name="menu_remove_from_folder">Retirer du dossier</string>
+    <string name="menu_new_folder">Nouveau dossier</string>
+    <string name="menu_remove_folder">Retirer le dossier</string>
+    <string name="folder_default_name">Dossier</string>
+    <string name="folder_name_hint">Nom du dossier</string>
+    <string name="folder_spotlight_help">Appuie sur Droite pour choisir une appli. Maintiens OK sur le dossier pour le renommer ou le retirer.</string>
+    <plurals name="folder_apps">
+        <item quantity="one">%1$d appli</item>
+        <item quantity="many">%1$d applis</item>
+        <item quantity="other">%1$d applis</item>
+    </plurals>
+    <plurals name="folder_spotlight">
+        <item quantity="one">Dossier · %1$d appli</item>
+        <item quantity="many">Dossier · %1$d applis</item>
+        <item quantity="other">Dossier · %1$d applis</item>
+    </plurals>
+
     <!-- Icon picker -->
     <string name="picker_title">Icône pour %1$s</string>
     <string name="picker_hint">Choisis une carte. Automatique devine à partir du nom de l’entrée.</string>
