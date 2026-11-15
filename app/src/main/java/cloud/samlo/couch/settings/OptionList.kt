@@ -134,14 +134,14 @@ class OptionList(
         return row
     }
 
-    /** OK opens a text field; [placeholder] is what an empty value shows and what the field hints. */
+    /** OK opens a text field beside the row; [placeholder] is what an empty value shows and what the field hints. */
     fun text(title: String, help: String, placeholder: String, valueOf: () -> String, set: (String) -> Unit) {
         val row = add(title, help, valueOf)
         row.value.background = underline(activity)
         row.value.setPadding(0, 0, 0, activity.dp(3))
         row.setOnClickListener {
             val current = valueOf().let { if (it == placeholder) "" else it.removePrefix("r/") }
-            Dialogs.text(activity, title, current, placeholder) {
+            Dialogs.text(activity, row, current, placeholder) {
                 set(it)
                 save(row)
             }

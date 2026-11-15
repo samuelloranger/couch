@@ -55,7 +55,7 @@ class InputsPage(private val ctx: SettingsContext) : SettingsPage {
 
     private fun rename(input: Tile, row: OptionRow) {
         val config = ctx.config
-        Dialogs.text(ctx.activity, ctx.str(R.string.menu_rename), config.names[input.key] ?: input.label, input.label) { name ->
+        Dialogs.text(ctx.activity, row, config.names[input.key] ?: input.label, input.label) { name ->
             config.names = if (name.isEmpty()) config.names - input.key else config.names + (input.key to name)
             ctx.options.save(row)
             ctx.activity.recreate()

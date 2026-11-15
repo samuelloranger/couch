@@ -103,6 +103,8 @@
 
         <activity
             android:name=".settings.WallpaperGalleryActivity"
+            android:enableOnBackInvokedCallback="false"
+            tools:targetApi="33"
             android:excludeFromRecents="true"
             android:exported="false"
             android:screenOrientation="landscape" />

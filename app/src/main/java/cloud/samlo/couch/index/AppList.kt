@@ -41,6 +41,11 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
     private var rowsShown = IndexTokens.ROWS_SHOWN
     /** In-row state and accent as last painted; repainting only on a change keeps a key press from redrawing it. */
     private var painted: Pair<Boolean, Int>? = null
+    /** The row lifted for a manual move, and where it sits in the column. */
+    private var lifted: AppRow? = null
+    private var liftedIndex = -1
+    /** The row wearing the selection, which a lift's frame follows. */
+    private var chosen: AppRow? = null
 
     init {
         clipChildren = true
@@ -93,12 +98,78 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
     /** Makes [row] the selected one; [inRow] while focus is in its channel row, which quietens it. */
     fun select(row: AppRow, inRow: Boolean) {
         rows().forEach { it.chosen = it === row }
+        chosen = row
         if (painted != inRow to Tokens.accent) {
             painted = inRow to Tokens.accent
             fill.setColor(if (inRow) SELECTED_QUIET else SELECTED)
             marker.setColor(if (inRow) IndexTokens.markerIdle else Tokens.accent)
         }
-        val target = (column.indexOfChild(row) * context.dp(IndexTokens.LIST_ROW_PITCH)).toFloat()
+        place(column.indexOfChild(row), animate = true)
+    }
+
+    /**
+     * Lifts [row] out of the list for a manual move: an accent outline, a shadow, and a step to the
+     * right. The row keeps its place in the column; [shift] shows it elsewhere without moving it.
+     */
+    fun lift(row: AppRow) {
+        lifted = row
+        liftedIndex = column.indexOfChild(row)
+        row.lifted = true
+        row.elevation = context.dpf(LIFT_Z)
+        // The step right would leave the list, which clips its rows: the row gives up as much width.
+        (row.layoutParams as? LinearLayout.LayoutParams)?.let {
+            it.marginEnd = context.dp(LIFT_X)
+            row.requestLayout()
+        }
+        row.animate().translationX(context.dp(LIFT_X).toFloat()).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
+    }
+
+    /**
+     * Shows the lifted row [offset] places from where it started: it and the rows it passes glide
+     * one pitch, so the list reads in its new order before anything is saved.
+     */
+    fun shift(offset: Int, animate: Boolean = true) {
+        val row = lifted ?: return
+        val pitch = context.dp(IndexTokens.LIST_ROW_PITCH).toFloat()
+        rows().forEachIndexed { i, other ->
+            val target = when {
+                other === row -> offset * pitch
+                offset > 0 && i in (liftedIndex + 1)..(liftedIndex + offset) -> -pitch
+                offset < 0 && i in (liftedIndex + offset) until liftedIndex -> pitch
+                else -> 0f
+            }
+            other.animate().cancel()
+            if (animate) other.animate().translationY(target).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
+            else other.translationY = target
+        }
+        place(liftedIndex + offset, animate)
+    }
+
+    /** Puts the lifted row back in line: the list shows its saved order again. */
+    fun endLift() {
+        val row = lifted ?: return
+        row.lifted = false
+        row.elevation = 0f
+        (row.layoutParams as? LinearLayout.LayoutParams)?.let {
+            it.marginEnd = 0
+            row.requestLayout()
+        }
+        row.animate().cancel()
+        row.translationX = 0f
+        rows().forEach {
+            it.animate().cancel()
+            it.translationY = 0f
+        }
+        lifted = null
+        liftedIndex = -1
+        // The selection frame goes back to the chosen row, which never moved.
+        chosen?.let { place(column.indexOfChild(it), animate = false) }
+    }
+
+    /** Glides the selection frame to row [index], or drops it there when [animate] is false. */
+    private fun place(index: Int, animate: Boolean) {
+        if (index < 0) return
+        val target = (index * context.dp(IndexTokens.LIST_ROW_PITCH)).toFloat()
         if (selection.visibility != VISIBLE) {
             selectionY = target
             selection.translationY = target
@@ -107,6 +178,11 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         }
         if (target == selectionY) return
         selectionY = target
+        selection.animate().cancel()
+        if (!animate) {
+            selection.translationY = target
+            return
+        }
         selection.animate().translationY(target).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
     }
 
@@ -130,5 +206,8 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         /** White at 6%, and a little less while focus is in the channel row. */
         const val SELECTED = 0x0FFFFFFF
         const val SELECTED_QUIET = 0x0AFFFFFF
+        /** How far a lifted row steps to the right, and how high it floats. */
+        const val LIFT_X = 6
+        const val LIFT_Z = 8f
     }
 }

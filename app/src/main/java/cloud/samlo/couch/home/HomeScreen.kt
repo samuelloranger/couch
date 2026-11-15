@@ -10,6 +10,7 @@ import android.widget.Toast
 import cloud.samlo.couch.HomeAccessibilityService
 import cloud.samlo.couch.MediaListener
 import cloud.samlo.couch.R
+import cloud.samlo.couch.data.AppOrder
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Fetcher
 import cloud.samlo.couch.data.Images
@@ -49,6 +50,11 @@ class HomeScreen(private val activity: Activity) {
             config.save(files.dir)
             load()
         },
+        onMoved = { visible, key, index ->
+            AppOrder.move(config, visible, key, index)
+            config.save(files.dir)
+            load()
+        },
     )
     private val installer = Installer(activity, fetcher)
     private var update: Release? = null
@@ -63,7 +69,10 @@ class HomeScreen(private val activity: Activity) {
         if (resumed) if (shown) stopLive() else startLive()
     }
         .also { it.minutes = config.ambientMinutes }
-    private val menus: CardMenus = CardMenus(activity, { config }, files, { views.index.appTiles() }) { load() }
+    private val menus: CardMenus = CardMenus(
+        activity, { config }, files, { views.index.appTiles() },
+        onMove = { views.index.startMove(it.key) },
+    ) { load() }
     private val loader = HomeLoader(
         activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded, ::onExtras,
     )

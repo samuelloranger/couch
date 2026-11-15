@@ -1,7 +1,6 @@
 package cloud.samlo.couch.home
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.app.usage.StorageStatsManager
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -36,6 +35,8 @@ class CardMenus(
     private val config: () -> Config,
     private val files: UserFiles,
     private val apps: () -> List<Tile>,
+    /** Lifts the app out of the Index list so up and down move it: the dialog-free Move. */
+    private val onMove: (Tile) -> Unit,
     private val reload: () -> Unit,
 ) {
     /** The open menu, so a second long-press replaces it instead of stacking windows. */
@@ -44,7 +45,7 @@ class CardMenus(
     fun show(card: Card) = show(card.tile, card)
 
     fun show(tile: Tile, anchor: View) {
-        val items = itemsFor(tile) ?: return
+        val items = itemsFor(tile, anchor) ?: return
         popover?.dismiss()
         popover = Popover(activity, anchor, items).apply {
             setOnDismissListener { if (popover === this) popover = null }
@@ -57,8 +58,9 @@ class CardMenus(
         popover?.dismiss()
     }
 
-    private fun itemsFor(tile: Tile): List<Popover.Item>? = when (tile.kind) {
-        Tile.Kind.APP -> appItems(tile)
+    /** [anchor] is the view the menu points at: a field opens beside it, not over the screen. */
+    private fun itemsFor(tile: Tile, anchor: View): List<Popover.Item>? = when (tile.kind) {
+        Tile.Kind.APP -> appItems(tile, anchor)
         Tile.Kind.INPUT -> null
         Tile.Kind.PROGRAM -> tile.packageName?.let { pkg ->
             val app = AppLabels.of(activity, pkg) ?: pkg
@@ -69,7 +71,7 @@ class CardMenus(
         }
     }
 
-    private fun appItems(tile: Tile): List<Popover.Item> {
+    private fun appItems(tile: Tile, anchor: View): List<Popover.Item> {
         val pkg = tile.packageName
         val pinned = tile.key in config().pinnedApps
         val adb = adbEnabled()
@@ -79,9 +81,9 @@ class CardMenus(
             activity.getString(if (pinned) R.string.menu_unpin else R.string.menu_pin),
         ) { pin(tile) }
         if (apps().count { (it.key in config().pinnedApps) == pinned } > 1) {
-            items += Popover.Item(R.drawable.ic_menu_move, activity.getString(R.string.menu_move)) { move(tile) }
+            items += Popover.Item(R.drawable.ic_menu_move, activity.getString(R.string.menu_move)) { onMove(tile) }
         }
-        items += Popover.Item(R.drawable.ic_menu_rename, activity.getString(R.string.menu_rename)) { rename(tile) }
+        items += Popover.Item(R.drawable.ic_menu_rename, activity.getString(R.string.menu_rename)) { rename(tile, anchor) }
         items += Popover.Item(R.drawable.ic_menu_hide, activity.getString(R.string.menu_hide)) { hide(tile) }
         // Force stop and a cache wipe go through the TV's own adbd, so they need debugging on.
         if (adb && pkg != null) {
@@ -112,27 +114,9 @@ class CardMenus(
         reload()
     }
 
-    private fun move(tile: Tile) {
+    private fun rename(tile: Tile, anchor: View) {
         val config = config()
-        val visible = apps()
-        val pinned = tile.key in config.pinnedApps
-        val group = visible.filter { (it.key in config.pinnedApps) == pinned }
-        if (group.size < 2) return
-        AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Dialog_Alert)
-            .setTitle(activity.getString(R.string.move_app_title, tile.label))
-            .setSingleChoiceItems(group.mapIndexed { i, app -> "${i + 1}. ${app.label}" }.toTypedArray(), group.indexOfFirst { it.key == tile.key }) { dialog, which ->
-                AppOrder.move(config, visible.map { it.key }, tile.key, which)
-                config.save(files.dir)
-                dialog.dismiss()
-                reload()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
-    }
-
-    private fun rename(tile: Tile) {
-        val config = config()
-        Dialogs.text(activity, activity.getString(R.string.menu_rename), config.names[tile.key] ?: tile.label, tile.label) { name ->
+        Dialogs.text(activity, anchor, config.names[tile.key] ?: tile.label, tile.label) { name ->
             config.names = if (name.isEmpty()) config.names - tile.key else config.names + (tile.key to name)
             config.save(files.dir)
             reload()

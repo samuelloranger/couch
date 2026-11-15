@@ -46,6 +46,14 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
             restyle()
         }
 
+    /** Outlined in the accent while a manual move has it off the list, under the remote's thumb. */
+    var lifted = false
+        set(value) {
+            if (field == value) return
+            field = value
+            background = if (value) liftedOutline(context) else null
+        }
+
     init {
         isFocusable = true
         isClickable = true
@@ -80,3 +88,12 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
         const val ICON_RADIUS = 5f
     }
 }
+
+/** The thin accent outline a lifted row wears while a manual move carries it. */
+private fun liftedOutline(context: Context) = GradientDrawable().apply {
+    cornerRadius = context.dpf(LIFTED_RADIUS)
+    setStroke(context.dpf(LIFTED_STROKE).toInt(), Tokens.accent)
+}
+
+private const val LIFTED_RADIUS = 6f
+private const val LIFTED_STROKE = 1.5f
