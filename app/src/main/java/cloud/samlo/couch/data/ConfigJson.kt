@@ -14,11 +14,13 @@ internal object ConfigJson {
         .put("hiddenInputs", JSONArray(c.hiddenInputs.sorted()))
         .put("names", JSONObject(c.names))
         .put("inputIcons", JSONObject(c.inputIcons))
+        .put("folders", foldersJson(c.folders))
         .put("channels", JSONObject(c.channels))
         .put("preferredChannels", JSONObject(c.preferredChannels))
         .put("accent", c.accent)
         .put("wallpaper", c.wallpaper)
         .put("clock24h", c.clock24h)
+        .put("continueWatching", c.continueWatching)
         .put("subreddit", c.subreddit)
         .put("wallpaperHours", c.wallpaperHours)
         .put("weather", c.weather)
@@ -47,12 +49,14 @@ internal object ConfigJson {
         json.strings("hiddenInputs")?.let { hiddenInputs = it.toSet() }
         names = json.stringMap("names")
         inputIcons = json.stringMap("inputIcons")
+        json.folders("folders")?.let { folders = it }
         preferredChannels = json.stringMap("preferredChannels")
         channels = json.optJSONObject("channels")?.let { o -> o.keys().asSequence().associateWith { o.optBoolean(it) } }
             ?: emptyMap()
         accent = Accents.migrate(json.optString("accent", accent))
         wallpaper = json.optString("wallpaper", wallpaper)
         clock24h = json.optBoolean("clock24h", clock24h)
+        continueWatching = json.optBoolean("continueWatching", continueWatching)
         subreddit = json.optString("subreddit", subreddit)
         wallpaperHours = json.optInt("wallpaperHours", wallpaperHours)
         weather = json.optBoolean("weather", weather)
@@ -88,5 +92,25 @@ internal object ConfigJson {
     private fun JSONObject.stringMap(name: String): Map<String, String> {
         val o = optJSONObject(name) ?: return emptyMap()
         return o.keys().asSequence().associateWith { o.getString(it) }
+    }
+
+    private fun foldersJson(folders: List<Folder>) = JSONArray(
+        folders.map { folder ->
+            JSONObject().put("id", folder.id).put("name", folder.name).put("apps", JSONArray(folder.apps))
+        },
+    )
+
+    /** `[{id, name, apps}]`; an entry missing one of the three is skipped, and so is a broken app key. */
+    private fun JSONObject.folders(name: String): List<Folder>? {
+        val array = optJSONArray(name) ?: return null
+        val out = ArrayList<Folder>(array.length())
+        for (i in 0 until array.length()) {
+            val entry = array.optJSONObject(i) ?: continue
+            val id = entry.optString("id").takeIf { it.isNotEmpty() } ?: continue
+            val label = entry.optString("name").takeIf { it.isNotEmpty() } ?: continue
+            val apps = entry.optJSONArray("apps") ?: continue
+            out += Folder(id, label, (0 until apps.length()).mapNotNull { apps.optString(it).takeIf(String::isNotEmpty) })
+        }
+        return Folders.clean(out)
     }
 }

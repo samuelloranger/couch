@@ -17,19 +17,30 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
 /**
- * The strip down the left edge: Home (this screen, marked with an accent bar, not an action),
- * Inputs, and Settings alone at the bottom. Items stand at fixed positions; focus only repaints
- * their colours, so a move never triggers a layout pass.
+ * The strip down the left edge: Search, Home (this screen, marked with an accent bar, not an
+ * action), Inputs, and Settings alone at the bottom. Items stand at fixed positions; focus only
+ * repaints their colours, so a move never triggers a layout pass.
+ *
+ * While Search takes the app list's place the bar stands on Search instead, and Home becomes an
+ * action that closes it.
  */
 @SuppressLint("ViewConstructor")
-class IndexRail(context: Context, onInputs: () -> Unit, onSettings: () -> Unit) : FrameLayout(context) {
-    private val home = item(R.drawable.ic_rail_home, R.string.index_home, IndexTokens.RAIL_HOME_Y, null)
-    val inputs = item(R.drawable.ic_pill_inputs, R.string.section_inputs, IndexTokens.RAIL_INPUTS_Y, onInputs)
-    val settings = item(R.drawable.ic_pill_settings, R.string.settings, IndexTokens.RAIL_SETTINGS_Y, onSettings)
+class IndexRail(
+    context: Context,
+    onSearch: () -> Unit,
+    onInputs: () -> Unit,
+    onSettings: () -> Unit,
+    onHome: () -> Unit,
+) : FrameLayout(context) {
+    val search = item(R.drawable.ic_rail_search, R.string.search, IndexTokens.RAIL_SEARCH_Y, active = false, onClick = onSearch)
+    private val home = item(R.drawable.ic_rail_home, R.string.index_home, IndexTokens.RAIL_HOME_Y, active = true, onClick = onHome)
+    val inputs = item(R.drawable.ic_pill_inputs, R.string.section_inputs, IndexTokens.RAIL_INPUTS_Y, active = false, onClick = onInputs)
+    val settings = item(R.drawable.ic_pill_settings, R.string.settings, IndexTokens.RAIL_SETTINGS_Y, active = false, onClick = onSettings)
     private val bar = FlatView(context).apply {
         background = GradientDrawable().apply { cornerRadius = context.dpf(1f) }
     }
     private var barColor = 0
+    private var searching = false
 
     init {
         background = GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT, intArrayOf(0x09FFFFFF, 0x04FFFFFF))
@@ -37,7 +48,7 @@ class IndexRail(context: Context, onInputs: () -> Unit, onSettings: () -> Unit) 
             LayoutParams(context.dp(1), LayoutParams.MATCH_PARENT, Gravity.END))
         val barTop = IndexTokens.RAIL_HOME_Y + (IndexTokens.RAIL_ITEM_H - IndexTokens.RAIL_BAR_H) / 2
         addView(bar, LayoutParams(context.dp(IndexTokens.RAIL_BAR_W), context.dp(IndexTokens.RAIL_BAR_H)).apply { topMargin = context.dp(barTop) })
-        listOf(home, inputs, settings).forEach { addView(it) }
+        listOf(search, home, inputs, settings).forEach { addView(it) }
         paintBar()
     }
 
@@ -48,26 +59,39 @@ class IndexRail(context: Context, onInputs: () -> Unit, onSettings: () -> Unit) 
         (bar.background as GradientDrawable).setColor(barColor)
     }
 
+    /** Search has the list's place: the bar glides up to it, and Home turns into OK-to-close. */
+    fun setSearch(open: Boolean) {
+        if (open == searching) return
+        searching = open
+        home.isFocusable = open
+        home.isClickable = open
+        val up = -context.dpf((IndexTokens.RAIL_HOME_Y - IndexTokens.RAIL_SEARCH_Y).toFloat())
+        bar.animate().cancel()
+        bar.animate().translationY(if (open) up else 0f).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
+    }
+
     /** Hidden when the TV has no inputs to switch to. */
     fun setHasInputs(has: Boolean, animate: Boolean) {
         inputs.appear(has, animate)
     }
 
     /** The focusable item whose middle is closest to [y] (screen pixels): where ← from a row lands. */
-    fun nearest(y: Int): View? = listOf(inputs, settings).filter { it.visibility == VISIBLE }.minByOrNull {
+    fun nearest(y: Int): View? = focusable().minByOrNull {
         val at = IntArray(2).also { a -> it.getLocationOnScreen(a) }
         kotlin.math.abs(at[1] + it.height / 2 - y)
     }
 
     /** The next item up or down from [from], or null at the end. */
     fun neighbour(from: View, down: Boolean): View? {
-        val items = listOf(inputs, settings).filter { it.visibility == VISIBLE }
+        val items = focusable()
         val i = items.indexOf(from)
         return items.getOrNull(if (down) i + 1 else i - 1)
     }
 
-    private fun item(icon: Int, label: Int, y: Int, onClick: (() -> Unit)?): LinearLayout {
-        val active = onClick == null
+    /** The items the remote reaches, top to bottom: Home joins them only while it closes Search. */
+    private fun focusable() = listOf(search, home, inputs, settings).filter { it.visibility == VISIBLE && it.isFocusable }
+
+    private fun item(icon: Int, label: Int, y: Int, active: Boolean, onClick: () -> Unit): LinearLayout {
         val color = if (active) IndexTokens.railActive else IndexTokens.railIdle
         val glyph = ImageView(context).apply { setImageResource(icon); setColorFilter(color) }
         val text = IndexText(context, 7.5f, 500, color).apply {
@@ -85,19 +109,18 @@ class IndexRail(context: Context, onInputs: () -> Unit, onSettings: () -> Unit) 
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             contentDescription = context.getString(label)
-            if (onClick != null) {
-                isFocusable = true
-                isClickable = true
-                setOnClickListener { onClick() }
-                background = StateListDrawable().apply {
-                    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                        cornerRadius = context.dpf(8f)
-                        setColor(0x1AFFFFFF)
-                        setStroke(context.dp(2), RING)
-                    })
-                    addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-                }
+            setOnClickListener { onClick() }
+            background = StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
+                    cornerRadius = context.dpf(8f)
+                    setColor(0x1AFFFFFF)
+                    setStroke(context.dp(2), RING)
+                })
+                addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
             }
+            // Home marks the screen: it takes focus only while Search is open.
+            isFocusable = !active
+            isClickable = !active
             addView(glyph, LayoutParams(context.dp(IndexTokens.RAIL_ICON), context.dp(IndexTokens.RAIL_ICON)))
             addView(text, text.stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT), top = context.dp(4)))
             layoutParams = FrameLayout.LayoutParams(context.dp(IndexTokens.RAIL_ITEM_W), context.dp(IndexTokens.RAIL_ITEM_H)).apply {

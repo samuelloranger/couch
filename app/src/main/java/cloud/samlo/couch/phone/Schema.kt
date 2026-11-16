@@ -48,6 +48,7 @@ object Schema {
                     "appSort", s(R.string.app_sort), s(R.string.app_sort_help), "choice",
                     listOf(Option("usage", s(R.string.sort_usage)), Option("manual", s(R.string.sort_manual)), Option("alphabetical", s(R.string.sort_alphabetical))),
                 ),
+                Row("continueWatching", s(R.string.continue_watching), s(R.string.continue_watching_help), "toggle"),
             ),
         )
         val clock = Group(

@@ -2,6 +2,7 @@ package cloud.samlo.couch
 
 import cloud.samlo.couch.data.Accents
 import cloud.samlo.couch.data.Config
+import cloud.samlo.couch.data.Folder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -50,6 +51,26 @@ class ConfigTest {
         assertEquals("ps5", copy.inputIcons["hdmi4"])
         assertEquals("Montréal", copy.weatherCity)
         assertFalse(copy.clock24h)
+    }
+
+    @Test
+    fun foldersRoundTripAndBrokenEntriesAreSkipped() {
+        val config = Config().apply { folders = listOf(Folder("1a2b3c4d", "Kids", listOf("a.b", "c.d"))) }
+        val copy = Config.fromJson(config.toJson())
+        assertEquals(config.toJson(), copy.toJson())
+        assertEquals("Kids", copy.folders.single().name)
+        assertEquals(listOf("a.b", "c.d"), copy.folders.single().apps)
+
+        val partial = Config.fromJson(
+            """{"folders":[{"id":"1","name":"Kids","apps":["a"]},{"name":"No id","apps":["b"]},""" +
+                """{"id":"2","apps":["c"]},{"id":"3","name":"No apps"},"junk",""" +
+                """{"id":"4","name":"Later","apps":["a","c"]}]}""",
+        )
+        assertEquals(listOf("Kids", "Later"), partial.folders.map { it.name })
+        // Each app stays in the first folder that lists it.
+        assertEquals(listOf("a"), partial.folders[0].apps)
+        assertEquals(listOf("c"), partial.folders[1].apps)
+        assertEquals(emptyList<Folder>(), Config.fromJson("""{"folders":"nope"}""").folders)
     }
 
     @Test

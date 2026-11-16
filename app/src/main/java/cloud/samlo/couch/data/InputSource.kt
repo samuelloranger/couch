@@ -2,6 +2,7 @@ package cloud.samlo.couch.data
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.media.tv.TvContract
@@ -16,7 +17,25 @@ import java.util.Locale
 /** Stable key for a name: lowercase letters and digits only, so "HDMI 4" is `hdmi4`. */
 fun slug(text: String) = text.lowercase(Locale.ROOT).filter { it in 'a'..'z' || it in '0'..'9' }
 
-/** The Inputs row: the TV's passthrough inputs (HDMI and others). Empty without live-TV support. */
+/**
+ * Where an input sorts in the Inputs row: the HDMI ports first, then the other passthrough ports
+ * (composite, component…), then the TV's own tuner. [passthrough] is [TvInputInfo.isPassthroughInput].
+ */
+fun inputRank(type: Int, passthrough: Boolean): Int = when {
+    type == TvInputInfo.TYPE_HDMI -> 0
+    passthrough -> 1
+    else -> 2
+}
+
+/** The Inputs row's order: by [inputRank] group, then by name. [rank] may be read off [inputRank]. */
+fun <T> inputOrder(rank: (T) -> Int, name: (T) -> String): Comparator<T> = compareBy(rank, name)
+
+/** The TV's own tuner. Streaming apps (Pluto TV, Haystack…) register their own tuners of this type. */
+fun isBuiltInTuner(info: TvInputInfo): Boolean =
+    info.type == TvInputInfo.TYPE_TUNER &&
+        (info.serviceInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+
+/** The Inputs row: the TV's passthrough inputs (HDMI and others), then its tuner. Empty without live-TV support. */
 object InputSource {
     fun tiles(
         context: Context,
@@ -31,9 +50,10 @@ object InputSource {
         // CEC devices show up as children of their port and often carry the device's real name.
         val children = all.filter { it.parentId != null }.groupBy { it.parentId }
         return all
-            .filter { it.isPassthroughInput && it.parentId == null && !it.isHidden(context) }
+            // A tuner is not a passthrough port but is still something to watch, so it belongs in the row.
+            .filter { (it.isPassthroughInput || isBuiltInTuner(it)) && it.parentId == null && !it.isHidden(context) }
             .map { info -> info to info.loadLabel(context).toString() }
-            .sortedWith(compareBy({ it.first.type != TvInputInfo.TYPE_HDMI }, { it.second }))
+            .sortedWith(inputOrder({ inputRank(it.first.type, it.first.isPassthroughInput) }, { it.second }))
             .mapNotNull { (info, systemLabel) ->
                 val key = slug(systemLabel).ifEmpty { slug(info.id.substringAfterLast('/')) }
                 if (key in config.hiddenInputs) return@mapNotNull null
@@ -63,11 +83,14 @@ object InputSource {
         w: Int,
         h: Int,
     ): Tile {
+        val tuner = info.type == TvInputInfo.TYPE_TUNER
         val custom = info.loadCustomLabel(context)?.toString()?.trim()
             ?.takeIf { it.isNotEmpty() && it != systemLabel }
         val deviceName = device?.let { (it.loadCustomLabel(context) ?: it.loadLabel(context))?.toString()?.trim() }
             ?.takeIf { it.isNotEmpty() }
-        val name = config.names[key] ?: custom ?: deviceName ?: systemLabel
+        // A tuner's system label is often its input id, which says nothing: "Live TV" does.
+        val fallback = if (tuner) context.getString(R.string.input_live_tv) else systemLabel
+        val name = config.names[key] ?: custom ?: deviceName ?: fallback
         val disconnected = manager.getInputState(info.id) == TvInputManager.INPUT_STATE_DISCONNECTED
         val disconnectedLabel = context.getString(R.string.input_disconnected)
         val icon = InputIcon.resolve(config.inputIcons[key], name)
@@ -77,17 +100,28 @@ object InputSource {
             label = name,
             subtitle = when {
                 disconnected -> disconnectedLabel
+                // A tuner has no port number: it watches the antenna.
+                tuner -> context.getString(R.string.input_antenna)
                 name != systemLabel -> systemLabel
                 else -> null
             },
             banner = Banners.memoized("input|$key|$w|${Banners.mtime(iconsDir, key)}") { Banners.custom(iconsDir, key, w, h, context) },
-            iconRes = if (info.type != TvInputInfo.TYPE_HDMI && config.inputIcons[key] == null) R.drawable.ic_input else icon.res,
+            iconRes = when {
+                config.inputIcons[key] != null -> icon.res
+                tuner -> R.drawable.ic_antenna
+                info.type != TvInputInfo.TYPE_HDMI -> R.drawable.ic_input
+                else -> icon.res
+            },
             cardColor = icon.color?.let { Color.parseColor(it) },
             iconWide = icon.wide,
             dimmed = disconnected,
             inputId = info.id,
-            intent = Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(info.id))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            // The TV app tunes a tuner itself, so it opens on the channel it was last on.
+            intent = (if (tuner) {
+                Intent(Intent.ACTION_VIEW, TvContract.buildChannelsUriForInput(info.id))
+            } else {
+                Intent(Intent.ACTION_VIEW, TvContract.buildChannelUriForPassthroughInput(info.id))
+            }).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }
 }

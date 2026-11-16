@@ -8,14 +8,15 @@ import android.graphics.Color
  * never trigger a layout pass.
  */
 object IndexTokens {
-    // The rail: Home, Inputs and Settings, a strip down the left edge.
+    // The rail: Search, Home, Inputs and Settings, a strip down the left edge.
     const val RAIL_W = 60
     const val RAIL_ITEM_W = 48
     const val RAIL_ITEM_H = 48
     const val RAIL_ICON = 17
-    /** Home marks the current screen; Inputs sits one item below it. */
-    const val RAIL_HOME_Y = 75
-    const val RAIL_INPUTS_Y = 131
+    /** Search takes the list's place; Home marks the current screen, Inputs sits one item below it. */
+    const val RAIL_SEARCH_Y = 75
+    const val RAIL_HOME_Y = 131
+    const val RAIL_INPUTS_Y = 187
     const val RAIL_SETTINGS_Y = 450
     const val RAIL_BAR_W = 2
     const val RAIL_BAR_H = 18
@@ -56,9 +57,14 @@ object IndexTokens {
     const val CARD_GAP = 10
     const val CARD_RADIUS = 6f
     const val STATS_Y = 345
+    /** The Now Playing dock at the foot of the right column, in the space the week leaves. */
+    const val DOCK_Y = 420
+    const val DOCK_H = 52
     const val FOOTER_Y = 505
 
     val hours = Color.parseColor("#5E6865")
+    /** The 2x2 icon of a folder row: a shade darker than an app's own icon square. */
+    val folderIcon = Color.parseColor("#2A3330")
     val railIdle = Color.parseColor("#7D8784")
     val railActive = Color.parseColor("#F4F6F5")
     val barOff = Color.parseColor("#2C3532")

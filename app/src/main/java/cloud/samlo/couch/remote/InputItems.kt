@@ -44,7 +44,9 @@ object InputItems {
             device(context, home, id, label, section)
         }
         return Loaded(
-            devices + data.inputs.map { PanelItem.of(it, inputs, null) } + data.entries.map { PanelItem.of(it.app, apps, it.icon) },
+            // Couch's own rows (Continue watching, folders) stand for no app to open here.
+            devices + data.inputs.map { PanelItem.of(it, inputs, null) } +
+                data.entries.filterNot { it.continues || it.isFolder }.map { PanelItem.of(it.app, apps, it.icon) },
             url, ids,
         )
     }

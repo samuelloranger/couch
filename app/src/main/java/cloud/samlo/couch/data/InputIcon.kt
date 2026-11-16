@@ -43,6 +43,7 @@ enum class InputIcon(
     SOUND("sound", R.string.icon_sound, R.drawable.ic_speaker, match = Regex("barre|soundbar|son\\b|ampli|receiver")),
     CAMERA("camera", R.string.icon_camera, R.drawable.ic_camera, match = Regex("caméra|camera|webcam")),
     HDMI("hdmi", R.string.icon_hdmi, R.drawable.ic_hdmi),
+    ANTENNA("antenna", R.string.icon_antenna, R.drawable.ic_antenna, match = Regex("live ?tv|télé en direct|antenne|antenna|tuner")),
     ;
 
     companion object {

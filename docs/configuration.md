@@ -174,6 +174,7 @@ setting changes, so edit it while the home screen is in the background.
 | `hiddenApps` | string[] | vendor extras | Hidden apps (package names). |
 | `hiddenInputs` | string[] | `[]` | Hidden inputs (keys like `hdmi3`). |
 | `names` | object | `{}` | Custom names, by app package or input key. |
+| `folders` | object[] | `[]` | Groups of apps shown as one row: `{"id", "name", "apps"}`. An app is in at most one folder; a hidden or uninstalled member leaves it. |
 | `inputIcons` | object | `{}` | Input key → icon id (`ps5`, `xbox`, `switch2`, `server`…). |
 | `channels` | object | `{}` | Channel id → shown or not. Channels without a saved choice are shown. |
 | `preferredChannels` | object | `{}` | App package → chosen channel id (string). Falls back to the first available channel. |

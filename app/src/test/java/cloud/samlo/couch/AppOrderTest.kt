@@ -59,6 +59,15 @@ class AppOrderTest {
     }
 
     @Test
+    fun aMoveStaysInsideItsOwnGroup() {
+        val pinned = listOf("c", "a")
+        val visible = listOf("c", "a", "b", "d")
+        assertEquals(0..1, AppOrder.group(visible, pinned, "a"))
+        assertEquals(2..3, AppOrder.group(visible, pinned, "d"))
+        assertEquals(IntRange.EMPTY, AppOrder.group(visible, pinned, "gone"))
+    }
+
+    @Test
     fun savedSettingsRoundTripAndUnknownSortsFallBack() {
         val original = Config().apply {
             appSort = "manual"

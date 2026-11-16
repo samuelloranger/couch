@@ -20,6 +20,8 @@ class Config {
     var names: Map<String, String> = emptyMap()
     /** Input key to an [InputIcon] id. */
     var inputIcons: Map<String, String> = emptyMap()
+    /** Groups of apps, each shown as one row; an app belongs to at most one. */
+    var folders: List<Folder> = emptyList()
 
     // Channels
     /** Channel id to shown or not; channels without a choice are shown. */
@@ -31,6 +33,8 @@ class Config {
     var accent: String = Accents.default
     var wallpaper: String = "daily"
     var clock24h = true
+    /** Show the programs apps publish as Watch Next, as the Index's first row. */
+    var continueWatching = true
 
     // Wallpaper: "daily" (Bing photo of the day), "reddit", "gradient" or "custom" (wallpapers/)
     var subreddit = DEFAULT_SUBREDDIT
