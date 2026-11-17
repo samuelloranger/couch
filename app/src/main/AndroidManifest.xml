@@ -136,6 +136,11 @@
             android:name=".godmode.IdleCloseReceiver"
             android:exported="false" />
 
+        <!-- Coming home once the TV has slept long enough. -->
+        <receiver
+            android:name=".home.LongSleepReceiver"
+            android:exported="false" />
+
         <!-- Godmode's sleep timer. -->
         <receiver
             android:name=".godmode.SleepReceiver"

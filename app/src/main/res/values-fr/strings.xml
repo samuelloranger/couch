@@ -201,7 +201,7 @@
     <string name="setup_channels">Programmes télé</string>
     <string name="setup_channels_help">Les chaînes d’aperçu que publient les applis (YouTube, Jellyfin et autres). Si la télé n’a pas d’écran pour ça : adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS</string>
     <string name="long_sleep">Après une longue veille</string>
-    <string name="long_sleep_help">Quand la télé est en veille depuis ce temps, la sortie de veille ferme les applis restées en arrière-plan et ramène Couch à l’avant. L’appli qui était à l’écran se ferme aussi, une fois Couch affiché. Demande l’accès au bouton HOME.</string>
+    <string name="long_sleep_help">Une fois la télé en veille depuis ce temps, Couch ferme les applis restées ouvertes, y compris celle qui était à l’écran, et revient à l’avant pendant que l’écran est encore éteint : la sortie de veille montre Couch. Demande l’accès au bouton HOME.</string>
     <string name="long_sleep_off">Désactivé</string>
     <string name="long_sleep_hours">Après %1$d h de veille</string>
     <string name="long_sleep_no_home">Demande le bouton HOME</string>
