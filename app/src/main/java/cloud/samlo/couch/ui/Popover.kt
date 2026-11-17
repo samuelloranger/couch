@@ -100,6 +100,8 @@ class Popover private constructor(
     private var onLeft = false
     /** The row waiting for its second OK, and the timer that takes the question back. */
     private var asking = -1
+    /** OK went down while the panel showed: the release of the long press that opened it doesn't count. */
+    private var pressed = false
     private val main = Handler(Looper.getMainLooper())
     private val unask = Runnable { ask(-1) }
     /** Runs once the window is up: a field can only take focus after that. */
@@ -258,8 +260,16 @@ class Popover private constructor(
                 else -> move(selected - 1)
             }
             KeyEvent.KEYCODE_DPAD_DOWN -> if (down) move(selected + 1)
-            // On release, so the press's other half doesn't reach the anchor's screen.
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> if (!down) choose()
+            // On release, so the press's other half doesn't reach the anchor's screen. A held
+            // key's repeats and release follow focus into this window, so only a fresh
+            // press arms it.
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> when {
+                down -> if (event.repeatCount == 0) pressed = true
+                pressed -> {
+                    pressed = false
+                    choose()
+                }
+            }
             // Back is the dialog's own: it dismisses before this sees it. Left closes too.
             // A panel under the anchor has no side to leave through, so Left goes nowhere.
             KeyEvent.KEYCODE_DPAD_LEFT -> when {
