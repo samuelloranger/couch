@@ -392,6 +392,8 @@ class SearchPanel(
         true
     } catch (e: ActivityNotFoundException) {
         false
+    } catch (e: SecurityException) {
+        false
     }
 
     private fun noVoice() =

@@ -63,6 +63,7 @@ class Images(context: Context, fetcher: Fetcher) {
             } catch (e: Exception) {
                 null
             } ?: return@execute
+            if (pool.isShutdown) return@execute
             memory.put(key, bitmap)
             main.post { if (isCurrent()) onReady(bitmap) }
         }
@@ -70,7 +71,8 @@ class Images(context: Context, fetcher: Fetcher) {
 
     /** Stops the workers and drops the decoded bitmaps; call from the owning Activity's onDestroy. */
     fun shutdown() {
-        pool.shutdown()
+        // Drop queued loads too: their callbacks would hold the destroyed views until the queue drains.
+        pool.shutdownNow()
         memory.evictAll()
     }
 
