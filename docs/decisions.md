@@ -44,6 +44,11 @@ setting sits on the Permissions page under the HOME access it depends on. The co
 where HOME opens Couch without that service gets nothing, and a standby that never sends a
 screen-off broadcast simply never counts.
 
+The work runs from a wake-up timer set at screen-off, while the screen is still dark: acting on
+screen-on instead showed the app that was on screen for a moment before Couch replaced it. The
+timer is inexact, so it needs no exact-alarm permission. A standby deep enough to hold the timer
+until the TV wakes falls back to doing it on screen-on, with that brief flash.
+
 ## Configuration in a JSON file
 
 Settings live in `config.json` in the app's external files directory rather than in private

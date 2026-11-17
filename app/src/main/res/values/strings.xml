@@ -199,7 +199,7 @@
     <string name="setup_channels">TV listings</string>
     <string name="setup_channels_help">The preview channels apps publish (YouTube, Jellyfin and others). If the TV has no screen for it: adb shell pm grant cloud.samlo.couch android.permission.READ_TV_LISTINGS</string>
     <string name="long_sleep">After a long sleep</string>
-    <string name="long_sleep_help">When the TV has been asleep for this long, waking it closes the apps left in the background and puts Couch back in front. The app that was on screen closes too, once Couch is showing. Needs the HOME button access.</string>
+    <string name="long_sleep_help">Once the TV has been asleep this long, Couch closes the apps left running, the one that was on screen included, and comes back in front while the screen is still off, so waking shows Couch. Needs the HOME button access.</string>
     <string name="long_sleep_off">Off</string>
     <string name="long_sleep_hours">After %1$d h asleep</string>
     <string name="long_sleep_no_home">Needs HOME button</string>

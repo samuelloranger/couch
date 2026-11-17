@@ -25,7 +25,7 @@ is off, a line at the top says so and opens the permissions page.
 | Clock and weather | 24-hour clock, Weather | On / Off |
 | | City, Units *(weather on)* | |
 | Couch | Permissions | HOME button, Notification access, Usage access, TV listings ([setup](setup.md#3-permissions)) |
-| | After a long sleep | under the HOME button: Off, 1, 2, 4 or 8 hours of standby, after which waking closes apps left in the background and opens Couch |
+| | After a long sleep | under the HOME button: Off, 1, 2, 4 or 8 hours of standby, after which Couch closes apps left running and comes back in front before the TV wakes |
 | | Other TVs, Remote buttons | their own pages |
 | | Check for updates | On / Off |
 | | About | the installed version; OK installs a newer one when there is one |
