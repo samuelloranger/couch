@@ -127,6 +127,7 @@ class HomeScreen(private val activity: Activity) {
     fun onDestroy() {
         watchers.unregister()
         loader.shutdown()
+        images.shutdown()
     }
 
     /** HOME while already home goes back to the start, like the stock launcher. */

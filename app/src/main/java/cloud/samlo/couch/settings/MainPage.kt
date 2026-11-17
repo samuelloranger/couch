@@ -14,6 +14,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Accents
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.Fetcher
+import cloud.samlo.couch.data.startSafely
 import cloud.samlo.couch.godmode.GodmodePage
 import cloud.samlo.couch.godmode.PRESSES
 import cloud.samlo.couch.godmode.Unlock
@@ -245,7 +246,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         about()
         if (config.godmode) godmodeRow()
         o.leaves(ctx.str(R.string.android_settings), ctx.str(R.string.android_settings_help)) {
-            ctx.activity.startActivity(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            ctx.activity.startSafely(Intent(Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
         updates()
     }

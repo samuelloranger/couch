@@ -29,6 +29,11 @@ class IconPickerActivity : Activity() {
     private val files by lazy { UserFiles(this) }
     private val images by lazy { Images(this, Fetcher(this)) }
 
+    override fun onDestroy() {
+        images.shutdown()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val config = Config.load(files.dir)

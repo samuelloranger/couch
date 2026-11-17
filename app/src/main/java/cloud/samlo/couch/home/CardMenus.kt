@@ -21,6 +21,7 @@ import cloud.samlo.couch.data.Folder
 import cloud.samlo.couch.data.Folders
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.UserFiles
+import cloud.samlo.couch.data.startSafely
 import cloud.samlo.couch.settings.Dialogs
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.Popover
@@ -237,13 +238,13 @@ class CardMenus(
 
     private fun openApp(pkg: String) {
         activity.packageManager.getLeanbackLaunchIntentForPackage(pkg)?.let {
-            activity.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            activity.startSafely(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         }
     }
 
     private fun appInfo(pkg: String?) {
         pkg ?: return
-        activity.startActivity(
+        activity.startSafely(
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", pkg, null))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
@@ -252,7 +253,7 @@ class CardMenus(
     /** Android's own uninstall question; it confirms, so a mis-press costs one more screen. */
     private fun uninstall(pkg: String) {
         if (!SAFE_PACKAGE.matches(pkg)) return
-        activity.startActivity(
+        activity.startSafely(
             Intent(Intent.ACTION_DELETE, Uri.fromParts("package", pkg, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }
