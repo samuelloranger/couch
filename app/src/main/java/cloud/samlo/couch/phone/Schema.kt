@@ -49,6 +49,10 @@ object Schema {
                     listOf(Option("usage", s(R.string.sort_usage)), Option("manual", s(R.string.sort_manual)), Option("alphabetical", s(R.string.sort_alphabetical))),
                 ),
                 Row("continueWatching", s(R.string.continue_watching), s(R.string.continue_watching_help), "toggle"),
+                Row(
+                    "longSleepMinutes", s(R.string.long_sleep), s(R.string.long_sleep_help), "choice",
+                    listOf(Option(0, s(R.string.long_sleep_off))) + listOf(60, 120, 240, 480).map { Option(it, c.getString(R.string.long_sleep_hours, it / 60)) },
+                ),
             ),
         )
         val clock = Group(

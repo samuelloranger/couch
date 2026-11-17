@@ -29,9 +29,10 @@ class PhoneConfigTest {
 
     @Test
     fun unknownKeysAreIgnoredAndValuesAreChecked() {
-        val next = ConfigPatch.apply(Config(), JSONObject("""{"nonsense":1,"appSort":"sideways","ambientMinutes":-4,"wallpaperHours":0,"subreddit":"r/EarthPorn"}"""))
+        val next = ConfigPatch.apply(Config(), JSONObject("""{"nonsense":1,"appSort":"sideways","ambientMinutes":-4,"longSleepMinutes":999,"wallpaperHours":0,"subreddit":"r/EarthPorn"}"""))
         assertEquals("usage", next.appSort)
         assertEquals(0, next.ambientMinutes)
+        assertEquals(480, next.longSleepMinutes)
         assertEquals(1, next.wallpaperHours)
         assertEquals("EarthPorn", next.subreddit)
         assertEquals(Config.DEFAULT_SUBREDDIT, ConfigPatch.apply(Config(), JSONObject("""{"subreddit":" "}""")).subreddit)
@@ -85,7 +86,7 @@ class PhoneConfigTest {
 
     @Test
     fun aStringForABooleanIsRejectedNotIgnored() {
-        for (patch in listOf("""{"clock24h":"nope"}""", """{"ambientMinutes":"5"}""", """{"accent":3}""", """{"hiddenApps":"x"}""")) {
+        for (patch in listOf("""{"clock24h":"nope"}""", """{"ambientMinutes":"5"}""", """{"longSleepMinutes":"4 h"}""", """{"accent":3}""", """{"hiddenApps":"x"}""")) {
             try {
                 ConfigPatch.apply(Config(), JSONObject(patch))
                 org.junit.Assert.fail("accepted $patch")

@@ -1,5 +1,6 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.HomeAccessibilityService
 import cloud.samlo.couch.R
 
 /** The accesses that turn features on, each with where Android grants it. */
@@ -9,11 +10,29 @@ class AccessPage(private val ctx: SettingsContext) : SettingsPage {
         ctx.layout.hint.text = ctx.str(R.string.setup_hint)
         for (item in Setup.items) {
             ctx.options.link(ctx.str(item.title), ctx.str(item.help), { value(item) }) { item.open(ctx.activity) }
+            if (item === Setup.home) longSleep()
         }
     }
 
     /** Back from Android's settings: show what was just granted. */
     override fun onResume() = ctx.options.rows().forEach { it.refresh() }
+
+    /**
+     * What a long sleep wakes to, under the HOME access it runs through. With that access off
+     * nothing of Couch is alive to watch the screen, so the row says so and the setting waits.
+     */
+    private fun longSleep() {
+        val c = ctx.activity
+        val options = listOf(Option(ctx.str(R.string.long_sleep_off), "0")) +
+            listOf(60, 120, 240, 480).map { Option(c.getString(R.string.long_sleep_hours, it / 60), "$it") }
+        ctx.options.choice(
+            ctx.str(R.string.long_sleep), ctx.str(R.string.long_sleep_help), options, { "${ctx.config.longSleepMinutes}" },
+            // Being Android's home isn't enough: nothing of Couch is alive to watch the screen then.
+            shown = { label -> if (ctx.config.longSleepMinutes > 0 && !HomeAccessibilityService.isEnabled(c)) ctx.str(R.string.long_sleep_no_home) else label },
+        ) {
+            ctx.config.longSleepMinutes = it.toInt()
+        }
+    }
 
     /** Granted, or how to turn it on: most of these open one of Android's screens. */
     private fun value(item: SetupItem): String {

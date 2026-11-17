@@ -43,14 +43,25 @@ internal object IdleClose {
         val minutes = minutes(context)
         if (minutes <= 0) return
         val used = Usage.lastWeek(context) ?: return
-        val idle = idle(launchable(context), used.mapValues { it.value.lastUsed }, System.currentTimeMillis(), minutes, context.packageName)
-        if (idle.isEmpty()) return
+        kill(context, idle(launchable(context), used.mapValues { it.value.lastUsed }, System.currentTimeMillis(), minutes, context.packageName))
+    }
+
+    /**
+     * Closes every launchable app but Couch, whether or not it counts as idle: what waking the TV
+     * after a long sleep does. Blocking: call from a worker.
+     */
+    fun closeAll(context: Context) {
+        kill(context, launchable(context).filter { it != context.packageName }.sorted())
+    }
+
+    private fun kill(context: Context, pkgs: List<String>) {
+        if (pkgs.isEmpty()) return
         // Android 14 lets an app close only its own processes; the shell may still close the rest.
         if (Build.VERSION.SDK_INT < 34) {
             val am = context.getSystemService(ActivityManager::class.java) ?: return
-            idle.forEach { am.killBackgroundProcesses(it) }
+            pkgs.forEach { am.killBackgroundProcesses(it) }
         } else {
-            shell(context, idle.joinToString("; ") { "am kill $it" })
+            shell(context, pkgs.joinToString("; ") { "am kill $it" })
         }
     }
 

@@ -21,6 +21,7 @@ class ConfigTest {
         assertTrue(config.pinnedApps.isEmpty())
         assertTrue("com.sony.dtv.promos" in config.hiddenApps)
         assertEquals(5, config.ambientMinutes)
+        assertEquals(0, config.longSleepMinutes)
         assertEquals(3, config.wallpaperHours)
         assertEquals(Config.DEFAULT_SUBREDDIT, config.subreddit)
     }
@@ -43,6 +44,7 @@ class ConfigTest {
             weatherCity = "Montréal"
             fahrenheit = true
             ambientMinutes = 0
+            longSleepMinutes = 240
         }
         val copy = Config.fromJson(config.toJson())
         assertEquals(config.toJson(), copy.toJson())

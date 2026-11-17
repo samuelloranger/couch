@@ -72,7 +72,7 @@ class SharedSettings(private val file: File?) {
         /** `config.json` keys every paired TV shares. */
         val KEYS = setOf(
             "accent", "clock24h", "continueWatching",
-            "wallpaper", "subreddit", "wallpaperHours", "ambientMinutes",
+            "wallpaper", "subreddit", "wallpaperHours", "ambientMinutes", "longSleepMinutes",
             "weather", "weatherCity", "fahrenheit",
             "pinnedApps", "appSort", "manualAppOrder", "hiddenApps", "names", "folders",
             "homeAssistantUrl", "checkUpdates",

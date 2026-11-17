@@ -27,10 +27,13 @@ class SetupItem(val title: Int, val help: Int, val isOn: (Context) -> Boolean, v
  * failing, so this list is the one place that says what is missing.
  */
 object Setup {
+    /** The HOME access, which more than HOME itself can depend on: the row under it says so. */
+    val home = SetupItem(R.string.setup_home, R.string.setup_home_help, { isDefaultHome(it) || HomeAccessibilityService.isEnabled(it) }) {
+        openSettings(it, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+    }
+
     val items = listOf(
-        SetupItem(R.string.setup_home, R.string.setup_home_help, { isDefaultHome(it) || HomeAccessibilityService.isEnabled(it) }) {
-            openSettings(it, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-        },
+        home,
         SetupItem(R.string.setup_notifications, R.string.setup_notifications_help, { notificationAccess(it) }) {
             openSettings(it, Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         },

@@ -57,7 +57,7 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
         o.choice(
             ctx.str(R.string.tvs_scope), ctx.str(R.string.tvs_scope_help),
             listOf(Option(ctx.str(R.string.tvs_scope_this), "this"), Option(ctx.str(R.string.tvs_scope_all), "all")),
-            { if (config.syncAllTvs) "all" else "this" }, { config.syncAllTvs = it == "all" },
+            { if (config.syncAllTvs) "all" else "this" }, set = { config.syncAllTvs = it == "all" },
         )
         o.text(
             ctx.str(R.string.tvs_name), ctx.str(R.string.tvs_name_help), peers.name,

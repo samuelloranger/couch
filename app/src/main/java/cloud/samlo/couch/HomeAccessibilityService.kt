@@ -8,13 +8,15 @@ import android.content.pm.PackageManager
 import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import cloud.samlo.couch.data.Prefs
+import cloud.samlo.couch.home.LongSleep
 import cloud.samlo.couch.remote.RemoteButtons
 
 /**
  * Some TVs hardwire HOME to the stock launcher. This service only receives window changes from
  * that launcher (see `res/xml/home_accessibility.xml`) and replaces it with Couch. It never
- * filters key events, so holding volume keeps ramping. It also draws the panels the remote's
- * buttons open when [RemoteButtons] is turned on.
+ * filters key events, so holding volume keeps ramping. It also holds [LongSleep]'s screen
+ * receiver, the one part of Couch alive while another app is on screen, and it draws the panels
+ * the remote's buttons open when [RemoteButtons] is turned on.
  */
 class HomeAccessibilityService : AccessibilityService() {
     private var remote: RemoteButtons? = null
@@ -31,6 +33,7 @@ class HomeAccessibilityService : AccessibilityService() {
         super.onServiceConnected()
         running = this
         remote = RemoteButtons(this).also { it.reload() }
+        LongSleep.attach(this)
         // Remember that HOME capture is wanted, so it can be restored after Android drops it.
         wanted(this, true)
         // A self-update restarts the app and leaves the stock launcher showing; come back to Couch.
@@ -41,6 +44,7 @@ class HomeAccessibilityService : AccessibilityService() {
     }
 
     override fun onDestroy() {
+        LongSleep.detach(this)
         remote?.stop()
         remote = null
         if (running === this) running = null
@@ -81,6 +85,13 @@ class HomeAccessibilityService : AccessibilityService() {
 
         /** The running service, which may start activities while Couch is in the background. */
         fun context(): Context? = running
+
+        /** Brings Couch back to the front; false while the service isn't connected. */
+        fun showHome(): Boolean {
+            val service = running ?: return false
+            service.openCouch()
+            return true
+        }
 
         /** Android's own global action (screen off, screenshot), through the service; false without it. */
         fun globalAction(action: Int): Boolean = running?.performGlobalAction(action) == true

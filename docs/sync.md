@@ -12,10 +12,11 @@ Per app, the last seven days of screen time, how many times it was opened, and w
 used, plus the app's name.
 
 Settings that aren't tied to one TV: the accent and clock, ambient mode (picture source, subreddit,
-how often it changes, idle minutes), weather, the apps' order, pins, hidden apps and names, the Home
-Assistant address, and update checks. Channels, inputs and their icons, the remote's buttons, the
-Home Assistant devices in the row, Godmode, and sharing itself stay on each TV. Custom images
-(icons, ambient pictures) are files, not settings, and stay where they were added.
+how often it changes, idle minutes), waking after a long sleep, weather, the apps' order, pins,
+hidden apps and names, the Home Assistant address, and update checks. Channels, inputs and their
+icons, the remote's buttons, the Home Assistant devices in the row, Godmode, and sharing itself stay
+on each TV. Custom images (icons, ambient pictures) are files, not settings, and stay where they
+were added.
 
 Nothing else: no apps list beyond those with usage, no viewing history. Everything is encrypted for
 the one TV it is meant for, with a key only the two paired TVs hold.

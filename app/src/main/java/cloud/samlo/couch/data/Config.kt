@@ -49,6 +49,9 @@ class Config {
     /** Minutes idle on the home screen before ambient mode; 0 turns it off. */
     var ambientMinutes = 5
 
+    /** Minutes of sleep after which waking closes apps and comes home; 0 turns it off. */
+    var longSleepMinutes = 0
+
     /** Once a day, look for a newer release on GitHub. */
     var checkUpdates = true
 
