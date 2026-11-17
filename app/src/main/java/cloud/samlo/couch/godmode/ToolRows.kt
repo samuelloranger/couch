@@ -15,7 +15,7 @@ import kotlin.concurrent.thread
 /** The sleep timer, a delayed screenshot, and making Couch the TV's real home. */
 internal fun GodmodePage.toolRows() {
     val c = ctx.activity
-    val minutes = listOf(0, 15, 30, 60, 90, 120)
+    val minutes = listOf(0, 15, 30, 45, 60, 90, 120)
     val options = minutes.map { Option(if (it == 0) ctx.str(R.string.sleep_off) else c.getString(R.string.sleep_minutes, it), "$it") }
     o.choice(ctx.str(R.string.sleep), ctx.str(R.string.sleep_help), options, { "${Sleep.minutes(c)}" }) { Sleep.set(c, it.toInt()) }
     o.link(ctx.str(R.string.screenshot), ctx.str(R.string.screenshot_help), { ctx.str(R.string.screenshot_value) }) { screenshotSoon() }
