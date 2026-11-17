@@ -52,7 +52,7 @@ val signing: Map<String, String> = run {
 
 android {
     namespace = "cloud.samlo.couch"
-    compileSdk = 36
+    compileSdk = 37
     // Builds the remote relay (src/main/native); see the relay tasks below.
     ndkVersion = "30.0.16248370"
 
@@ -137,7 +137,11 @@ val relayTasks = relayAbis.map { (abi, target) ->
 tasks.named("preBuild") { dependsOn(relayTasks) }
 
 dependencies {
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
     testImplementation("junit:junit:4.13.2")
+    // Plays Home Assistant's side of the WebSocket in HassSocketTest.
+    testImplementation("com.squareup.okhttp3:mockwebserver3:5.5.1")
     // The android.jar used by JVM tests only has stubs for org.json.
     testImplementation("org.json:json:20260814")
     // Reads back the QR codes Couch draws itself; tests only, nothing ships.

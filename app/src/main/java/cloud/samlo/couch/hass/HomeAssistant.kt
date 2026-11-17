@@ -1,9 +1,12 @@
 package cloud.samlo.couch.hass
 
 import android.content.SharedPreferences
+import cloud.samlo.couch.data.Http
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.concurrent.TimeUnit
 
 /**
  * Home Assistant's REST API, for the Index's row of lights and plugs. Blocking: call from a worker
@@ -61,24 +64,12 @@ class HomeAssistant(private val prefs: SharedPreferences) {
     private fun request(method: String, url: String, token: String, body: String? = null): Pair<Int, String>? = try {
         // Plain HTTP only on the home network, where the token can't be read on the way.
         if (!LocalNetwork.allowed(url)) throw java.io.IOException("Not sent: plain HTTP off the home network")
-        val connection = URL(url).openConnection() as HttpURLConnection
-        try {
-            connection.requestMethod = method
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
-            connection.setRequestProperty("Authorization", "Bearer $token")
-            connection.setRequestProperty("Content-Type", "application/json")
-            if (body != null) {
-                connection.doOutput = true
-                connection.outputStream.use { it.write(body.toByteArray()) }
-            }
-            val code = connection.responseCode
-            val text = (if (code in 200..299) connection.inputStream else connection.errorStream)
-                ?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()
-            code to text
-        } finally {
-            connection.disconnect()
-        }
+        val request = Request.Builder()
+            .url(url)
+            .header("Authorization", "Bearer $token")
+            .method(method, body?.toRequestBody(JSON))
+            .build()
+        client.newCall(request).execute().use { it.code to it.body.string() }
     } catch (e: Exception) {
         null
     }
@@ -87,6 +78,10 @@ class HomeAssistant(private val prefs: SharedPreferences) {
         const val TOKEN = "homeassistant:token"
         const val NAME = "homeassistant:name:"
         // On the home network: a slow answer means it is down, and the row should say so soon.
-        const val TIMEOUT_MS = 4000
+        val client = Http.client.newBuilder()
+            .connectTimeout(4, TimeUnit.SECONDS)
+            .readTimeout(4, TimeUnit.SECONDS)
+            .build()
+        val JSON = "application/json".toMediaType()
     }
 }

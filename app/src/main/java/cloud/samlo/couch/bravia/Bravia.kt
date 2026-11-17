@@ -2,13 +2,16 @@ package cloud.samlo.couch.bravia
 
 import android.content.Context
 import android.util.Base64
+import cloud.samlo.couch.data.Http
 import cloud.samlo.couch.data.Prefs
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.IOException
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 
 /**
  * Sony's own control API for Bravia TVs ("IP control"), reached on the TV itself at 127.0.0.1.
@@ -75,23 +78,18 @@ class Bravia(context: Context) {
 
     /** The status, the body, and the `auth` cookie the TV set, if it set one. */
     private fun post(path: String, body: String, cookie: String?, authorization: String?): Triple<Int, String, String?> {
-        val conn = URL("http://127.0.0.1$path").openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = TIMEOUT_MS
-            conn.readTimeout = TIMEOUT_MS
-            conn.requestMethod = "POST"
-            conn.doOutput = true
-            conn.setRequestProperty("Content-Type", "application/json")
-            cookie?.let { conn.setRequestProperty("Cookie", "auth=$it") }
-            authorization?.let { conn.setRequestProperty("Authorization", it) }
-            conn.outputStream.use { it.write(body.toByteArray()) }
-            val code = conn.responseCode
-            val text = (if (code < 400) conn.inputStream else conn.errorStream)?.bufferedReader()?.use { it.readText() }.orEmpty()
-            val fresh = conn.headerFields["Set-Cookie"].orEmpty()
+        val request = Request.Builder()
+            .url("http://127.0.0.1$path")
+            .post(body.toRequestBody("application/json".toMediaType()))
+            .apply {
+                cookie?.let { header("Cookie", "auth=$it") }
+                authorization?.let { header("Authorization", it) }
+            }
+            .build()
+        client.newCall(request).execute().use { response ->
+            val fresh = response.headers("Set-Cookie")
                 .firstNotNullOfOrNull { Regex("(?:^|;\\s*)auth=([^;]+)").find(it)?.groupValues?.get(1) }
-            return Triple(code, text, fresh)
-        } finally {
-            conn.disconnect()
+            return Triple(response.code, response.body.string(), fresh)
         }
     }
 
@@ -100,7 +98,10 @@ class Bravia(context: Context) {
         const val COOKIE = "bravia:cookie"
         const val COOKIE_AT = "bravia:cookieAt"
         const val CLIENT = "bravia:client"
-        const val TIMEOUT_MS = 3_000
+        val client = Http.client.newBuilder()
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(3, TimeUnit.SECONDS)
+            .build()
         /** The cookie lasts 14 days; renewing after 7 leaves a week of TV left off before a PIN is needed again. */
         const val RENEW_MS = 7 * 24 * 3_600_000L
     }
