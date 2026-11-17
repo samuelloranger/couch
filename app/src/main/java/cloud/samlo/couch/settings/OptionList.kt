@@ -89,10 +89,13 @@ class OptionList(
         onSave?.invoke()
     }
 
-    /** Left/right step through [options]; OK steps forward. Short lists show every option at once. */
-    fun choice(title: String, help: String, options: List<Option>, get: () -> String, set: (String) -> Unit) {
+    /**
+     * Left/right step through [options]; OK steps forward. Short lists show every option at once.
+     * [shown] may swap the label for a warning; stepping still starts from the stored value.
+     */
+    fun choice(title: String, help: String, options: List<Option>, get: () -> String, shown: (String) -> String = { it }, set: (String) -> Unit) {
         val labelOf = { options.firstOrNull { it.value == get() }?.label ?: get() }
-        val row = add(title, help) { "‹  ${labelOf()}  ›" }
+        val row = add(title, help) { "‹  ${shown(labelOf())}  ›" }
         val index = { options.indexOfFirst { it.value == get() }.coerceAtLeast(0) }
         val labels = options.map { it.label }
         if (Segments.fit(labels)) row.use(Segments(activity, labels)) { it.select(index()) }

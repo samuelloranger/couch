@@ -150,7 +150,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             ctx.str(R.string.ambient), ctx.str(R.string.ambient_help),
             listOf(Option(ctx.str(R.string.ambient_never), "0")) + minutes,
             { config.ambientMinutes.toString() },
-            {
+            set = {
                 val was = config.ambientMinutes > 0
                 config.ambientMinutes = it.toInt()
                 // The wallpaper rows come and go with ambient mode; other steps keep the page as it is.
@@ -170,7 +170,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 Option(ctx.str(R.string.wallpaper_custom), "custom"),
             ),
             { config.wallpaper },
-            {
+            set = {
                 val was = config.wallpaper == REDDIT
                 config.wallpaper = it
                 // The subreddit rows come and go with Reddit; other steps keep the page as it is.
@@ -193,7 +193,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
                 Option(ctx.str(R.string.hours_6), "6"),
                 Option(ctx.str(R.string.hours_24), "24"),
             ),
-            { config.wallpaperHours.toString() }, { config.wallpaperHours = it.toInt() },
+            { config.wallpaperHours.toString() }, set = { config.wallpaperHours = it.toInt() },
         )
     }
 
@@ -201,7 +201,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         o.choice(
             ctx.str(R.string.app_sort), ctx.str(R.string.app_sort_help),
             listOf(Option(ctx.str(R.string.sort_usage), "usage"), Option(ctx.str(R.string.sort_manual), "manual"), Option(ctx.str(R.string.sort_alphabetical), "alphabetical")),
-            { config.appSort }, { config.appSort = it },
+            { config.appSort }, set = { config.appSort = it },
         )
         o.toggle(ctx.str(R.string.continue_watching), ctx.str(R.string.continue_watching_help), { config.continueWatching }, { config.continueWatching = it })
         o.page(ctx.str(R.string.settings_channels), ctx.str(R.string.settings_channels_help)) { open(SettingsActivity.PAGE_CHANNELS) }
@@ -229,7 +229,7 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
             )
             o.choice(
                 ctx.str(R.string.units), ctx.str(R.string.units_help), listOf(Option("°C", "c"), Option("°F", "f")),
-                { if (config.fahrenheit) "f" else "c" }, { config.fahrenheit = it == "f" },
+                { if (config.fahrenheit) "f" else "c" }, set = { config.fahrenheit = it == "f" },
             )
         }
     }

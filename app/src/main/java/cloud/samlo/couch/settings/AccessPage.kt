@@ -25,18 +25,12 @@ class AccessPage(private val ctx: SettingsContext) : SettingsPage {
         val c = ctx.activity
         val options = listOf(Option(ctx.str(R.string.long_sleep_off), "0")) +
             listOf(60, 120, 240, 480).map { Option(c.getString(R.string.long_sleep_hours, it / 60), "$it") }
-        ctx.options.choice(ctx.str(R.string.long_sleep), ctx.str(R.string.long_sleep_help), options, { longSleepValue() }) {
-            ctx.config.longSleepMinutes = it.toInt()
-        }
-    }
-
-    private fun longSleepValue(): String {
-        val minutes = ctx.config.longSleepMinutes
-        return when {
-            minutes == 0 -> "0"
+        ctx.options.choice(
+            ctx.str(R.string.long_sleep), ctx.str(R.string.long_sleep_help), options, { "${ctx.config.longSleepMinutes}" },
             // Being Android's home isn't enough: nothing of Couch is alive to watch the screen then.
-            !HomeAccessibilityService.isEnabled(ctx.activity) -> ctx.str(R.string.long_sleep_no_home)
-            else -> "$minutes"
+            shown = { label -> if (ctx.config.longSleepMinutes > 0 && !HomeAccessibilityService.isEnabled(c)) ctx.str(R.string.long_sleep_no_home) else label },
+        ) {
+            ctx.config.longSleepMinutes = it.toInt()
         }
     }
 
