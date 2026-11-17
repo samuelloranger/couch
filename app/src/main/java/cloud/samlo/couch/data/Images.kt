@@ -51,6 +51,7 @@ class Images(context: Context, fetcher: Fetcher) {
         onReady: (Bitmap) -> Unit,
     ) {
         val key = "$url|$w|$h|$radius|$opaque|$leftCorners|$decorateKey"
+        if (pool.isShutdown) return // a card bound while its Activity is being destroyed
         memory.get(key)?.let {
             onReady(it)
             return
@@ -62,9 +63,17 @@ class Images(context: Context, fetcher: Fetcher) {
             } catch (e: Exception) {
                 null
             } ?: return@execute
+            if (pool.isShutdown) return@execute
             memory.put(key, bitmap)
             main.post { if (isCurrent()) onReady(bitmap) }
         }
+    }
+
+    /** Stops the workers and drops the decoded bitmaps; call from the owning Activity's onDestroy. */
+    fun shutdown() {
+        // Drop queued loads too: their callbacks would hold the destroyed views until the queue drains.
+        pool.shutdownNow()
+        memory.evictAll()
     }
 
     private fun decode(url: String, w: Int, h: Int, radius: Float, opaque: Boolean, leftCorners: Boolean): Bitmap? {

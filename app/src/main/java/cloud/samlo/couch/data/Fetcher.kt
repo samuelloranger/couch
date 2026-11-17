@@ -10,7 +10,10 @@ import java.net.URL
  * Opens https URLs and content URIs. Blocking: call from a worker thread. Plain http is refused:
  * the app allows cleartext only for devices on the home network, never for internet content.
  */
-class Fetcher(private val context: Context) {
+class Fetcher(context: Context) {
+    // The application context: a Fetcher outlives the Activity that made it while its pool drains.
+    private val context = context.applicationContext
+
     fun open(url: String): InputStream = when (Uri.parse(url).scheme) {
         "http" -> throw java.io.IOException("Plain HTTP refused: $url")
         "https" -> {

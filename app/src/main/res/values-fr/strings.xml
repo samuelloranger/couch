@@ -15,6 +15,7 @@
     <string name="input_live_tv">Télé en direct</string>
     <string name="input_antenna">Antenne</string>
     <string name="input_menu_hint">"OK : changer  ·  Retour : fermer"</string>
+    <string name="screen_unavailable">Cette télé n’a pas d’écran pour ça</string>
     <string name="launch_failed">Impossible d’ouvrir %1$s</string>
     <string name="settings">Paramètres</string>
     <string name="now_playing_paused">En pause</string>

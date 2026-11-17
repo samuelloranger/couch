@@ -75,6 +75,8 @@ object Setup {
             activity.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(activity, R.string.setup_no_screen, Toast.LENGTH_LONG).show()
+        } catch (e: SecurityException) {
+            Toast.makeText(activity, R.string.setup_no_screen, Toast.LENGTH_LONG).show()
         }
     }
 

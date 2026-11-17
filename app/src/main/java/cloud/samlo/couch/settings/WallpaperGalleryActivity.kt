@@ -93,7 +93,7 @@ class WallpaperGalleryActivity : Activity() {
     }
 
     override fun onPause() { HomeReload.listener = null; super.onPause() }
-    override fun onDestroy() { worker.shutdown(); super.onDestroy() }
+    override fun onDestroy() { worker.shutdown(); images.shutdown(); super.onDestroy() }
 
     // Opted out of predictive back in the manifest, so this legacy hook still sees Back.
     @SuppressLint("GestureBackNavigation")
