@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import cloud.samlo.couch.godmode.IdleClose
 import cloud.samlo.couch.godmode.Sleep
+import cloud.samlo.couch.home.LongSleep
 
 /** Restores HOME capture at boot, before anyone presses HOME, drops a sleep timer the restart cancelled, and re-arms closing idle apps. */
 class BootReceiver : BroadcastReceiver() {
@@ -12,6 +13,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
         HomeAccessibilityService.restore(context)
         Sleep.forget(context)
+        LongSleep.forget(context)
         IdleClose.arm(context)
     }
 }

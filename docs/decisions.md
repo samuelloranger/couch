@@ -34,6 +34,16 @@ stock launcher flashing and the few-second delay Android imposes on activity sta
 HOME press. It was rejected: filtering keys routes every remote press through the app, and on the
 tested TV it stopped held keys from repeating, so holding volume no longer ramped.
 
+## Waking after a long sleep
+
+Closing what was left running and coming back to the front after the TV slept for hours needs
+something of Couch alive while another app is on screen, and allowed to start an activity from the
+background. The launcher activity is paused then, and a manifest receiver can't hear the screen
+turning on; only the HOME accessibility service qualifies, so it holds the screen receiver, and the
+setting sits on the Permissions page under the HOME access it depends on. The cost is that a TV
+where HOME opens Couch without that service gets nothing, and a standby that never sends a
+screen-off broadcast simply never counts.
+
 ## Configuration in a JSON file
 
 Settings live in `config.json` in the app's external files directory rather than in private

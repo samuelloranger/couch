@@ -28,6 +28,7 @@ object ConfigPatch {
         // The TV shows the subreddit as r/name and takes either; an empty one means the default.
         out.subreddit = out.subreddit.trim().removePrefix("r/").ifEmpty { Config.DEFAULT_SUBREDDIT }
         out.ambientMinutes = out.ambientMinutes.coerceIn(0, MAX_AMBIENT_MINUTES)
+        out.longSleepMinutes = out.longSleepMinutes.coerceIn(0, MAX_LONG_SLEEP_MINUTES)
         out.wallpaperHours = out.wallpaperHours.coerceIn(1, MAX_WALLPAPER_HOURS)
         return out
     }
@@ -42,5 +43,6 @@ object ConfigPatch {
     }
 
     private const val MAX_AMBIENT_MINUTES = 240
+    private const val MAX_LONG_SLEEP_MINUTES = 480
     private const val MAX_WALLPAPER_HOURS = 24 * 7
 }
