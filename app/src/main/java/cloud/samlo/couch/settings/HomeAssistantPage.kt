@@ -18,7 +18,12 @@ import cloud.samlo.couch.index.HomeStatus
 import cloud.samlo.couch.ui.Popover
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.dp
-import java.util.concurrent.Executors
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Home Assistant: connect from the phone, then pick up to six lights, plugs and appliances for the
@@ -28,7 +33,9 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     private val o = ctx.options
     private val config get() = ctx.config
     private val hass = HomeAssistant(Prefs.of(ctx.activity))
-    private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "couch-hass-settings").apply { isDaemon = true } }
+    /** Cancelled with the page: nothing lands on a closed screen. */
+    private val scope = MainScope()
+    private val worker = Dispatchers.IO.limitedParallelism(1)
     /** Every light and plug, once read; null while reading or after a failed read. */
     private var devices: List<HassDevice>? = null
     private var reading = false
@@ -99,15 +106,12 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     private fun read() {
         reading = true
         val base = url
-        worker.execute {
-            val all = hass.all(base)?.also { hass.remember(it) }
-            ctx.activity.runOnUiThread {
-                reading = false
-                if (ctx.activity.isFinishing) return@runOnUiThread
-                devices = all
-                unreachable = all == null
-                rebuild(null)
-            }
+        scope.launch {
+            val all = withContext(worker) { hass.all(base)?.also { hass.remember(it) } }
+            reading = false
+            devices = all
+            unreachable = all == null
+            rebuild(null)
         }
     }
 
@@ -118,22 +122,24 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         linkPending = true
         link?.stop()
         val activity = ctx.activity
-        worker.execute {
-            val suggested = url.ifEmpty { HassDiscovery.find(activity, DISCOVERY_MS) ?: "" }
-            val phone = PhoneLink(activity, hass, suggested) { linked ->
-                activity.runOnUiThread { linked(linked) }
+        val base = url
+        scope.launch {
+            val suggested = base.ifEmpty { withContext(worker) { HassDiscovery.find(activity, DISCOVERY_MS) } ?: "" }
+            val phone = PhoneLink(activity, hass, suggested) { linked -> scope.launch { linked(linked) } }
+            val address = try {
+                withContext(worker) { phone.start() }
+            } catch (e: CancellationException) {
+                // The page closed while it started: nobody will stop it later.
+                phone.stop()
+                throw e
             }
-            val address = phone.start()
-            activity.runOnUiThread {
-                linkPending = false
-                if (activity.isFinishing) return@runOnUiThread phone.stop()
-                if (address == null) {
-                    Toast.makeText(activity, R.string.hass_link_failed, Toast.LENGTH_LONG).show()
-                    return@runOnUiThread
-                }
-                link = phone
-                showLink(address, anchor)
+            linkPending = false
+            if (address == null) {
+                Toast.makeText(activity, R.string.hass_link_failed, Toast.LENGTH_LONG).show()
+                return@launch
             }
+            link = phone
+            showLink(address, anchor)
         }
     }
 
@@ -215,7 +221,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
     override fun onDestroy() {
         linkPopover?.dismiss()
         stopLink()
-        worker.shutdown()
+        scope.cancel()
     }
 
     private companion object {

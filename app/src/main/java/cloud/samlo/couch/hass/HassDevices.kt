@@ -3,7 +3,11 @@ package cloud.samlo.couch.hass
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The chosen lights and plugs as last known, and the commands sent to them, shared by the Index's
@@ -26,7 +30,9 @@ import java.util.concurrent.Executors
  */
 class HassDevices(private val hass: HomeAssistant, private val onChange: () -> Unit) {
     private val main = Handler(Looper.getMainLooper())
-    private val worker = Executors.newSingleThreadExecutor { r -> Thread(r, "couch-hass").apply { isDaemon = true } }
+    private val scope = MainScope()
+    // One at a time, in order: a quick on then off must reach Home Assistant in that order.
+    private val worker = Dispatchers.IO.limitedParallelism(1)
     private val known = HashMap<String, HassDevice>()
     private val versions = HashMap<String, Int>()
     /** Devices whose last command Home Assistant hasn't confirmed yet: plain reads leave them alone. */
@@ -92,18 +98,16 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         val missing = ids.filter { Appliances.isStateSensor(it) && it !in finishOf }
         if (missing.isEmpty()) return
         val base = url
-        worker.execute {
-            val found = missing.mapNotNull { id -> hass.finishSensor(base, id)?.let { id to it } }
-            main.post {
-                if (found.isEmpty() || base != url) return@post
-                finishOf.putAll(found)
-                readAt = 0L
-                if (live) {
-                    disconnect()
-                    connect()
-                }
-                refresh()
+        scope.launch {
+            val found = withContext(worker) { missing.mapNotNull { id -> hass.finishSensor(base, id)?.let { id to it } } }
+            if (found.isEmpty() || base != url) return@launch
+            finishOf.putAll(found)
+            readAt = 0L
+            if (live) {
+                disconnect()
+                connect()
             }
+            refresh()
         }
     }
 
@@ -191,18 +195,16 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         readAt = now
         val asked = followed().associateWith { versions[it] ?: 0 }
         val base = url
-        worker.execute {
-            val read = asked.keys.associateWith { hass.state(base, it) }
-            main.post {
-                reachable = read.values.any { it != null }
-                read.forEach { (id, d) ->
-                    if (d == null || finished(d)) return@forEach
-                    if ((versions[id] ?: 0) == asked[id] && id !in unconfirmed) known[id] = d
-                }
-                hass.remember(read.values.filterNotNull().filter { it.id in ids })
-                failed = null
-                onChange()
+        scope.launch {
+            val read = withContext(worker) { asked.keys.associateWith { hass.state(base, it) } }
+            reachable = read.values.any { it != null }
+            read.forEach { (id, d) ->
+                if (d == null || finished(d)) return@forEach
+                if ((versions[id] ?: 0) == asked[id] && id !in unconfirmed) known[id] = d
             }
+            hass.remember(read.values.filterNotNull().filter { it.id in ids })
+            failed = null
+            onChange()
         }
     }
 
@@ -219,9 +221,9 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         onChange()
         val version = bump(id)
         val base = url
-        worker.execute {
-            val ok = hass.switch(base, id, wanted)
-            main.post { settle(id, version, ok, before, checkBrightness = false) }
+        scope.launch {
+            val ok = withContext(worker) { hass.switch(base, id, wanted) }
+            settle(id, version, ok, before, checkBrightness = false)
         }
         return true
     }
@@ -267,9 +269,9 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
         unconfirmed += id
         levelPending += id
         val base = url
-        worker.execute {
-            val ok = hass.brightness(base, id, wanted.brightness)
-            main.post { settle(id, version, ok, null, checkBrightness = true) }
+        scope.launch {
+            val ok = withContext(worker) { hass.brightness(base, id, wanted.brightness) }
+            settle(id, version, ok, null, checkBrightness = true)
         }
     }
 
@@ -290,33 +292,30 @@ class HassDevices(private val hass: HomeAssistant, private val onChange: () -> U
 
     /** Reads [id] again until Home Assistant shows what the command asked for, or the checks run out. */
     private fun confirm(id: String, version: Int, attempt: Int, checkBrightness: Boolean) {
-        main.postDelayed({
+        scope.launch {
+            delay(CONFIRM_MS[attempt])
             // Already confirmed by the socket.
-            if (versions[id] != version || id !in unconfirmed) return@postDelayed
+            if (versions[id] != version || id !in unconfirmed) return@launch
             val base = url
-            worker.execute {
-                val after = hass.state(base, id)
-                main.post {
-                    if (versions[id] != version) return@post
-                    val wanted = known[id]
-                    val agrees = after != null && wanted != null && agrees(after, wanted, checkBrightness)
-                    val last = attempt == CONFIRM_MS.lastIndex
-                    when {
-                        after != null && (agrees || last) -> {
-                            known[id] = after
-                            unconfirmed -= id
-                            levelPending -= id
-                            onChange()
-                        }
-                        last -> {
-                            unconfirmed -= id
-                            levelPending -= id
-                        }
-                        else -> confirm(id, version, attempt + 1, checkBrightness)
-                    }
+            val after = withContext(worker) { hass.state(base, id) }
+            if (versions[id] != version) return@launch
+            val wanted = known[id]
+            val agrees = after != null && wanted != null && agrees(after, wanted, checkBrightness)
+            val last = attempt == CONFIRM_MS.lastIndex
+            when {
+                after != null && (agrees || last) -> {
+                    known[id] = after
+                    unconfirmed -= id
+                    levelPending -= id
+                    onChange()
                 }
+                last -> {
+                    unconfirmed -= id
+                    levelPending -= id
+                }
+                else -> confirm(id, version, attempt + 1, checkBrightness)
             }
-        }, CONFIRM_MS[attempt])
+        }
     }
 
     /**

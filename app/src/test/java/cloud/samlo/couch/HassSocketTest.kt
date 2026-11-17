@@ -1,86 +1,69 @@
 package cloud.samlo.couch
 
 import cloud.samlo.couch.hass.EntityStates
+import cloud.samlo.couch.hass.HassDevice
 import cloud.samlo.couch.hass.HassSocket
+import mockwebserver3.MockResponse
+import mockwebserver3.MockWebServer
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import org.json.JSONObject
-import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.concurrent.ArrayBlockingQueue
+import java.util.concurrent.TimeUnit
 
 class HassSocketTest {
-    private val socket = HassSocket("http://x", "t", emptyList(), {}, {})
+    /** Home Assistant's side: asks for auth, accepts only [goodToken], answers a subscribe with one light. */
+    private fun homeAssistant(goodToken: String) = object : WebSocketListener() {
+        override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
+            webSocket.send("""{"type":"auth_required"}""")
+        }
 
-    /** A server frame: unmasked, [first] byte carrying FIN and opcode. */
-    private fun server(first: Int, payload: String) = byteArrayOf(first.toByte(), payload.length.toByte()) + payload.toByteArray()
-
-    /** Hands out one byte per read, as a slow network would. */
-    private fun trickle(bytes: ByteArray) = object : java.io.InputStream() {
-        var at = 0
-        override fun read() = if (at < bytes.size) bytes[at++].toInt() and 0xFF else -1
-        override fun read(b: ByteArray, off: Int, len: Int): Int {
-            val c = read()
-            if (c < 0) return -1
-            b[off] = c.toByte()
-            return 1
+        override fun onMessage(webSocket: WebSocket, text: String) {
+            val m = JSONObject(text)
+            when (m.getString("type")) {
+                "auth" -> webSocket.send(if (m.getString("access_token") == goodToken) """{"type":"auth_ok"}""" else """{"type":"auth_invalid"}""")
+                "subscribe_entities" -> webSocket.send(
+                    """{"id":${m.getInt("id")},"type":"event","event":{"a":{"light.desk":{"s":"on","a":{"friendly_name":"Desk"}}}}}""",
+                )
+            }
         }
     }
 
-    @Test
-    fun fragmentsJoinAndAPingBetweenThemIsAnswered() {
-        val wire = server(0x01, "{\"a\":") + server(0x89, "hi") + server(0x80, "1}")
-        val sent = java.io.ByteArrayOutputStream()
-        assertEquals("{\"a\":1}", socket.readMessage(trickle(wire), sent))
-        // The pong echoes the ping's payload, masked: 2 header bytes, 4 mask bytes, 2 payload bytes.
-        val pong = sent.toByteArray()
-        assertEquals(8, pong.size)
-        assertEquals(0x8A, pong[0].toInt() and 0xFF)
-        assertEquals(0x80 or 2, pong[1].toInt() and 0xFF)
-    }
-
-    @Test
-    fun closeEndsTheStream() {
-        assertEquals(null, socket.readMessage(java.io.ByteArrayInputStream(server(0x88, "")), java.io.ByteArrayOutputStream()))
-    }
-
-    @Test
-    fun oversizedOrNegativeLengthsAreRejected() {
-        val huge = byteArrayOf(0x81.toByte(), 127) + ByteArray(8).also { it[4] = 0x7F } // ~2 GB
-        val negative = byteArrayOf(0x81.toByte(), 127) + ByteArray(8).also { it[0] = 0x80.toByte() }
-        for (wire in listOf(huge, negative)) {
+    /** Runs a socket against [server] and returns what it reported first: a device list or a rejection flag. */
+    private fun firstReport(token: String): Any {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse.Builder().webSocketUpgrade(homeAssistant("good")).build())
+            server.start()
+            val reports = ArrayBlockingQueue<Any>(4)
+            val socket = HassSocket(
+                "http://127.0.0.1:${server.port}", token, listOf("light.desk"),
+                onStates = { reports.add(it) },
+                onDown = { rejected -> reports.add(rejected) },
+            )
+            socket.start()
             try {
-                socket.readMessage(java.io.ByteArrayInputStream(wire), java.io.ByteArrayOutputStream())
-                org.junit.Assert.fail("accepted")
-            } catch (e: java.io.IOException) {
-                // Rejected before any payload was allocated.
+                return reports.poll(5, TimeUnit.SECONDS) ?: error("no report")
+            } finally {
+                socket.close()
             }
         }
     }
 
     @Test
-    fun acceptKeyMatchesTheRfcExample() {
-        assertEquals("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", HassSocket.acceptFor("dGhlIHNhbXBsZSBub25jZQ=="))
+    fun authenticatesSubscribesAndStreamsStates() {
+        @Suppress("UNCHECKED_CAST")
+        val devices = firstReport("good") as List<HassDevice>
+        assertEquals("light.desk", devices.single().id)
+        assertTrue(devices.single().on)
     }
 
     @Test
-    fun shortFrameIsMasked() {
-        val mask = byteArrayOf(0x37, 0xfa.toByte(), 0x21, 0x3d)
-        // RFC 6455's masked "Hello".
-        val expected = byteArrayOf(0x81.toByte(), 0x85.toByte(), 0x37, 0xfa.toByte(), 0x21, 0x3d, 0x7f, 0x9f.toByte(), 0x4d, 0x51, 0x58)
-        assertArrayEquals(expected, HassSocket.encodeFrame(0x1, "Hello".toByteArray(), mask))
-    }
-
-    @Test
-    fun longFramesCarryTheirLength() {
-        val mask = ByteArray(4)
-        val medium = HassSocket.encodeFrame(0x1, ByteArray(300), mask)
-        assertEquals(0x80 or 126, medium[1].toInt() and 0xFF)
-        assertEquals(300, ((medium[2].toInt() and 0xFF) shl 8) or (medium[3].toInt() and 0xFF))
-        assertEquals(2 + 2 + 4 + 300, medium.size)
-        val large = HassSocket.encodeFrame(0x1, ByteArray(70_000), mask)
-        assertEquals(0x80 or 127, large[1].toInt() and 0xFF)
-        assertEquals(2 + 8 + 4 + 70_000, large.size)
+    fun aRefusedTokenIsReportedAsRejected() {
+        assertEquals(true, firstReport("bad"))
     }
 
     @Test

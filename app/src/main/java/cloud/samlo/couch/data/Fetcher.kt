@@ -2,9 +2,9 @@ package cloud.samlo.couch.data
 
 import android.content.Context
 import android.net.Uri
+import okhttp3.Request
 import java.io.InputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import java.util.concurrent.TimeUnit
 
 /**
  * Opens https URLs and content URIs. Blocking: call from a worker thread. Plain http is refused:
@@ -17,11 +17,12 @@ class Fetcher(context: Context) {
     fun open(url: String): InputStream = when (Uri.parse(url).scheme) {
         "http" -> throw java.io.IOException("Plain HTTP refused: $url")
         "https" -> {
-            val connection = URL(url).openConnection() as HttpURLConnection
-            connection.connectTimeout = TIMEOUT_MS
-            connection.readTimeout = TIMEOUT_MS
-            connection.instanceFollowRedirects = true
-            connection.inputStream
+            val response = client.newCall(Request.Builder().url(url).build()).execute()
+            if (!response.isSuccessful) {
+                response.close()
+                throw java.io.IOException("HTTP ${response.code}: $url")
+            }
+            response.body.byteStream()
         }
         else -> context.contentResolver.openInputStream(Uri.parse(url))
             ?: throw IllegalStateException("No stream for $url")
@@ -35,6 +36,9 @@ class Fetcher(context: Context) {
     }
 
     private companion object {
-        const val TIMEOUT_MS = 8000
+        val client = Http.client.newBuilder()
+            .connectTimeout(8, TimeUnit.SECONDS)
+            .readTimeout(8, TimeUnit.SECONDS)
+            .build()
     }
 }
