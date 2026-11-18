@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The instrumented suite's harness (see app/src/androidTest): binds an IndexScreen to
+         crafted data. Debug builds only, so nothing of it reaches a release. -->
+    <application>
+        <activity
+            android:name="cloud.samlo.couch.index.IndexTestActivity"
+            android:exported="false" />
+    </application>
+</manifest>

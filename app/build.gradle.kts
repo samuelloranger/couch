@@ -64,6 +64,8 @@ android {
         versionCode = (semver[0] * 10_000 + semver[1] * 100 + semver[2]).coerceAtLeast(1)
         // Keeps a pre-release suffix (`0.3.0-beta.1`), so the update check can tell a beta from its final release.
         versionName = gitTag.removePrefix("v")
+        // Runs the D-pad instrumented suite in app/src/androidTest.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     signingConfigs {
@@ -116,10 +118,14 @@ android {
 /**
  * The remote relay is one C file run as the ADB shell user, so it is compiled straight with the
  * NDK's clang, once per ABI, and packaged as `librelay.so` for Android to unpack beside the app.
+ * x86 and x86_64 join for the instrumented suite, which runs on a TV emulator; release packaging
+ * drops them again (see androidComponents below), since no TV runs them.
  */
 val relayAbis = mapOf(
     "armeabi-v7a" to "armv7a-linux-androideabi28",
     "arm64-v8a" to "aarch64-linux-android28",
+    "x86_64" to "x86_64-linux-android28",
+    "x86" to "i686-linux-android28",
 )
 val relayTasks = relayAbis.map { (abi, target) ->
     tasks.register<Exec>("relay-$abi") {
@@ -146,11 +152,19 @@ dependencies {
     testImplementation("org.json:json:20260814")
     // Reads back the QR codes Couch draws itself; tests only, nothing ships.
     testImplementation("com.google.zxing:core:3.5.4")
+    // The instrumented D-pad suite over IndexScreen. Test-only: nothing of this reaches the APK.
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
 }
 
 // Release is the variant that ships, so its unit tests must run too (AGP skips them by default).
 androidComponents {
     beforeVariants { variant ->
         variant.hostTests[com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
+    }
+    // The emulator-only relays never ship: no TV unpacks them.
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.packaging.jniLibs.excludes.add("lib/x86/**")
+        variant.packaging.jniLibs.excludes.add("lib/x86_64/**")
     }
 }
