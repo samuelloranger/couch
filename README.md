@@ -20,6 +20,10 @@ Runs on Android TV, Google TV and Fire TV, on Android 9 or later. On each, the H
 Couch instead of the stock home screen.
 
 <p align="center">
+  <img src="docs/screenshots/dpad.gif" alt="Ten seconds of D-pad focus navigation on the Index: the list glides as the selection moves down and up, and the right column follows it" width="72%">
+</p>
+
+<p align="center">
   <img src="docs/screenshots/home.jpg" alt="The Index home screen" width="32%">
   <img src="docs/screenshots/channel.jpg" alt="Moving along an app's channel" width="32%">
   <img src="docs/screenshots/settings.jpg" alt="Customize" width="32%">
