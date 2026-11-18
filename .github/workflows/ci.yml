@@ -37,6 +37,10 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Build, unit tests and lint
         run: ./gradlew --no-daemon assembleRelease testReleaseUnitTest lintRelease
+      # The D-pad instrumented suite runs on a TV emulator (see docs/development.md); CI compiles
+      # it so the suite cannot drift behind the code it tests.
+      - name: Compile instrumented tests
+        run: ./gradlew --no-daemon assembleDebugAndroidTest
       # Features cost kilobytes; a library costs megabytes. The budget catches the second.
       - name: APK size budget
         run: |
