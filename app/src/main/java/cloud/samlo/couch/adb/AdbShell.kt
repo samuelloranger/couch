@@ -22,10 +22,15 @@ import java.nio.ByteOrder
  * got no Allow, or, with [prompt] off, the key isn't authorized any more).
  */
 class AdbShell private constructor(
-    private val key: AdbKey,
+    loadKey: () -> AdbKey,
     private val prompt: Boolean,
     private val phase: (Phase) -> Unit,
 ) : Shell {
+    /**
+     * Read on the first connection, inside the handshake: a key that can't be read or written fails
+     * as [Failed.Blocked], which every caller handles, instead of an IOException that kills a bare thread.
+     */
+    private val key by lazy(loadKey)
     private var live: Socket? = null
     @Volatile private var closed = false
     @Volatile private var wait = WAIT_MS
@@ -277,8 +282,10 @@ class AdbShell private constructor(
          * One long-lived key per install; `couch@tv` is the name it carries in adbd's list. With
          * [prompt] off an unknown key fails instead of putting the question on screen.
          */
-        fun create(context: Context, prompt: Boolean = true, phase: (Phase) -> Unit = {}) =
-            AdbShell(AdbKey.load(context.filesDir, "couch@tv"), prompt, phase)
+        fun create(context: Context, prompt: Boolean = true, phase: (Phase) -> Unit = {}): AdbShell {
+            val dir = context.filesDir
+            return AdbShell({ AdbKey.load(dir, "couch@tv") }, prompt, phase)
+        }
 
         /**
          * Runs [block] on a silent connection (never asks) and closes it; null on any failure (no key,

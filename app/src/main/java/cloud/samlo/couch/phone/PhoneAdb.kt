@@ -44,17 +44,12 @@ object PhoneAdb {
         if (if (probeRoot) Root.available() else Root.cached() == true) return RootShell()
         if (!enabled(context)) return null
         val ask = prompt && !usable && claimPrompt()
-        return try {
-            AdbShell.create(context, ask) { phase ->
-                when (phase) {
-                    AdbShell.Phase.DIALOG -> set(State.DIALOG)
-                    AdbShell.Phase.READY -> set(State.READY)
-                    else -> Unit
-                }
+        return AdbShell.create(context, ask) { phase ->
+            when (phase) {
+                AdbShell.Phase.DIALOG -> set(State.DIALOG)
+                AdbShell.Phase.READY -> set(State.READY)
+                else -> Unit
             }
-        } catch (e: java.io.IOException) {
-            // The key couldn't be read or written; callers run on bare threads and treat null as "no ADB".
-            null
         }
     }
 
