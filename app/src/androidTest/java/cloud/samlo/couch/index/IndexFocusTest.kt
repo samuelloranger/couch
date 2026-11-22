@@ -153,6 +153,21 @@ class IndexFocusTest {
     }
 
     @Test
+    fun backFromAResultsCardsStepsToTheResultAndKeepsSearchOpen() {
+        onMain { assertTrue(activity.consumesKey(KeyEvent.KEYCODE_SEARCH, KeyEvent.ACTION_DOWN)) }
+        // Down the panel to app a's result, then Right into its program cards.
+        repeat(4) { if (search().entryOf(focused())?.key != "a") key(KeyEvent.KEYCODE_DPAD_DOWN) }
+        assertEquals("a", search().entryOf(focused())?.key)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        assertTrue(focused() is cloud.samlo.couch.ui.Card)
+        // Back returns to the result; the panel and its query stay.
+        onMain { assertTrue(activity.consumesKey(KeyEvent.KEYCODE_BACK, KeyEvent.ACTION_DOWN)) }
+        onMain { assertTrue(activity.consumesKey(KeyEvent.KEYCODE_BACK, KeyEvent.ACTION_UP)) }
+        assertEquals(View.VISIBLE, search().visibility)
+        assertEquals("a", search().entryOf(focused())?.key)
+    }
+
+    @Test
     fun liftedRowMovesWithTheKeysAndDropsOnOk() {
         // The lift owns the remote: its keys reach the screen through consumesKey, as the
         // activity's dispatch would route them, so the arrows no longer walk the list.
