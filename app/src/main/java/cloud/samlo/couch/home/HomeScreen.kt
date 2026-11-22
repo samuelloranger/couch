@@ -64,6 +64,7 @@ class HomeScreen(private val activity: Activity) {
     private var config = Config.load(null)
     private var resumed = false
     private var resumedAt = 0L
+    private var pausedAt = 0L
 
     private val ambientMode = AmbientMode(views.ambient, { resumed }) { shown ->
         // The overlay hides the home screen: keep its live parts quiet while it shows.
@@ -111,6 +112,7 @@ class HomeScreen(private val activity: Activity) {
 
     fun onPause() {
         resumed = false
+        pausedAt = SystemClock.elapsedRealtime()
         HomeReload.listener = null
         MediaListener.onRecommendationsChanged = null
         main.removeCallbacks(reloadForRecommendations)
@@ -132,7 +134,7 @@ class HomeScreen(private val activity: Activity) {
 
     /** HOME while already home goes back to the start, like the stock launcher. */
     fun onHomePressed() {
-        if (!resumed) return
+        if (!HomePress.whileHome(resumed, pausedAt, SystemClock.elapsedRealtime())) return
         measuring.cancel()
         menus.dismiss()
         views.index.reset()
