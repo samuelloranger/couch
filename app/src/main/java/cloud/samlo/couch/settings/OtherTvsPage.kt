@@ -147,7 +147,8 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
             }
             val matched = answer.poll(ANSWER_SECONDS, TimeUnit.SECONDS)
             // Unanswered: take the question off the screen, or its rows would offer answers nobody reads.
-            if (matched == null) expired(answer)
+            // A pairing this TV started ends through pairWith's own result instead, which leaves pairing.
+            if (matched == null && !outgoing) expired(answer)
             return matched ?: false
         } finally {
             asking.set(false)
