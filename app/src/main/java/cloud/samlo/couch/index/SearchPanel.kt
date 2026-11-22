@@ -21,6 +21,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -95,6 +96,8 @@ class SearchPanel(
     private var watchNext: List<Tile> = emptyList()
     /** False while the app list has the box: keystrokes and binds then do nothing. */
     private var shown = false
+    /** The current Back press closed the keyboard, so its release must not close Search too. */
+    private var backHidKeyboard = false
 
     init {
         val glyph = ImageView(context).apply {
@@ -155,6 +158,8 @@ class SearchPanel(
 
     /** Gives the box back: the next open starts on an empty query. */
     fun close() {
+        // HOME or the search key can close the panel under the keyboard, which would stay up alone.
+        hideKeyboard()
         shown = false
         field.setText("")
         chosen = null
@@ -169,6 +174,28 @@ class SearchPanel(
 
     /** The app the focused row opens; null for the panel's own rows. */
     fun entryOf(view: View): IndexEntry? = (view as? SearchRow)?.entry
+
+    /**
+     * Back closes the TV's keyboard before the keyboard sees it: Fire TV's own keeps Back and never
+     * hides, so it could not be closed at all. With no keyboard up, Back goes on and closes Search.
+     */
+    override fun dispatchKeyEventPreIme(event: KeyEvent): Boolean {
+        if (event.keyCode == KeyEvent.KEYCODE_BACK) {
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                backHidKeyboard = shown && field.hasFocus() && hideKeyboard()
+            }
+            if (backHidKeyboard) {
+                // The press's other half is swallowed too: one Back closes the keyboard, not Search as well.
+                if (event.action == KeyEvent.ACTION_UP) backHidKeyboard = false
+                return true
+            }
+        }
+        return super.dispatchKeyEventPreIme(event)
+    }
+
+    /** True when a keyboard was up and is now hidden. */
+    private fun hideKeyboard(): Boolean =
+        context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(field.windowToken, 0) == true
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!shown) return super.dispatchKeyEvent(event)
