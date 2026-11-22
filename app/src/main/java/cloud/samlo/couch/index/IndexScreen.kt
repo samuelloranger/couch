@@ -254,8 +254,9 @@ class IndexScreen(
             if (event.action == KeyEvent.ACTION_DOWN) if (searchOpen) closeSearch() else openSearch()
             return true
         }
-        // Back out of Search first: the list comes back as it was.
-        if (searchOpen && event.keyCode == KeyEvent.KEYCODE_BACK) {
+        // Back out of Search first: the list comes back as it was. From a result's cards or the dock, Back
+        // only steps to the result (below); the rail's Search item belongs to Search's own UI, so it closes.
+        if (searchOpen && event.keyCode == KeyEvent.KEYCODE_BACK && activity.currentFocus.let { it == null || search.isAncestorOf(it) || rail.isAncestorOf(it) }) {
             if (event.action == KeyEvent.ACTION_DOWN) closeSearch()
             return true
         }

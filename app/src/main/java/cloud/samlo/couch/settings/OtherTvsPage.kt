@@ -145,7 +145,11 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
                 mode = Mode.CONFIRM
                 rebuild()
             }
-            return answer.poll(ANSWER_SECONDS, TimeUnit.SECONDS) ?: false
+            val matched = answer.poll(ANSWER_SECONDS, TimeUnit.SECONDS)
+            // Unanswered: take the question off the screen, or its rows would offer answers nobody reads.
+            // A pairing this TV started ends through pairWith's own result instead, which leaves pairing.
+            if (matched == null && !outgoing) expired(answer)
+            return matched ?: false
         } finally {
             asking.set(false)
         }
@@ -188,9 +192,15 @@ class OtherTvsPage(private val ctx: SettingsContext) : SettingsPage {
     }
 
     /** The other side ended the pairing while the question was up: drop it and wait for the next try. */
-    private fun aborted(declined: Boolean) = ctx.activity.runOnUiThread {
-        val c = confirm ?: return@runOnUiThread
-        if (mode != Mode.CONFIRM || ctx.activity.isFinishing) return@runOnUiThread
+    private fun aborted(declined: Boolean) = ctx.activity.runOnUiThread { drop(null, declined) }
+
+    /** Nobody answered in time. Only the question that timed out goes: a newer one is left alone. */
+    private fun expired(answer: ArrayBlockingQueue<Boolean>) = ctx.activity.runOnUiThread { drop(answer, false) }
+
+    private fun drop(only: ArrayBlockingQueue<Boolean>?, declined: Boolean) {
+        val c = confirm ?: return
+        if (only != null && c.answer !== only) return
+        if (mode != Mode.CONFIRM || ctx.activity.isFinishing) return
         c.answer.offer(false)
         confirm = null
         mode = Mode.ADD
