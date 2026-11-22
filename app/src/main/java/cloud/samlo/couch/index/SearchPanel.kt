@@ -21,7 +21,6 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -33,6 +32,7 @@ import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.TvField
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 import cloud.samlo.couch.ui.reveal
@@ -57,7 +57,7 @@ class SearchPanel(
     /** A folder result is opened: the list comes back with it selected and focus moves into its apps. */
     private val onFolder: (IndexEntry) -> Unit,
 ) : FrameLayout(context) {
-    private val field = EditText(context).apply {
+    private val field = TvField(context).apply {
         typeface = Fonts.hanken(context, 400)
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
         setTextColor(Tokens.textPrimary)
@@ -155,6 +155,8 @@ class SearchPanel(
 
     /** Gives the box back: the next open starts on an empty query. */
     fun close() {
+        // HOME or the search key can close the panel under the keyboard, which would stay up alone.
+        field.hideKeyboard()
         shown = false
         field.setText("")
         chosen = null
