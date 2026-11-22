@@ -75,4 +75,23 @@ class DebloatStoreTest {
         assertEquals(-1, store.before.ramFreeMb)
         assertEquals("{not json at all", File(d, "debloat.json.bad").readText())
     }
+
+    @Test fun readersDuringWritesNeverSeeAHalfChangedLedger() {
+        val store = DebloatStore.load(dir())
+        val failure = java.util.concurrent.atomic.AtomicReference<Throwable>()
+        val writer = Thread {
+            try {
+                repeat(300) { store.removed("com.t.$it"); store.undone("com.t.$it") }
+            } catch (e: Throwable) { failure.set(e) }
+        }
+        val reader = Thread {
+            try {
+                repeat(3000) { store.tally(); store.entries() }
+            } catch (e: Throwable) { failure.set(e) }
+        }
+        writer.start(); reader.start()
+        writer.join(); reader.join()
+        assertEquals(null, failure.get())
+        assertEquals(DebloatStore.Tally(active = 0, ever = 300), store.tally())
+    }
 }

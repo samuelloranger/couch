@@ -53,9 +53,6 @@ class Server(
     /** Whether snapshots and settings are shared right now: the server also runs for phones alone. */
     @Volatile var shares: () -> Boolean = { true }
 
-    private val watchdog = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
-        Thread(r, "couch-sync-watchdog").apply { isDaemon = true }
-    }
     private var cached: Pair<Long, String>? = null
     private var socket: ServerSocket? = null
     private val live = AtomicInteger()
@@ -281,6 +278,10 @@ class Server(
     }
 
     companion object {
+        /** One daemon thread for the class: each up/down cycle builds a new Server, and none should leave a thread behind. */
+        private val watchdog = java.util.concurrent.Executors.newSingleThreadScheduledExecutor { r ->
+            Thread(r, "couch-sync-watchdog").apply { isDaemon = true }
+        }
         /** Fixed, so a TV that mDNS can't find can still be reached by its address. */
         const val PORT = 47820
         const val NONCE_BYTES = 16
