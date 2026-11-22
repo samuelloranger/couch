@@ -12,6 +12,7 @@ import java.io.File
  * own file because config.json is the user's hand-edited setup, and this is Couch's ledger.
  */
 class DebloatStore private constructor(private val file: File?) {
+    // The debloat worker writes while screens read, so every method that touches the ledger is synchronized.
     private val applied = LinkedHashMap<String, Removal>()
     val before = Snapshot()
 
@@ -29,13 +30,13 @@ class DebloatStore private constructor(private val file: File?) {
     var flow: Flow? = null
         private set
 
-    fun startFlow(batches: List<List<String>>) {
+    @Synchronized fun startFlow(batches: List<List<String>>) {
         flow = Flow(batches)
         save()
     }
 
     /** The batch on screen ran: [removed] is what actually went, [boot] the boot count then. */
-    fun ran(removed: List<String>, boot: Int) {
+    @Synchronized fun ran(removed: List<String>, boot: Int) {
         flow?.let {
             it.check = removed
             it.boot = boot
@@ -44,7 +45,7 @@ class DebloatStore private constructor(private val file: File?) {
     }
 
     /** Moves past the checked batch; null once none are left, and the flow is over. */
-    fun next(): List<String>? {
+    @Synchronized fun next(): List<String>? {
         val f = flow ?: return null
         f.index++
         f.check = emptyList()
@@ -54,25 +55,25 @@ class DebloatStore private constructor(private val file: File?) {
         return flow?.batches?.get(f.index)
     }
 
-    fun stopFlow() {
+    @Synchronized fun stopFlow() {
         flow = null
         save()
     }
 
-    fun removed(pkg: String) {
+    @Synchronized fun removed(pkg: String) {
         applied[pkg] = Removal(System.currentTimeMillis(), false)
         save()
     }
 
     /** Marks one removal undone; restoring an untouched package is a no-op. */
-    fun undone(pkg: String) {
+    @Synchronized fun undone(pkg: String) {
         if (applied[pkg]?.undone == false) {
             applied[pkg]!!.undone = true
             save()
         }
     }
 
-    fun tally(): Tally {
+    @Synchronized fun tally(): Tally {
         val done = applied.filterValues { !it.undone }
         return Tally(done.size, applied.size)
     }
@@ -80,10 +81,10 @@ class DebloatStore private constructor(private val file: File?) {
     data class Tally(val active: Int, val ever: Int)
 
     /** Packages Couch removed and has not undone, the undo list's rows. */
-    fun entries(): List<String> = applied.keys.filter { applied[it]?.undone != true }
+    @Synchronized fun entries(): List<String> = applied.keys.filter { applied[it]?.undone != true }
 
     /** Records storage as Couch first found it; once set, later scans change nothing. */
-    fun saw(ramFreeMb: Int, storageFreeMb: Int) {
+    @Synchronized fun saw(ramFreeMb: Int, storageFreeMb: Int) {
         if (before.ramFreeMb < 0) {
             before.ramFreeMb = ramFreeMb
             before.storageFreeMb = storageFreeMb
@@ -91,7 +92,7 @@ class DebloatStore private constructor(private val file: File?) {
         }
     }
 
-    private fun save() {
+    @Synchronized private fun save() {
         file ?: return
         val out = JSONObject()
             .put("before", JSONObject()

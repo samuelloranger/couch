@@ -34,7 +34,6 @@ class PhoneLink(
     private var socket: ServerSocket? = null
     private val secret = randomSecret()
     private val live = AtomicInteger()
-    private val watchdog = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "couch-phone-link-watchdog").apply { isDaemon = true } }
 
     /** Starts listening; returns the address to show, or null without a network. */
     fun start(): String? {
@@ -77,7 +76,6 @@ class PhoneLink(
     fun stop() {
         runCatching { socket?.close() }
         socket = null
-        watchdog.shutdown()
     }
 
     private fun serve(client: Socket) {
@@ -182,6 +180,11 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:#34D399;co
     }
 
     companion object {
+        /**
+         * One daemon thread for the class, never shut down: a connection accepted just as [stop] runs
+         * still schedules its deadline, where a per-link executor would reject it on a bare thread.
+         */
+        private val watchdog = Executors.newSingleThreadScheduledExecutor { r -> Thread(r, "couch-phone-link-watchdog").apply { isDaemon = true } }
         private const val TIMEOUT_MS = 10_000
         /** Longest a connection may last: reading the form and checking it with Home Assistant. */
         private const val DEADLINE_MS = 30_000L
