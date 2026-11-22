@@ -23,7 +23,6 @@ import android.view.ViewGroup.LayoutParams
 import android.view.Window
 import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -339,7 +338,7 @@ class Popover private constructor(
          * it was. The field keeps focus, so the TV's keyboard types into it and so does the phone.
          */
         fun text(activity: Activity, anchor: View, current: String, hint: String, onDone: (String) -> Unit): Popover {
-            val field = EditText(activity).apply {
+            val field = TvField(activity).apply {
                 setText(current)
                 setSelection(text.length)
                 this.hint = hint
