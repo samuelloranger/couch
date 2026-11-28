@@ -19,12 +19,11 @@ import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
 /**
- * The strip down the left edge: Search, Home (this screen, marked with an accent bar, not an
- * action), Inputs, and Settings alone at the bottom. Items stand at fixed positions; focus only
- * repaints their colours, so a move never triggers a layout pass.
- *
- * While Search takes the app list's place the bar stands on Search instead, and Home becomes an
- * action that closes it.
+ * The strip down the left edge: Search, Home, Inputs, and Settings alone at the bottom. The current
+ * page (Home, or Search while it has the list's place) carries an accent bar and an accent icon;
+ * focus is the ring, so the two never share a look. Every item takes focus, Home included: Left
+ * from the list lands on the current item, and OK on Home returns to the list. Items stand at
+ * fixed positions; focus only repaints, so a move never triggers a layout pass.
  */
 @SuppressLint("ViewConstructor")
 class IndexRail(
@@ -34,12 +33,16 @@ class IndexRail(
     onSettings: () -> Unit,
     onHome: () -> Unit,
 ) : FrameLayout(context) {
-    val search = item(R.drawable.ic_rail_search, R.string.search, IndexTokens.RAIL_SEARCH_Y, active = false, onClick = onSearch)
-    private val home = item(R.drawable.ic_rail_home, R.string.index_home, IndexTokens.RAIL_HOME_Y, active = true, onClick = onHome)
-    val inputs = item(R.drawable.ic_pill_inputs, R.string.section_inputs, IndexTokens.RAIL_INPUTS_Y, active = false, onClick = onInputs)
-    val settings = item(R.drawable.ic_pill_settings, R.string.settings, IndexTokens.RAIL_SETTINGS_Y, active = false, onClick = onSettings)
+    private val searchItem = item(R.drawable.ic_rail_search, R.string.search, IndexTokens.RAIL_SEARCH_Y, onClick = onSearch)
+    private val homeItem = item(R.drawable.ic_rail_home, R.string.index_home, IndexTokens.RAIL_HOME_Y, onClick = onHome).apply { current = true }
+    private val inputsItem = item(R.drawable.ic_pill_inputs, R.string.section_inputs, IndexTokens.RAIL_INPUTS_Y, onClick = onInputs)
+    private val settingsItem = item(R.drawable.ic_pill_settings, R.string.settings, IndexTokens.RAIL_SETTINGS_Y, onClick = onSettings)
+    val search: View get() = searchItem
+    val home: View get() = homeItem
+    val inputs: View get() = inputsItem
+    val settings: View get() = settingsItem
     private val bar = FlatView(context).apply {
-        background = GradientDrawable().apply { cornerRadius = context.dpf(1f) }
+        background = GradientDrawable().apply { cornerRadius = context.dpf(1.5f) }
     }
     private var barColor = 0
     private var searching = false
@@ -50,7 +53,7 @@ class IndexRail(
             LayoutParams(context.dp(1), LayoutParams.MATCH_PARENT, Gravity.END))
         val barTop = IndexTokens.RAIL_HOME_Y + (IndexTokens.RAIL_ITEM_H - IndexTokens.RAIL_BAR_H) / 2
         addView(bar, LayoutParams(context.dp(IndexTokens.RAIL_BAR_W), context.dp(IndexTokens.RAIL_BAR_H)).apply { topMargin = context.dp(barTop) })
-        listOf(search, home, inputs, settings).forEach { addView(it) }
+        items().forEach { addView(it) }
         paintBar()
     }
 
@@ -59,79 +62,101 @@ class IndexRail(
         if (barColor == Tokens.accent) return
         barColor = Tokens.accent
         (bar.background as GradientDrawable).setColor(barColor)
-        // The items' focus glow bakes the accent in too.
-        listOf(search, home, inputs, settings).forEach { it.background = focusBackground() }
+        // The items' focus glow and the current icon bake the accent in too.
+        items().forEach {
+            it.background = focusBackground()
+            it.paint()
+        }
     }
 
-    /** Search has the list's place: the bar glides up to it, and Home turns into OK-to-close. */
+    /** Search has the list's place: the bar glides up to it, and it becomes the current item. */
     fun setSearch(open: Boolean) {
         if (open == searching) return
         searching = open
-        home.isFocusable = open
-        home.isClickable = open
+        searchItem.current = open
+        homeItem.current = !open
         val up = -context.dpf((IndexTokens.RAIL_HOME_Y - IndexTokens.RAIL_SEARCH_Y).toFloat())
         bar.animate().cancel()
         bar.animate().translationY(if (open) up else 0f).setDuration(Tokens.GLIDE_MS).setInterpolator(Tokens.ease).start()
     }
 
+    /** The item for the page showing: where Left from the list or the panel lands. */
+    fun current(): View = if (searching) searchItem else homeItem
+
     /** Hidden when the TV has no inputs to switch to. */
     fun setHasInputs(has: Boolean, animate: Boolean) {
-        inputs.appear(has, animate)
-    }
-
-    /** The focusable item whose middle is closest to [y] (screen pixels): where ← from a row lands. */
-    fun nearest(y: Int): View? = focusable().minByOrNull {
-        val at = IntArray(2).also { a -> it.getLocationOnScreen(a) }
-        kotlin.math.abs(at[1] + it.height / 2 - y)
+        inputsItem.appear(has, animate)
     }
 
     /** The next item up or down from [from], or null at the end. */
-    fun neighbour(from: View, down: Boolean): View? {
-        val items = focusable()
-        val i = items.indexOf(from)
-        return items.getOrNull(if (down) i + 1 else i - 1)
-    }
+    fun neighbour(from: View, down: Boolean): View? = Order.step(visible(), from, down)
 
-    /** The items the remote reaches, top to bottom: Home joins them only while it closes Search. */
-    private fun focusable() = listOf(search, home, inputs, settings).filter { it.visibility == VISIBLE && it.isFocusable }
+    private fun items() = listOf(searchItem, homeItem, inputsItem, settingsItem)
+
+    /** The items the remote reaches, top to bottom. */
+    private fun visible() = items().filter { it.visibility == VISIBLE }
 
     private fun focusBackground() = StateListDrawable().apply {
         addState(intArrayOf(android.R.attr.state_focused), Focus.tileRing(context, 8f, 0x1AFFFFFF))
         addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
     }
 
-    private fun item(icon: Int, label: Int, y: Int, active: Boolean, onClick: () -> Unit): LinearLayout {
-        val color = if (active) IndexTokens.railActive else IndexTokens.railIdle
-        val glyph = ImageView(context).apply { setImageResource(icon); setColorFilter(color) }
-        val text = IndexText(context, Type.CAPTION, 500, color).apply {
+    /** The neighbour of [from] in [items], or null past either end; pure so the rail's walk is tested. */
+    object Order {
+        fun <T> step(items: List<T>, from: T, down: Boolean): T? {
+            val i = items.indexOf(from)
+            if (i < 0) return null
+            return items.getOrNull(if (down) i + 1 else i - 1)
+        }
+    }
+
+    private inner class Item(icon: Int, label: Int, onClick: () -> Unit) : LinearLayout(context) {
+        private val glyph = ImageView(context).apply { setImageResource(icon) }
+        private val text = IndexText(context, Type.CAPTION, 500, IndexTokens.railIdle).apply {
             maxLines = 1
             this.text = context.getString(label)
         }
-        return object : LinearLayout(context) {
-            override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
-                super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
-                val scale = if (gainFocus) Tokens.FOCUS_SCALE else 1f
-                animate().scaleX(scale).scaleY(scale)
-                    .setDuration(if (gainFocus) Tokens.FOCUS_IN_MS else Tokens.FOCUS_OUT_MS).setInterpolator(Tokens.ease).start()
-                val c = if (gainFocus || active) IndexTokens.railActive else IndexTokens.railIdle
-                glyph.setColorFilter(c)
-                text.setTextColor(c)
+
+        /** The page showing: accent icon, white label, and the bar beside it. */
+        var current = false
+            set(value) {
+                field = value
+                paint()
             }
-        }.apply {
-            orientation = LinearLayout.VERTICAL
+
+        init {
+            orientation = VERTICAL
             gravity = Gravity.CENTER
             contentDescription = context.getString(label)
             setOnClickListener { onClick() }
             background = focusBackground()
-            // Home marks the screen: it takes focus only while Search is open.
-            isFocusable = !active
-            isClickable = !active
+            isFocusable = true
+            isClickable = true
             addView(glyph, LayoutParams(context.dp(IndexTokens.RAIL_ICON), context.dp(IndexTokens.RAIL_ICON)))
             addView(text, text.stack(LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT), top = context.dp(4)))
-            layoutParams = FrameLayout.LayoutParams(context.dp(IndexTokens.RAIL_ITEM_W), context.dp(IndexTokens.RAIL_ITEM_H)).apply {
-                leftMargin = context.dp((IndexTokens.RAIL_W - IndexTokens.RAIL_ITEM_W) / 2)
-                topMargin = context.dp(y)
-            }
+            paint()
+        }
+
+        /** Colours only: the current icon is the accent, a focused or current label is white. */
+        fun paint() {
+            val lit = current || isFocused
+            glyph.setColorFilter(if (current) Tokens.accent else if (lit) IndexTokens.railActive else IndexTokens.railIdle)
+            text.setTextColor(if (lit) IndexTokens.railActive else IndexTokens.railIdle)
+        }
+
+        override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
+            super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+            val scale = if (gainFocus) Tokens.FOCUS_SCALE else 1f
+            animate().scaleX(scale).scaleY(scale)
+                .setDuration(if (gainFocus) Tokens.FOCUS_IN_MS else Tokens.FOCUS_OUT_MS).setInterpolator(Tokens.ease).start()
+            paint()
+        }
+    }
+
+    private fun item(icon: Int, label: Int, y: Int, onClick: () -> Unit): Item = Item(icon, label, onClick).apply {
+        layoutParams = FrameLayout.LayoutParams(context.dp(IndexTokens.RAIL_ITEM_W), context.dp(IndexTokens.RAIL_ITEM_H)).apply {
+            leftMargin = context.dp((IndexTokens.RAIL_W - IndexTokens.RAIL_ITEM_W) / 2)
+            topMargin = context.dp(y)
         }
     }
 }

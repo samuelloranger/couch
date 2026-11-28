@@ -13,15 +13,16 @@ object IndexTokens {
     // The rail: Search, Home, Inputs and Settings, a strip down the left edge.
     const val RAIL_W = 80
     const val RAIL_ITEM_W = 68
-    const val RAIL_ITEM_H = 52
+    const val RAIL_ITEM_H = 60
     const val RAIL_ICON = 22
     /** Search takes the list's place; Home marks the current screen, Inputs sits one item below it. */
-    const val RAIL_SEARCH_Y = 75
-    const val RAIL_HOME_Y = 131
-    const val RAIL_INPUTS_Y = 187
-    const val RAIL_SETTINGS_Y = 450
-    const val RAIL_BAR_W = Focus.MARKER_W
-    const val RAIL_BAR_H = Focus.MARKER_H
+    const val RAIL_SEARCH_Y = 60
+    const val RAIL_HOME_Y = 128
+    const val RAIL_INPUTS_Y = 196
+    const val RAIL_SETTINGS_Y = 448
+    /** The bar for the current page, flush with the rail's edge: wider and taller than a row's marker. */
+    const val RAIL_BAR_W = 3
+    const val RAIL_BAR_H = 26
 
     // The app list, right of the rail. Ten rows show, the last ones fading out.
     const val LIST_X = 100

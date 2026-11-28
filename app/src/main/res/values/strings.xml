@@ -56,11 +56,13 @@
 
     <!-- Search, in the app list's place -->
     <string name="search">Search</string>
-    <string name="search_hint">Type, or use your phone’s keyboard</string>
+    <string name="search_hint">Type, or use your phone</string>
     <string name="search_voice">Voice search</string>
     <string name="search_voice_unavailable">This TV has no voice search</string>
     <string name="search_tv_for">Search the TV for “%1$s”</string>
-    <string name="search_nothing">Nothing on this TV matches</string>
+    <string name="search_nothing">No app named “%1$s”. Press down, then OK, to search the TV</string>
+    <string name="search_letter_header">Apps starting with %1$s</string>
+    <string name="search_letters">Letters, A to Z</string>
 
     <!-- Card menus and reordering -->
     <string name="menu_hide">Hide</string>

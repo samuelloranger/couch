@@ -56,11 +56,13 @@
 
     <!-- Search, in the app list's place -->
     <string name="search">Rechercher</string>
-    <string name="search_hint">Tape, ou utilise le clavier de ton téléphone</string>
+    <string name="search_hint">Tape, ou ton téléphone</string>
     <string name="search_voice">Recherche vocale</string>
     <string name="search_voice_unavailable">Cette télé n’a pas de recherche vocale</string>
     <string name="search_tv_for">Rechercher « %1$s » sur la télé</string>
-    <string name="search_nothing">Rien sur cette télé ne correspond</string>
+    <string name="search_nothing">Aucune application « %1$s ». Appuie sur bas, puis OK, pour chercher sur la télé</string>
+    <string name="search_letter_header">Applications commençant par %1$s</string>
+    <string name="search_letters">Lettres, de A à Z</string>
 
     <!-- Card menus and reordering -->
     <string name="menu_hide">Masquer</string>
