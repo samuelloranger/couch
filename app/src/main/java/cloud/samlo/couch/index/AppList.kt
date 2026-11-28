@@ -17,7 +17,7 @@ import cloud.samlo.couch.ui.reveal
 /**
  * The app list on the left. Like Couch's rows, it never scrolls: the track glides by
  * translation so the selected row keeps [IndexTokens.ROWS_ABOVE] rows above it, and the last
- * rows stop above the fade at the bottom. The selected row's background and accent marker are
+ * row can rise above the fade at the bottom (the track over-scrolls by the rows the fade covers). The selected row's background and accent marker are
  * one view behind the rows that glides from row to row, also by translation.
  */
 @SuppressLint("ViewConstructor")
@@ -88,12 +88,15 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         if (wanted.isEmpty()) {
             column.removeAllViews()
             selection.visibility = INVISIBLE
+            fade.visibility = GONE
             return
         }
         // The focused app went away (hidden, uninstalled): focus the one now in its place.
         column.arrange(wanted) { _, index -> moveFocus(wanted[index.coerceAtMost(wanted.lastIndex)]) }
         // A rebuild (accent change) replaces every row; only apps not listed before are new.
         if (animate && !rebuildAll) wanted.filter { it.entry.key !in existing }.forEach { it.reveal() }
+        // A list that ends above the fade has nothing to hint at.
+        fade.visibility = if (ListScroll.fades(wanted.size, rowsShown)) VISIBLE else GONE
     }
 
     /** Makes [row] the selected one; [inRow] while focus is in its channel row, which quietens it. */
@@ -189,8 +192,7 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
 
     /** Glides so row [index] sits where the list wants it. Without [animate], the selection lands at once too. */
     fun reveal(index: Int, animate: Boolean = true) {
-        val count = column.childCount
-        val first = (index - IndexTokens.ROWS_ABOVE).coerceAtMost(count - rowsShown).coerceAtLeast(0)
+        val first = ListScroll.first(index, column.childCount, rowsShown, IndexTokens.ROWS_ABOVE)
         val target = -(first * context.dp(IndexTokens.LIST_ROW_PITCH)).toFloat()
         track.animate().cancel()
         if (!animate) {
@@ -204,11 +206,25 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
     }
 
     private companion object {
-        /** White at 6%, and a little less while focus is in the channel row. */
+        /** The focus plate, and a quieter one while focus is in the channel row. */
         const val SELECTED = Focus.PLATE
         const val SELECTED_QUIET = Focus.PLATE_QUIET
         /** How far a lifted row steps to the right, and how high it floats. */
         const val LIFT_X = 6
         const val LIFT_Z = 8f
     }
+}
+
+/** Where the app list's track rests: the rule that keeps the selected row out of the bottom fade. */
+object ListScroll {
+    /**
+     * The first row showing with row [index] of [count] selected: [rowsAbove] rows stay above it, and
+     * the track may run past the last row so that row stands in the last place clear of the fade
+     * (every row but the one the fade covers, [rowsShown] - 1).
+     */
+    fun first(index: Int, count: Int, rowsShown: Int, rowsAbove: Int): Int =
+        (index - rowsAbove).coerceIn(0, (count - (rowsShown - 1)).coerceAtLeast(0))
+
+    /** False when every row sits clear of the fade, so it has no row to dim. */
+    fun fades(count: Int, rowsShown: Int): Boolean = count > rowsShown - 1
 }

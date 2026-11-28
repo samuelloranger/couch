@@ -74,6 +74,9 @@ class HomeScreen(private val activity: Activity) {
     private val menus: CardMenus = CardMenus(
         activity, { config }, files, { views.index.appTiles() },
         onMove = { views.index.startMove(it.key) },
+        showSheet = { spec, anchor -> views.index.showMenu(spec, anchor) },
+        closeSheet = { views.index.dismissSheet() },
+        week = { views.index.weekLabel(it) },
     ) { load() }
     private val loader = HomeLoader(
         activity, files, Wallpapers(fetcher, prefs), Weather(fetcher, prefs), UpdateCheck(activity, fetcher), ::onLoaded, ::onExtras,

@@ -116,17 +116,54 @@ class IndexFocusTest {
     }
 
     @Test
-    fun rightFromAMultiChannelAppReachesTheChannelButton() {
+    fun rightFromAMultiChannelAppReachesTheFirstCardAndUpTheChannelButton() {
         // Walk to app d: a, b, the folder, c, d.
         repeat(4) { key(KeyEvent.KEYCODE_DPAD_DOWN) }
         assertEquals("d", focusedRow().entry.key)
+        // Right goes to the cards; the channel picker is one Up away, and Down returns to the cards.
         key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        assertSame(strip().cards().first(), focused())
+        key(KeyEvent.KEYCODE_DPAD_UP)
         assertSame(spotlight().channelButton, focused())
-        // Down from the picker reaches the cards; Back from them returns to the app.
         key(KeyEvent.KEYCODE_DPAD_DOWN)
         assertSame(strip().cards().first(), focused())
         onMain { activity.consumesKey(KeyEvent.KEYCODE_BACK, KeyEvent.ACTION_UP) }
         assertEquals("d", focusedRow().entry.key)
+    }
+
+    @Test
+    fun upFromTheCardsWithNoChannelButtonStaysOnTheCard() {
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val card = focused()
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        assertSame(card, focused())
+    }
+
+    @Test
+    fun downFromTheCardsStopsAtTheUsageRequestAndNothingBeyondItIsReached() {
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        key(KeyEvent.KEYCODE_DPAD_DOWN)
+        // The test data has no usage access: the request is the next stop, then nothing (no dock).
+        assertSame(child(StatsBar::class.java).allow, focused())
+        key(KeyEvent.KEYCODE_DPAD_DOWN)
+        assertSame(child(StatsBar::class.java).allow, focused())
+    }
+
+    @Test
+    fun rightFromTheListReturnsToTheCardTheRowStoodOn() {
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        val second = strip().cards()[1]
+        assertSame(second, focused())
+        // Down to the usage request and back up: the card the row stood on, not the first.
+        key(KeyEvent.KEYCODE_DPAD_DOWN)
+        key(KeyEvent.KEYCODE_DPAD_UP)
+        assertSame(second, focused())
+        // Back to the list and Right again: the same card.
+        onMain { activity.consumesKey(KeyEvent.KEYCODE_BACK, KeyEvent.ACTION_UP) }
+        assertEquals("a", focusedRow().entry.key)
+        key(KeyEvent.KEYCODE_DPAD_RIGHT)
+        assertSame(second, focused())
     }
 
     @Test

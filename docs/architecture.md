@@ -70,10 +70,16 @@ from `IndexTokens` (dp on the 960x540 canvas), so focus moves never lay out.
 - **`AppList`** glides its column by translation instead of scrolling; `AppRow` only swaps colours when
   selected. `IndexScreen.focusSearch` routes the D-pad between the list, the channel row (a
   `FocusRow` of `Card`s with a thin ring), the rail (`IndexRail`) and the Home Assistant row.
-- **`Spotlight`** is text only: the focused program's source, title, synopsis and progress, or the
-  app's name. The pictures are the channel's cards, so moving along them decodes no larger copy of
-  their art; an app without a channel shows its banner, rendered at card size, in the row's place.
-- **`StatsBar`** shows the week's total, when the app was last opened, and a bar per day.
+- **`Spotlight`** is text only: the channel line with the place in the row, and under the cards the
+  position dots and the focused program's title, synopsis and progress. The pictures are the
+  channel's cards, so moving along them decodes no larger copy of their art. The program shown is
+  the card the row last stood on, so the text and the strip never disagree.
+- **`AppSheet`** is an app's page in the right column: icon, name, then actions. An app without a
+  channel shows one inline (an Open button); the long-press menu shows another over the whole column
+  (arrange tiles, a Manage list, Uninstall alone below, and the folder list as a second page). One
+  component, built from one `Spec`, so both look and move alike; the sheet routes its own D-pad moves.
+- **`StatsBar`** shows the week's total, when the app was last opened, and a bar per day; without
+  usage access a button opens Android's own screen for it.
 - **`IndexRail`** is the strip down the left edge: Home (marks the screen, not an action), Inputs and
   Settings, at fixed positions; focus only repaints colours. Its items open `InputMenu` and Customize.
 - **`InputMenu`** is the Inputs panel: a dialog window beside the rail item, its

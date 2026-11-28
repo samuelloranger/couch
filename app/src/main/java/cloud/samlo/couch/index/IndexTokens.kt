@@ -23,19 +23,19 @@ object IndexTokens {
     const val RAIL_BAR_W = Focus.MARKER_W
     const val RAIL_BAR_H = Focus.MARKER_H
 
-    // The app list, right of the rail. Ten rows show, the last ones fading out.
+    // The app list, right of the rail. Eleven rows show, the last one fading out.
     const val LIST_X = 100
     const val LIST_Y = 70
     const val LIST_W = 280
     const val LIST_ROW_H = 32
     const val LIST_ROW_PITCH = 37
     const val LIST_ICON = 22
-    const val LIST_H = 10 * LIST_ROW_PITCH
-    /** Where the list starts fading out, from its top. */
-    const val LIST_FADE_Y = LIST_H * 85 / 100
-    /** Rows kept above the selected one before the list glides; the last rows never pass the fade. */
+    const val LIST_H = 11 * LIST_ROW_PITCH
+    /** Where the list starts fading out, from its top: only the partial last row sits in it. */
+    const val LIST_FADE_Y = LIST_H * 92 / 100
+    /** Rows kept above the selected one before the list glides; the selected row never reaches the fade. */
     const val ROWS_ABOVE = 3
-    const val ROWS_SHOWN = 10
+    const val ROWS_SHOWN = 11
     const val LIST_MARKER_W = Focus.MARKER_W
     const val LIST_MARKER_H = Focus.MARKER_H
 
@@ -53,12 +53,32 @@ object IndexTokens {
     const val RIGHT_MARGIN = 28
     const val HOME_ROW_Y = TOP_Y
     const val HOME_ROW_H = TOP_H
-    const val HEADER_Y = 85
-    const val STRIP_Y = 210
+    /** The channel line and the program counter, one row; its focus box is [CHANNEL_H] tall. */
+    const val HEADER_Y = 70
+    const val CHANNEL_H = 28
+    /** The channel row's cards come first, right under the header; the program's text sits under them. */
+    const val STRIP_Y = 104
     const val CARD_H = 84
-    const val CARD_GAP = 10
+    /** At least a card's focus growth plus its ring and glow: 14 clears a 1.05 scale on the widest card. */
+    const val CARD_GAP = 14
     const val CARD_RADIUS = 6f
-    const val STATS_Y = 345
+    /** Where the position dots, the program's title, its text and the key hint sit, from the screen's top. */
+    const val DOTS_Y = 206
+    const val TITLE_Y = 226
+    const val DESC_Y = 260
+    const val HINT_Y = 308
+    const val PROGRESS_Y = 336
+    /** A folder keeps its text above its tiles: the grid stands where the channel row used to. */
+    const val FOLDER_GRID_Y = 210
+    const val FOLDER_TITLE_Y = 104
+    const val FOLDER_DESC_Y = 140
+    /** The hairline over the week, and the week under it. */
+    const val RULE_Y = 352
+    const val STATS_Y = 362
+    /** An app without a channel is a sheet in the column; its week follows its Open button closely. */
+    const val SHEET_Y = 80
+    const val SHEET_RULE_Y = 276
+    const val SHEET_STATS_Y = 286
     /** The Now Playing dock at the foot of the right column, in the space the week leaves. */
     const val DOCK_Y = 420
     const val DOCK_H = 52

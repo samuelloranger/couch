@@ -22,17 +22,18 @@ import cloud.samlo.couch.data.Folders
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.data.startSafely
+import cloud.samlo.couch.index.AppSheet
 import cloud.samlo.couch.settings.Dialogs
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.Popover
 import kotlin.concurrent.thread
 
 /**
- * The long-press menu on an app or a program card: a small popover beside the pressed card.
- * An app can be pinned, moved, renamed, put in or taken out of a folder, hidden, force stopped,
- * cleared, uninstalled or opened in Android's app info; a program opens its app or that same page.
- * A folder row has its own menu, to rename the folder or remove it. Inputs are named, given icons
- * and hidden in settings.
+ * The long-press menu. An app's is a sheet over the Index's right column ([AppSheet]): arrange tiles
+ * (pin, move, folder, hide), a Manage list (rename, force stop, clear cache, app info) and Uninstall
+ * alone at the foot; the folder list is a second page of the same sheet. A program card's menu is a
+ * small popover beside the card, opening its app or that app's page, and a folder row has its own, to
+ * rename the folder or remove it. Inputs are named, given icons and hidden in settings.
  */
 class CardMenus(
     private val activity: Activity,
@@ -41,6 +42,11 @@ class CardMenus(
     private val apps: () -> List<Tile>,
     /** Lifts the app out of the Index list so up and down move it: the dialog-free Move. */
     private val onMove: (Tile) -> Unit,
+    /** Shows a sheet over the Index's column, or turns the open one to this page; focus returns to the view. */
+    private val showSheet: (AppSheet.Spec, View) -> Unit,
+    private val closeSheet: () -> Unit,
+    /** The app's screen time this week, as the list writes it, or null. */
+    private val week: (String) -> String?,
     private val reload: () -> Unit,
 ) {
     /** The open menu, so a second long-press replaces it instead of stacking windows. */
@@ -49,6 +55,11 @@ class CardMenus(
     fun show(card: Card) = show(card.tile, card)
 
     fun show(tile: Tile, anchor: View) {
+        if (tile.kind == Tile.Kind.APP) {
+            popover?.dismiss()
+            showSheet(appSheet(tile, anchor), anchor)
+            return
+        }
         val items = itemsFor(tile, anchor) ?: return
         popover?.dismiss()
         popover = Popover(activity, anchor, items).apply {
@@ -60,12 +71,12 @@ class CardMenus(
     /** Closes the open menu, if any: home was pressed, or the screen is going away. */
     fun dismiss() {
         popover?.dismiss()
+        closeSheet()
     }
 
     /** [anchor] is the view the menu points at: a field opens beside it, not over the screen. */
     private fun itemsFor(tile: Tile, anchor: View): List<Popover.Item>? = when (tile.kind) {
-        Tile.Kind.APP -> appItems(tile, anchor)
-        Tile.Kind.INPUT -> null
+        Tile.Kind.APP, Tile.Kind.INPUT -> null
         Tile.Kind.PROGRAM -> tile.packageName?.let { pkg ->
             val app = AppLabels.of(activity, pkg) ?: pkg
             listOf(
@@ -75,49 +86,66 @@ class CardMenus(
         }
     }
 
-    private fun appItems(tile: Tile, anchor: View): List<Popover.Item> {
+    /**
+     * The app's sheet: what it is (icon, name, this week and its folder), the arrange tiles, then what
+     * manages it, with Uninstall alone below a rule. [focus] names the tile to start on, for the page
+     * Back returns to from the folder list.
+     */
+    private fun appSheet(tile: Tile, anchor: View, focus: String? = null): AppSheet.Spec {
         val pkg = tile.packageName
         val pinned = tile.key in config().pinnedApps
         val folder = config().folders.firstOrNull { tile.key in it.apps }
         val adb = adbEnabled()
-        val items = mutableListOf<Popover.Item>()
-        items += Popover.Item(
+        val tiles = mutableListOf<Popover.Item>()
+        tiles += Popover.Item(
             R.drawable.ic_menu_pin,
             activity.getString(if (pinned) R.string.menu_unpin else R.string.menu_pin),
         ) { pin(tile) }
         // An app in a folder is not a row of the list, so there is no place to move it to.
         if (folder == null && apps().count { (it.key in config().pinnedApps) == pinned } > 1) {
-            items += Popover.Item(R.drawable.ic_menu_move, activity.getString(R.string.menu_move)) { onMove(tile) }
+            tiles += Popover.Item(R.drawable.ic_menu_move, activity.getString(R.string.menu_move)) { onMove(tile) }
         }
-        items += Popover.Item(R.drawable.ic_menu_rename, activity.getString(R.string.menu_rename)) { rename(tile, anchor) }
-        items += Popover.Item(
-            R.drawable.ic_menu_folder,
-            activity.getString(if (folder == null) R.string.menu_add_to_folder else R.string.menu_remove_from_folder),
-            hint = if (folder == null) ARROW else null,
-        ) {
+        val folderLabel = activity.getString(if (folder == null) R.string.menu_add_to_folder else R.string.menu_remove_from_folder)
+        tiles += Popover.Item(R.drawable.ic_menu_folder, folderLabel) {
             if (folder == null) chooseFolder(tile, anchor) else removeFromFolder(tile)
         }
-        items += Popover.Item(R.drawable.ic_menu_hide, activity.getString(R.string.menu_hide)) { hide(tile) }
+        tiles += Popover.Item(R.drawable.ic_menu_hide, activity.getString(R.string.menu_hide)) { hide(tile) }
+        val manage = mutableListOf<Popover.Item>()
+        manage += Popover.Item(R.drawable.ic_menu_rename, activity.getString(R.string.menu_rename)) { rename(tile, anchor) }
         // Force stop and a cache wipe go through the TV's own adbd, so they need debugging on.
         if (adb && pkg != null) {
-            items += Popover.Item(R.drawable.ic_menu_stop, activity.getString(R.string.menu_force_stop), divider = true) {
+            manage += Popover.Item(R.drawable.ic_menu_stop, activity.getString(R.string.menu_force_stop)) {
                 shell(pkg, R.string.menu_stopped) { "am force-stop $it" }
             }
-            items += Popover.Item(R.drawable.ic_menu_trash, activity.getString(R.string.menu_clear_cache), hint = cacheSize(pkg)) {
+            manage += Popover.Item(R.drawable.ic_menu_clear, activity.getString(R.string.menu_clear_cache), hint = cacheSize(pkg)) {
                 shell(pkg, R.string.menu_cache_cleared) { "pm clear --cache-only $it" }
             }
         }
+        manage += Popover.Item(R.drawable.ic_menu_info, activity.getString(R.string.menu_app_info)) { appInfo(pkg) }
+        val sections = mutableListOf(AppSheet.Section(activity.getString(R.string.sheet_manage), manage))
         if (pkg != null && removable(pkg)) {
-            items += Popover.Item(
-                R.drawable.ic_menu_uninstall,
-                activity.getString(R.string.menu_uninstall),
-                warn = true,
-                // With no shell rows above it, the uninstall row starts the risky group itself.
-                divider = !adb,
-            ) { uninstall(pkg) }
+            sections += AppSheet.Section(
+                null,
+                listOf(Popover.Item(
+                    R.drawable.ic_menu_uninstall, activity.getString(R.string.menu_uninstall),
+                    hint = activity.getString(R.string.sheet_uninstall_note), warn = true,
+                ) { uninstall(pkg) }),
+                divided = true,
+            )
         }
-        items += Popover.Item(R.drawable.ic_menu_info, activity.getString(R.string.menu_app_info)) { appInfo(pkg) }
-        return items
+        val about = listOfNotNull(
+            week(tile.key)?.let { activity.getString(R.string.sheet_week, it) },
+            folder?.let { activity.getString(R.string.sheet_in_folder, it.name) },
+        )
+        return AppSheet.Spec(
+            name = tile.label,
+            subtitle = about.joinToString(" · "),
+            icon = AppSheet.icon(activity, pkg, MENU_ICON_DP),
+            iconDp = MENU_ICON_DP,
+            tiles = tiles,
+            sections = sections,
+            focus = focus,
+        )
     }
 
     private fun pin(tile: Tile) {
@@ -144,31 +172,27 @@ class CardMenus(
     }
 
     /**
-     * The folders an app can join, beside the app's own menu, with New folder at the end. A pick or a
-     * new name opens its own popover; leaving with Left or Back comes back to the app's menu.
+     * The folders an app can join, as a second page of the app's sheet, with New folder at the end. A pick
+     * or a new name closes the sheet; Back returns to the app's own page, on its Folder tile.
      */
     private fun chooseFolder(tile: Tile, anchor: View) {
         val config = config()
-        var chose = false
+        val label = activity.getString(R.string.menu_add_to_folder)
         val items = config.folders.map { folder ->
-            Popover.Item(R.drawable.ic_menu_folder, folder.name) {
-                chose = true
-                addToFolder(tile, folder.id)
-            }
+            Popover.Item(R.drawable.ic_menu_folder, folder.name) { addToFolder(tile, folder.id) }
         }.toMutableList()
-        items += Popover.Item(R.drawable.ic_menu_plus, activity.getString(R.string.menu_new_folder), divider = config.folders.isNotEmpty()) {
-            chose = true
-            newFolder(tile, anchor)
-        }
-        popover?.dismiss()
-        popover = Popover(activity, anchor, items).apply {
-            setOnDismissListener {
-                if (popover === this) popover = null
-                // The dismiss runs before a row's own action: let it set chose before deciding.
-                if (!chose) anchor.post { if (anchor.isAttachedToWindow) show(tile, anchor) }
-            }
-            show()
-        }
+        items += Popover.Item(R.drawable.ic_menu_plus, activity.getString(R.string.menu_new_folder)) { newFolder(tile, anchor) }
+        showSheet(
+            AppSheet.Spec(
+                name = tile.label,
+                subtitle = label,
+                icon = AppSheet.icon(activity, tile.packageName, MENU_ICON_DP),
+                iconDp = MENU_ICON_DP,
+                sections = listOf(AppSheet.Section(null, items)),
+                up = { appSheet(tile, anchor, focus = label) },
+            ),
+            anchor,
+        )
     }
 
     /** Puts the app in a new folder named after OK, which the TV's keyboard or the phone types. */
@@ -302,7 +326,7 @@ class CardMenus(
         /** Package names, and nothing that could change a shell line's meaning. */
         val SAFE_PACKAGE = Regex("^[A-Za-z0-9._]+$")
 
-        /** The hint on a row that opens another popover. */
-        const val ARROW = "›"
+        /** The app's icon in the long-press sheet's header. */
+        const val MENU_ICON_DP = 56
     }
 }

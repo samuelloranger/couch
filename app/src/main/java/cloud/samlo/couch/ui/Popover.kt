@@ -484,7 +484,7 @@ object PopoverPlacement {
 
 /** One row: icon, label, and an optional hint at its right end; the dialog owns the keys. */
 @SuppressLint("ViewConstructor")
-private class PopoverRow(context: Context, item: Popover.Item) : LinearLayout(context) {
+internal class PopoverRow(context: Context, item: Popover.Item) : LinearLayout(context) {
     private val icon = ImageView(context)
     private val label = IndexText(context, LABEL_SP, 500, rowText).apply {
         maxLines = 1

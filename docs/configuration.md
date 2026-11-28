@@ -39,7 +39,7 @@ The home screen (Index) has a slim rail down the left edge: Home (this screen), 
 Settings at the bottom. Beside it is the list of your apps. The right side shows what the
 selected app offers (the chosen channel: the program's title and synopsis, then the channel as a
 row of cards), how much you used it over the last seven days with a bar per day,
-and when you last opened it. An app without a channel shows its banner in the channel's place. The
+and when you last opened it. An app without a channel shows its own page there: its icon and name and an Open button. The
 bottom line shows the TV's address, network traffic, memory, storage, uptime and whether ADB is on.
 The top right shows the weather and the clock (24-hour or 12-hour, as set in Customize).
 
@@ -53,7 +53,8 @@ The top right shows the weather and the clock (24-hour or 12-hour, as set in Cus
   chooses how the other apps follow: Usage (screen time over the last seven days), Manual, or
   Alphabetical. Without usage access, Usage falls back to alphabetical order and the figures
   are replaced by a hint. Manual and Alphabetical still show usage figures when access is on.
-- Long-press an app for Pin to top / Unpin, Move, Rename, Hide and App info. Move picks a position
+- Long-press an app (or press the remote's menu key) for Pin to top / Unpin, Move, Add to folder,
+  Hide, Rename, Force stop, Clear cache, App info and Uninstall. Move picks a position
   within the pinned apps or within the others. Moving an unpinned app switches to Manual;
   newly installed apps follow the saved manual order alphabetically. Move appears when there
   is another app in the same group.
@@ -108,7 +109,9 @@ home screen and in the App channels list. It reads them through notification acc
 
 ## Long-press menus
 
-- **App**: Pin to top / Unpin, Move, Rename, Hide, App info.
+- **App**: a sheet over the right column. Tiles: Pin to top / Unpin, Move, Add to folder (or Remove
+  from folder), Hide. Manage: Rename, Force stop and Clear cache (with ADB on), App info. Uninstall
+  stands alone at the bottom; Android asks to confirm. Back or Left closes it.
 - **Show or video**: Open the app, App info.
 
 Inputs are renamed, given an icon and hidden in **Customize → Home screen → Inputs**.

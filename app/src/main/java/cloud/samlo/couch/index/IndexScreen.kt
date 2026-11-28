@@ -7,7 +7,6 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.ImageView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.AppLabels
 import cloud.samlo.couch.data.AppOrder
@@ -17,13 +16,17 @@ import cloud.samlo.couch.data.Images
 import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.hass.HomeAssistant
+import cloud.samlo.couch.settings.Setup
 import cloud.samlo.couch.ui.Card
+import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.FocusRow
 import cloud.samlo.couch.ui.NowPlaying
 import cloud.samlo.couch.ui.Popover
 import cloud.samlo.couch.ui.Side
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
+import cloud.samlo.couch.ui.dpf
 
 /**
  * The Index layout: a rail of Search, Home, Inputs and Settings down the left edge, the apps
@@ -74,9 +77,31 @@ class IndexScreen(
     }
     /** The selected folder's apps, in the channel row's place. */
     private val folderGrid = FolderGrid(activity) { tile -> appCard(tile) }
-    /** The app's banner, in the channel row's place when the app has no channel. */
-    private val banner = ImageView(activity).apply { scaleType = ImageView.ScaleType.FIT_XY }
-    private val stats = StatsBar(activity)
+    /** An app with no channel: its page (icon, name, Open), in the channel row's place. */
+    private val sheet = AppSheet(activity, modal = false).apply { visibility = GONE }
+    /** What [sheet] shows now, so a reload of the same app leaves it alone. */
+    private var sheetKey: String? = null
+    private val stats = StatsBar(activity) { Setup.usage.open(activity) }
+    /** The rule over the week. */
+    private val rule = FlatView(activity).apply { setBackgroundColor(RULE_COLOR) }
+    /** The long-press sheet, over the right column, and the scrim that quietens the list beside it. */
+    private val menuScrim = FlatView(activity).apply {
+        setBackgroundColor(SCRIM_COLOR)
+        visibility = GONE
+    }
+    private val menuPanel = FrameLayout(activity).apply {
+        setBackgroundColor(PANEL_COLOR)
+        visibility = GONE
+    }
+    private val menu = AppSheet(activity, modal = true)
+    /** The view the open sheet returns focus to. */
+    private var menuReturn: View? = null
+    /** "Hold OK for options", under the list while an app or card that has a menu is focused. */
+    private val menuHint = IndexText(activity, Type.CAPTION, 500, IndexTokens.hours).apply {
+        text = activity.getString(R.string.index_menu_hint)
+        alpha = 0f
+    }
+    private val focusWatch = android.view.ViewTreeObserver.OnGlobalFocusChangeListener { _, now -> onFocusMoved(now) }
     /** What's playing, under the week: hidden when nothing does. */
     val nowPlaying = NowPlaying(activity)
     val systemLine = SystemLine(activity)
@@ -150,13 +175,15 @@ class IndexScreen(
             leftMargin = activity.dp(IndexTokens.COLUMN_X - STRIP_START)
             topMargin = activity.dp(IndexTokens.STRIP_Y - cardTop)
         })
-        place(banner, IndexTokens.COLUMN_X, IndexTokens.STRIP_Y, IndexTokens.cardWidth(-1), IndexTokens.CARD_H)
+        // The sheet's text sits a little right of its edge, which lets its rows' plates reach past the column.
+        place(sheet, IndexTokens.COLUMN_X - SHEET_INSET, IndexTokens.SHEET_Y, IndexTokens.COLUMN_W + 2 * SHEET_INSET, LayoutParams.WRAP_CONTENT)
         // Placed like a rule of cards: its tiles start where the channel row's first card does.
         place(
-            folderGrid, IndexTokens.COLUMN_X - Tokens.RING_INSET, IndexTokens.STRIP_Y - Tokens.RING_INSET,
+            folderGrid, IndexTokens.COLUMN_X - Tokens.RING_INSET, IndexTokens.FOLDER_GRID_Y - Tokens.RING_INSET,
             FolderGrid.W, FolderGrid.H,
         )
         folderGrid.visibility = GONE
+        place(rule, IndexTokens.COLUMN_X, IndexTokens.RULE_Y, IndexTokens.COLUMN_W, 1)
         place(stats, IndexTokens.COLUMN_X, IndexTokens.STATS_Y, IndexTokens.COLUMN_W, LayoutParams.WRAP_CONTENT)
         place(nowPlaying, IndexTokens.COLUMN_X, IndexTokens.DOCK_Y, IndexTokens.COLUMN_W, IndexTokens.DOCK_H)
         // Nothing playing takes the dock away: focus comes back to the app the column describes.
@@ -175,6 +202,30 @@ class IndexScreen(
             homeRow, IndexTokens.COLUMN_X - Tokens.RING_INSET, IndexTokens.HOME_ROW_Y - Tokens.RING_INSET,
             LayoutParams.WRAP_CONTENT, IndexTokens.HOME_ROW_H + 2 * Tokens.RING_INSET,
         )
+        place(menuHint, IndexTokens.LIST_X, IndexTokens.LIST_Y + IndexTokens.LIST_H + MENU_HINT_GAP, IndexTokens.LIST_W, LayoutParams.WRAP_CONTENT)
+        // The sheet goes over everything else: the scrim over the list and rail, the panel over the column.
+        place(menuScrim, 0, 0, MENU_X, LayoutParams.MATCH_PARENT)
+        place(menuPanel, MENU_X, 0, SCREEN_W - MENU_X, LayoutParams.MATCH_PARENT)
+        menuPanel.addView(FlatView(activity).apply { setBackgroundColor(RULE_COLOR) }, FrameLayout.LayoutParams(activity.dp(1), LayoutParams.MATCH_PARENT))
+        menuPanel.addView(menu, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            leftMargin = activity.dp(IndexTokens.COLUMN_X - MENU_X - SHEET_INSET)
+            rightMargin = activity.dp(MENU_RIGHT)
+            topMargin = activity.dp(MENU_TOP)
+        })
+        menu.onPick = { item -> pickFromMenu(item) }
+        sheet.onPick = { it.action() }
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        viewTreeObserver.addOnGlobalFocusChangeListener(focusWatch)
+    }
+
+    /** Focus moved: the hint under the list follows the focus, and the list quietens while focus is in the column. */
+    private fun onFocusMoved(now: View?) {
+        menuHint.alpha = if (now is AppRow && !now.entry.continues || now is Card && !searchOpen) 1f else 0f
+        val inColumn = now != null && (sheet.isAncestorOf(now) || now === stats.allow)
+        if (inColumn) selectedRow()?.let { list.select(it, inRow = true) }
     }
 
     /**
@@ -249,6 +300,14 @@ class IndexScreen(
     fun consumesKey(event: KeyEvent): Boolean {
         // A lifted row owns the remote until it is dropped or put back.
         if (moving != null) return moveKey(event)
+        // An open sheet owns Back and Left; its own keys go through its views.
+        if (menuPanel.visibility == VISIBLE) return menuKey(event)
+        // The remote's menu key opens what long-pressing OK would.
+        if (event.keyCode == KeyEvent.KEYCODE_MENU) {
+            val on = activity.currentFocus?.takeIf { it is AppRow || it is Card } ?: return false
+            if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) on.performLongClick()
+            return true
+        }
         // The remote's search key opens the panel from anywhere on the Index, and closes it again.
         if (event.keyCode == KeyEvent.KEYCODE_SEARCH) {
             if (event.action == KeyEvent.ACTION_DOWN) if (searchOpen) closeSearch() else openSearch()
@@ -265,16 +324,90 @@ class IndexScreen(
         val focused = activity.currentFocus ?: return false
         val elsewhere = programs.isAncestorOf(focused) || folderGrid.isAncestorOf(focused) || topBar.isAncestorOf(focused) ||
             homeRow.isAncestorOf(focused) || rail.isAncestorOf(focused) || nowPlaying.isAncestorOf(focused) ||
-            focused === spotlight.channelButton
+            sheet.isAncestorOf(focused) || focused === stats.allow || focused === spotlight.channelButton
         if (!elsewhere) return false
         if (event.action == KeyEvent.ACTION_UP) returnTarget()?.requestFocus()
         return true
+    }
+
+    /**
+     * Opens [spec] as the long-press sheet over the right column, or turns the open one to it (the
+     * folder list, then back). Focus goes to its first action; Back and Left close it, or step back a page,
+     * and focus returns to [anchor].
+     */
+    fun showMenu(spec: AppSheet.Spec, anchor: View) {
+        val open = menuPanel.visibility == VISIBLE
+        if (!open) menuReturn = anchor
+        menu.show(spec)
+        if (!open) {
+            menuScrim.visibility = VISIBLE
+            menuPanel.visibility = VISIBLE
+            // It arrives from the column's side: a short slide and a fade.
+            menuPanel.alpha = 0f
+            menuPanel.translationX = activity.dpf(MENU_SLIDE_DP)
+            menuPanel.animate().alpha(1f).translationX(0f).setDuration(Tokens.APPEAR_MS).setInterpolator(Tokens.ease).start()
+        }
+        menu.focusFirst()
+    }
+
+    /** Closes the long-press sheet, giving focus back to what opened it unless [focus] is false. */
+    fun dismissSheet(focus: Boolean = true) {
+        if (menuPanel.visibility != VISIBLE) return
+        val back = menuReturn?.takeIf { it.isAttachedToWindow && it.visibility == VISIBLE } ?: returnTarget()
+        menuReturn = null
+        // Focus first: the panel going away would leave it to the framework.
+        if (focus) back?.requestFocus()
+        menuPanel.animate().cancel()
+        menuPanel.visibility = GONE
+        menuScrim.visibility = GONE
+    }
+
+    /** The app's screen time this week as the list shows it, for the sheet's subtitle; null when there is none. */
+    fun weekLabel(key: String): String? {
+        val ms = data?.entries?.firstOrNull { it.key == key }?.usage?.weekMs ?: return null
+        return Formats.short(activity, ms).takeIf { ms > 0 }
+    }
+
+    /** A pick in the long-press sheet runs, then the sheet closes unless the action turned its page. */
+    private fun pickFromMenu(item: Popover.Item) {
+        val page = menu.page()
+        item.action()
+        if (menuPanel.visibility == VISIBLE && menu.page() === page) dismissSheet()
+    }
+
+    /** One step back: the page the sheet came from, or out of it. */
+    private fun menuBack() {
+        val up = menu.up()
+        if (up == null) {
+            dismissSheet()
+        } else {
+            menu.show(up)
+            menu.focusFirst()
+        }
+    }
+
+    /** While the sheet is open Back and Left (from its left edge) step out; the rest go to its views. */
+    private fun menuKey(event: KeyEvent): Boolean {
+        when (event.keyCode) {
+            KeyEvent.KEYCODE_BACK -> {
+                // On release, so the press's other half doesn't reach the list it returns to.
+                if (event.action == KeyEvent.ACTION_UP) menuBack()
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT -> if (menu.atLeftEdge(activity.currentFocus)) {
+                if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) menuBack()
+                return true
+            }
+            KeyEvent.KEYCODE_MENU -> return true
+        }
+        return false
     }
 
     /** HOME while home: back to the first app. */
     fun reset() {
         endMove()
         closeSearch()
+        dismissSheet(focus = false)
         homeRow.stopDimming()
         inputMenu?.dismiss()
         channelMenu?.dismiss()
@@ -350,7 +483,8 @@ class IndexScreen(
     private fun select(row: AppRow, refresh: Boolean) {
         val changed = row.entry.key != selectedKey
         selectedKey = row.entry.key
-        val inRow = programs.hasFocus() || spotlight.channelButton.hasFocus() || folderGrid.hasFocus()
+        val inRow = programs.hasFocus() || spotlight.channelButton.hasFocus() || folderGrid.hasFocus() ||
+            sheet.hasFocus() || stats.allow.hasFocus()
         list.select(row, inRow)
         if (row.hasFocus()) list.reveal(list.rows().indexOf(row))
         if (changed || refresh) show(row.entry, deferStrip = changed && !refresh)
@@ -364,29 +498,75 @@ class IndexScreen(
             return
         }
         folderGrid.visibility = GONE
-        val data = data ?: return
+        if (data == null) return
         removeCallbacks(fillStrip)
+        // An app with no channel is a page, not a row of cards: the program text has nothing to say.
+        val page = hasSheet(entry)
+        spotlight.visibility = if (page) GONE else VISIBLE
         if (deferStrip) {
             // Another app's cards must not linger under this one while the row waits.
-            if (stripKey != entry.stripKey) programs.update(emptyList(), "") { error("no cards") }
+            if (stripKey != entry.stripKey) {
+                programs.update(emptyList(), "") { error("no cards") }
+                sheet.visibility = GONE
+            }
             postDelayed(fillStrip, STRIP_SETTLE_MS)
         } else {
             fill(entry)
         }
         showProgram(entry, (activity.currentFocus as? Card)?.takeIf { programs.isAncestorOf(it) }?.tile)
-        banner.setImageBitmap(entry.app.banner)
-        // While the channels load, no banner: it would only flash before the app's cards.
-        banner.visibility = if (data.channelsKnown && entry.programs.isEmpty() && entry.app.banner != null) VISIBLE else GONE
         removeCallbacks(statsLater)
         if (deferStrip) post(statsLater) else showStats(entry)
+    }
+
+    /** True when [entry] is an app with nothing on its channel row: its column is the app's sheet instead. */
+    private fun hasSheet(entry: IndexEntry) = !entry.isFolder && !entry.continues && entry.programs.isEmpty()
+
+    /** The sheet for [entry], or gone when it has a channel row: rebuilt only when it would look different. */
+    private fun showSheet(entry: IndexEntry) {
+        if (!hasSheet(entry)) {
+            sheet.visibility = GONE
+            sheetKey = null
+            return
+        }
+        val known = data?.channelsKnown == true
+        val key = "${entry.key}|$known|${Tokens.accent}|${entry.app.signature}"
+        if (key != sheetKey) {
+            sheetKey = key
+            val label = entry.app.label
+            sheet.show(AppSheet.Spec(
+                name = label,
+                // While the channels load, the name alone: not yet "no channel".
+                subtitle = if (known) activity.getString(R.string.index_no_channel) else "",
+                icon = AppSheet.icon(activity, entry.app.packageName, SHEET_ICON_DP),
+                iconDp = SHEET_ICON_DP,
+                open = Popover.Item(0, activity.getString(R.string.menu_open_app, label)) { entry.app.launch(activity) },
+            ))
+        }
+        sheet.visibility = VISIBLE
     }
 
     private fun showStats(entry: IndexEntry) {
         val data = data ?: return
         // Screen time under the week belongs to apps: Continue watching and folders have none to show.
-        stats.visibility = if (entry.continues || entry.isFolder) GONE else VISIBLE
-        if (entry.continues || entry.isFolder) return
+        val shown = !entry.continues && !entry.isFolder
+        stats.visibility = if (shown) VISIBLE else GONE
+        rule.visibility = stats.visibility
+        if (!shown) return
+        placeStats(sheet = hasSheet(entry))
         stats.show(entry, data.usageKnown, System.currentTimeMillis(), config.clock24h)
+    }
+
+    /** The week and the rule over it: right under an app's sheet, or at the foot of a channel row's text. */
+    private fun placeStats(sheet: Boolean) {
+        val rule = (rule.layoutParams as LayoutParams)
+        val stats = (stats.layoutParams as LayoutParams)
+        val ruleY = activity.dp(if (sheet) IndexTokens.SHEET_RULE_Y else IndexTokens.RULE_Y)
+        val statsY = activity.dp(if (sheet) IndexTokens.SHEET_STATS_Y else IndexTokens.STATS_Y)
+        if (rule.topMargin == ruleY && stats.topMargin == statsY) return
+        rule.topMargin = ruleY
+        stats.topMargin = statsY
+        this.rule.requestLayout()
+        this.stats.requestLayout()
     }
 
     /**
@@ -406,7 +586,9 @@ class IndexScreen(
         spotlight.showFolder(entry.app.label, entry.folderApps.size)
         folderGrid.show(entry.key, entry.folderApps, look)
         folderGrid.visibility = VISIBLE
-        banner.visibility = GONE
+        sheet.visibility = GONE
+        spotlight.visibility = VISIBLE
+        rule.visibility = GONE
         stats.visibility = GONE
     }
 
@@ -419,6 +601,7 @@ class IndexScreen(
         removeCallbacks(buildMore)
         built = 0
         buildStep(entry)
+        showSheet(entry)
     }
 
     private fun buildStep(entry: IndexEntry) {
@@ -444,22 +627,37 @@ class IndexScreen(
         return tiles.size
     }
 
-    /** The text for [program], or the app's first one, or the app itself when it has no channel. */
+    /**
+     * The text for [program], or else the program the row last stood on (the strip stays scrolled to
+     * it, so title and cards agree), or the channel's first. An app with no channel shows its sheet.
+     */
     private fun showProgram(entry: IndexEntry, program: Tile?) {
-        val tile = program ?: entry.programs.firstOrNull()
+        if (hasSheet(entry)) return
+        val tile = program ?: currentProgram(entry) ?: entry.programs.firstOrNull()
         if (tile != null) {
             // Continue watching's channel is Couch's own, so the line above the title names the app
             // the program comes from; an app's own row names its channel.
-            val source = if (entry.continues) {
-                tile.packageName?.let { AppLabels.of(activity, it) }.orEmpty()
+            val source: String
+            val app: String
+            if (entry.continues) {
+                app = tile.packageName?.let { AppLabels.of(activity, it) }.orEmpty()
+                source = app
             } else {
-                entry.channelTitle.orEmpty()
+                app = entry.app.label
+                source = entry.channelTitle.orEmpty()
             }
-            spotlight.showProgram(source, tile, entry.channels.size > 1)
+            val position = entry.programs.indexOfFirst { it.key == tile.key }.coerceAtLeast(0)
+            spotlight.showProgram(source, app, tile, position, entry.programs.size, entry.channels.size > 1)
         } else {
-            // While the channels load, the app's name alone: not yet "no channel".
-            spotlight.showApp(entry.app, if (data?.channelsKnown == false) "" else activity.getString(R.string.index_no_channel, entry.app.label))
+            spotlight.showApp(entry.app, "")
         }
+    }
+
+    /** The card the row last had focus on for [entry]'s channel, if the row holds that channel's cards now. */
+    private fun currentProgram(entry: IndexEntry): Tile? {
+        if (stripKey != entry.stripKey) return null
+        val tile = programs.current()?.tile ?: return null
+        return tile.takeIf { t -> entry.programs.any { it.key == t.key } }
     }
 
     private fun card(tile: Tile, cardLook: String) = Card(
@@ -543,7 +741,7 @@ class IndexScreen(
                         folderGrid.first() ?: focused
                     } else {
                         if (stripKey != entry.stripKey) fill(entry)
-                        spotlight.channelButton.takeIf { it.isFocusable } ?: programs.cards().firstOrNull() ?: nowPlaying.entry() ?: target ?: focused
+                        column(entry) ?: target ?: focused
                     }
                 } ?: focused
                 // Clear of the results: up, down and left are the panel's own business.
@@ -562,8 +760,8 @@ class IndexScreen(
                     } else {
                         // Right before the row has filled: fill it now.
                         if (stripKey != focused.entry.stripKey) fill(focused.entry)
-                        // An app with no channel has no cards: what's playing is still worth reaching.
-                        if (spotlight.channelButton.isFocusable) spotlight.channelButton else programs.cards().firstOrNull() ?: nowPlaying.entry() ?: focused
+                        // The card the row stood on last, or the app's sheet: the media dock is reached from there, not from here.
+                        column(focused.entry) ?: focused
                     }
                     else -> focused
                 }
@@ -575,21 +773,34 @@ class IndexScreen(
                 else -> next
             }
             inStrip -> when (direction) {
-                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else target ?: focused
-                // Down past the cards reaches what's playing, when anything is.
-                FOCUS_DOWN -> nowPlaying.entry() ?: target ?: focused
+                // Up reaches the channel picker, or the Home Assistant row; with neither, the key does nothing.
+                FOCUS_UP -> if (spotlight.channelButton.isFocusable) spotlight.channelButton else homeRow.entry().takeIf { homeLayout } ?: focused
+                // Down past the cards reaches the usage request, then what's playing; with neither it stays on the card.
+                FOCUS_DOWN -> stats.entry() ?: nowPlaying.entry() ?: focused
                 FOCUS_LEFT -> if (programs.cards().firstOrNull() === focused) target ?: focused else super.focusSearch(focused, direction)
                 else -> super.focusSearch(focused, direction)
             }
             focused === spotlight.channelButton -> when (direction) {
-                FOCUS_DOWN -> programs.cards().firstOrNull() ?: nowPlaying.entry() ?: target ?: focused
-                FOCUS_RIGHT -> programs.cards().firstOrNull() ?: target ?: focused
+                FOCUS_DOWN, FOCUS_RIGHT -> programs.current() ?: focused
+                FOCUS_UP -> homeRow.entry().takeIf { homeLayout } ?: focused
                 else -> target ?: focused
             }
+            // An app's sheet (no channel): Left returns to the list, Down reaches what is below it.
+            sheet.isAncestorOf(focused!!) -> when (direction) {
+                FOCUS_LEFT -> target ?: focused
+                FOCUS_DOWN -> stats.entry() ?: nowPlaying.entry() ?: focused
+                else -> focused
+            }
+            focused === stats.allow -> when (direction) {
+                FOCUS_UP -> column(selectedRow()?.entry) ?: focused
+                FOCUS_DOWN -> nowPlaying.entry() ?: focused
+                FOCUS_LEFT -> target ?: focused
+                else -> focused
+            }
             inDock -> when (direction) {
-                // The dock sits at the bottom: down stays, up returns to the cards, back to the list.
+                // The dock sits at the bottom: down stays, up returns to the usage request or the column, back to the list.
                 FOCUS_DOWN -> focused
-                FOCUS_UP -> programs.cards().firstOrNull() ?: target ?: focused
+                FOCUS_UP -> stats.entry() ?: column(selectedRow()?.entry) ?: target ?: focused
                 FOCUS_LEFT -> nowPlaying.neighbour(focused, FOCUS_LEFT) ?: target ?: focused
                 FOCUS_RIGHT -> nowPlaying.neighbour(focused, FOCUS_RIGHT) ?: focused
                 else -> focused
@@ -615,6 +826,10 @@ class IndexScreen(
             else -> super.focusSearch(focused, direction)
         }
     }
+
+    /** Where Right from the app list lands: the sheet's first action, or the card the row stood on last. */
+    private fun column(entry: IndexEntry?): View? =
+        if (entry != null && hasSheet(entry)) sheet.takeIf { it.visibility == VISIBLE }?.entry() else programs.current()
 
     /** The first chip at the top right that is showing, reached from the apps (no Home Assistant row) or its end. */
     private fun firstTopTarget(): View? = listOf<View>(topBar.inputOffer, topBar.update)
@@ -760,6 +975,7 @@ class IndexScreen(
 
     // The activity is going away: a dialog left open would leak its window.
     override fun onDetachedFromWindow() {
+        viewTreeObserver.removeOnGlobalFocusChangeListener(focusWatch)
         inputMenu?.dismiss()
         channelMenu?.dismiss()
         // The hint is a window of its own, and would outlive the screen that shows it.
@@ -775,8 +991,20 @@ class IndexScreen(
     }
 
     private companion object {
-        /** Where the channel row's clipping starts, left of the column: room for a focused card's ring. */
-        const val STRIP_START = 16
+        /** Where the channel row's clipping starts, left of the column: room for a focused card's ring and glow, no more. */
+        const val STRIP_START = 10
+        /** A sheet's text sits this far right of its edge, so its rows' plates start left of the column. */
+        const val SHEET_INSET = 8
+        const val SHEET_ICON_DP = 76
+        /** The long-press sheet: its panel starts here, its content this far below the top and short of the right edge. */
+        const val MENU_SLIDE_DP = 8f
+        const val MENU_X = 380
+        const val MENU_TOP = 36
+        const val MENU_RIGHT = 20
+        const val MENU_HINT_GAP = 7
+        val RULE_COLOR = 0x14FFFFFF
+        val SCRIM_COLOR = 0x8C000000.toInt()
+        val PANEL_COLOR = android.graphics.Color.parseColor("#101413")
         /** Between the Home Assistant row and the top bar's first item. */
         const val HOME_ROW_GAP = 16
         const val STRIP_SETTLE_MS = 160L

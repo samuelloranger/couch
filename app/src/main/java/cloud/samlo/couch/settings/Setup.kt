@@ -32,14 +32,17 @@ object Setup {
         openSettings(it, Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
     }
 
+    /** Screen time: the Index asks for it in place when it is missing. */
+    val usage = SetupItem(R.string.setup_usage, R.string.setup_usage_help, { Usage.canRead(it) }) {
+        openSettings(it, Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+    }
+
     val items = listOf(
         home,
         SetupItem(R.string.setup_notifications, R.string.setup_notifications_help, { notificationAccess(it) }) {
             openSettings(it, Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         },
-        SetupItem(R.string.setup_usage, R.string.setup_usage_help, { Usage.canRead(it) }) {
-            openSettings(it, Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
-        },
+        usage,
         SetupItem(R.string.setup_channels, R.string.setup_channels_help, { Programs.canRead(it) }, inPlace = true) { channels(it) },
     )
 
