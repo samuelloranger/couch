@@ -1,7 +1,7 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.content.Context
-import android.graphics.Typeface
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
@@ -12,6 +12,7 @@ import android.widget.TextView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 
 /**
@@ -22,13 +23,14 @@ import cloud.samlo.couch.ui.dp
 class SettingsLayout(context: Context, val withRail: Boolean = false) {
     val title = TextView(context).apply {
         setText(R.string.settings_title)
-        textSize = if (withRail) 26f else 30f
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        textSize = if (withRail) Type.TITLE else Type.DISPLAY
+        typeface = Fonts.hanken(context, 600)
         setTextColor(Tokens.textPrimary)
         setPadding(context.dp(20), 0, 0, 0)
     }
     val hint = TextView(context).apply {
-        textSize = 15f
+        textSize = Type.LABEL
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textMuted)
         setPadding(context.dp(20), context.dp(4), 0, context.dp(16))
     }
@@ -37,7 +39,8 @@ class SettingsLayout(context: Context, val withRail: Boolean = false) {
         setPadding(0, 0, 0, context.dp(60))
     }
     val help = TextView(context).apply {
-        textSize = 17f
+        textSize = Type.BODY
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textMuted)
         setLineSpacing(0f, 1.25f)
     }
@@ -75,8 +78,8 @@ class SettingsLayout(context: Context, val withRail: Boolean = false) {
         orientation = LinearLayout.VERTICAL
         addView(TextView(context).apply {
             setText(R.string.settings_title)
-            textSize = 26f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            textSize = Type.TITLE
+            typeface = Fonts.hanken(context, 600)
             setTextColor(Tokens.textPrimary)
             setPadding(context.dp(12), 0, 0, context.dp(20))
         })

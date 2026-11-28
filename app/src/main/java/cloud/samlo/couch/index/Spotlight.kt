@@ -1,5 +1,6 @@
 package cloud.samlo.couch.index
 
+import cloud.samlo.couch.ui.Focus
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
@@ -11,6 +12,7 @@ import android.widget.LinearLayout
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.R
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -21,16 +23,16 @@ import cloud.samlo.couch.ui.dpf
  */
 @SuppressLint("ViewConstructor")
 class Spotlight(context: Context) : LinearLayout(context) {
-    val channelButton = text(9.5f, 600, Tokens.accent, 1f).apply {
+    val channelButton = text(Type.CAPTION, 600, Tokens.accent, 1f).apply {
         maxLines = 1
         minimumHeight = context.dp(CHANNEL_H)
         gravity = android.view.Gravity.CENTER_VERTICAL
     }
-    private val title = text(22f, 600, Tokens.textPrimary, 1.1f).apply {
+    private val title = text(Type.TITLE, 600, Tokens.textPrimary, 1.1f).apply {
         maxLines = 1
         letterSpacing = -0.02f
     }
-    private val description = text(12f, 400, IndexTokens.description, 1.45f).apply { maxLines = 2 }
+    private val description = text(Type.LABEL, 400, IndexTokens.description, 1.45f).apply { maxLines = 2 }
     private val progressFill = GradientDrawable().apply { cornerRadius = context.dpf(1.5f) }
     private val progress = FrameLayout(context).apply {
         background = GradientDrawable().apply {
@@ -62,11 +64,7 @@ class Spotlight(context: Context) : LinearLayout(context) {
         if (channelLook != look) {
             channelLook = look
             channelButton.background = if (canChooseChannel) StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    setColor(Tokens.surfaceFocused)
-                    cornerRadius = context.dpf(4f)
-                    setStroke(context.dp(1), Tokens.accent)
-                })
+                addState(intArrayOf(android.R.attr.state_focused), Focus.ring(context, 4f, Tokens.surfaceFocused))
                 addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
             } else null
         }

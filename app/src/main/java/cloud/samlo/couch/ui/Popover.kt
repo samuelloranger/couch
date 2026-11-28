@@ -347,11 +347,7 @@ class Popover private constructor(
                 setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, FIELD_SP)
                 setTextColor(Tokens.textPrimary)
                 typeface = Fonts.hanken(activity, 500)
-                background = GradientDrawable().apply {
-                    cornerRadius = activity.dpf(FIELD_RADIUS)
-                    setColor(fieldFill)
-                    setStroke(activity.dpf(FIELD_STROKE).toInt(), Tokens.accent)
-                }
+                background = Focus.ring(activity, FIELD_RADIUS, fieldFill)
                 setPadding(activity.dp(FIELD_PAD), 0, activity.dp(FIELD_PAD), 0)
                 inputType = InputType.TYPE_CLASS_TEXT
                 imeOptions = EditorInfo.IME_ACTION_DONE
@@ -546,22 +542,8 @@ private class PopoverRow(context: Context, item: Popover.Item) : LinearLayout(co
     }
 }
 
-/** A focused row's fill with a thin white ring pulled inside its bounds. */
-private fun ringedRow(context: Context): Drawable {
-    val stroke = context.dpf(1.5f).toInt()
-    val fill = GradientDrawable().apply {
-        cornerRadius = context.dpf(ROW_RADIUS)
-        setColor(focusedFill)
-    }
-    val ring = GradientDrawable().apply {
-        cornerRadius = context.dpf(ROW_RADIUS)
-        setStroke(stroke, Tokens.ring)
-    }
-    return LayerDrawable(arrayOf(fill, ring)).apply {
-        val inset = stroke / 2
-        setLayerInset(1, inset, inset, inset, inset)
-    }
-}
+/** A focused row: the shared plate and accent marker. */
+private fun ringedRow(context: Context): Drawable = Focus.plate(context, ROW_RADIUS)
 
 /**
  * The pointer: a 10dp square turned 45°, so its tip reaches past the panel's edge. [edge] is the
@@ -619,7 +601,7 @@ private class ArrowView(context: Context) : View(context) {
 private val panelFill = Color.parseColor("#1F2624")
 private val panelStroke = Color.parseColor("#2E3734")
 private val rowText = Color.parseColor("#D5DBD8")
-private val hintText = Color.parseColor("#7A8481")
+private val hintText = Color.parseColor("#9AA4A0")
 private val hintLine = Color.parseColor("#C4CCC9")
 private val focusedFill = Color.parseColor("#2C3532")
 private val dividerLine = Color.parseColor("#2C3532")
@@ -627,16 +609,16 @@ private val warnText = Color.parseColor("#F59E8B")
 private val fieldFill = Color.parseColor("#0F1412")
 
 /** The panel's width, and the room the arrow's tip needs outside it. */
-private const val PANEL_W = 196
+private const val PANEL_W = 256
 private const val PANEL_RADIUS = 10f
 private const val PANEL_PAD = 4
-private const val ROW_H = 26
+private const val ROW_H = 34
 private const val ROW_SIDE = 9
-private const val ROW_ICON = 12
+private const val ROW_ICON = 18
 private const val ROW_GAP = 9
 private const val ROW_RADIUS = 6f
-private const val LABEL_SP = 11.5f
-private const val HINT_SP = 8.5f
+private const val LABEL_SP = Type.LABEL
+private const val HINT_SP = Type.CAPTION
 /** A hint panel: a line of text, a little room around it. */
 private const val HINT_W = 168
 private const val HINT_PAD = 8
@@ -645,9 +627,9 @@ private const val TEXT_PAD = 8
 private const val FIELD_H = 30
 private const val FIELD_RADIUS = 7f
 private const val FIELD_STROKE = 1.5f
-private const val FIELD_SP = 13f
+private const val FIELD_SP = Type.LABEL
 private const val FIELD_PAD = 8
-private const val NOTE_SP = 8.5f
+private const val NOTE_SP = Type.CAPTION
 private const val NOTE_TOP = 6
 /** Between the anchor and the panel. */
 private const val GAP = 10

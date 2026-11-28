@@ -15,6 +15,7 @@ import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.GodBadge
 import cloud.samlo.couch.ui.InputChip
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.UpdateChip
 import cloud.samlo.couch.ui.appear
 import cloud.samlo.couch.ui.dp
@@ -27,19 +28,19 @@ import cloud.samlo.couch.ui.dp
 class IndexTopBar(context: Context, onUpdate: () -> Unit) : LinearLayout(context) {
     val inputOffer = InputChip(context)
     val update = UpdateChip(context).apply { setOnClickListener { onUpdate() } }
-    val god = GodBadge(context, 9.5f)
+    val god = GodBadge(context, Type.CAPTION)
     private val weather = LinearLayout(context).apply {
         orientation = HORIZONTAL
         gravity = Gravity.CENTER_VERTICAL
         visibility = GONE
     }
     private val weatherIcon = ImageView(context)
-    private val temperature = text(14f, 600, Tokens.textPrimary).apply { letterSpacing = -0.02f }
-    private val range = text(8f, 500, IndexTokens.railIdle)
+    private val temperature = text(Type.LABEL, 600, Tokens.textPrimary).apply { letterSpacing = -0.02f }
+    private val range = text(Type.CAPTION, 500, IndexTokens.railIdle)
     private val divider = FlatView(context).apply { setBackgroundColor(0xFF2A3330.toInt()) }
     private val clock = TextClock(context).apply {
         typeface = Fonts.hanken(context, 500)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, Type.LABEL)
         setTextColor(Tokens.textPrimary)
         includeFontPadding = false
         fontFeatureSettings = "tnum"

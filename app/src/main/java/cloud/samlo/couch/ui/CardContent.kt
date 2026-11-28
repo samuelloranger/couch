@@ -43,7 +43,7 @@ class CardContent(
 
     private fun addRemoteArt(url: String) {
         // Title stays underneath as the placeholder until (or unless) the art arrives.
-        addView(cardLabel(context, tile.label, 14f, Tokens.textMuted).apply {
+        addView(cardLabel(context, tile.label, Type.LABEL, Tokens.textMuted).apply {
             maxLines = 2
             setPadding(context.dp(10), 0, context.dp(10), 0)
         }, fill())
@@ -75,8 +75,8 @@ class CardContent(
         // Brand marks carry the identity, so they get more room.
         val iconSize = context.dp(if (tile.cardColor != null) 32 else if (tile.subtitle != null) 24 else 30)
         addView(icon(), if (tile.iconWide) LinearLayout.LayoutParams(iconSize * 3, iconSize) else LinearLayout.LayoutParams(iconSize, iconSize))
-        addView(cardLabel(context, tile.label, 14f, Tokens.textPrimary).apply { setPadding(0, context.dp(4), 0, 0) })
-        tile.subtitle?.let { addView(cardLabel(context, it, 11f, Tokens.textMuted)) }
+        addView(cardLabel(context, tile.label, Type.LABEL, Tokens.textPrimary).apply { setPadding(0, context.dp(4), 0, 0) })
+        tile.subtitle?.let { addView(cardLabel(context, it, Type.CAPTION, Tokens.textMuted)) }
     }
 
     private fun icon() = ImageView(context).apply {
@@ -100,6 +100,7 @@ class CardContent(
 fun cardLabel(context: Context, text: String, sizeSp: Float, color: Int) = TextView(context).apply {
     this.text = text
     textSize = sizeSp
+    typeface = Fonts.hanken(context, 500)
     setTextColor(color)
     maxLines = 1
     ellipsize = TextUtils.TruncateAt.END

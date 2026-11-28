@@ -9,6 +9,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.SystemInfo
 import cloud.samlo.couch.settings.SettingsContext
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 
 /**
@@ -23,7 +24,7 @@ internal object Readouts {
         val info = SystemInfo(c)
         val view = TextView(c).apply {
             typeface = Typeface.MONOSPACE
-            textSize = 12.5f
+            textSize = Type.CAPTION
             setTextColor(Tokens.textMuted)
             setLineSpacing(0f, 1.3f)
         }

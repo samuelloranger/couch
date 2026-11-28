@@ -1,6 +1,8 @@
 package cloud.samlo.couch.index
 
+import cloud.samlo.couch.ui.Focus
 import android.graphics.Color
+import cloud.samlo.couch.ui.Tokens
 
 /**
  * The Index layout's measurements, in dp on Couch's 960x540dp canvas, and the few colours it
@@ -9,20 +11,20 @@ import android.graphics.Color
  */
 object IndexTokens {
     // The rail: Search, Home, Inputs and Settings, a strip down the left edge.
-    const val RAIL_W = 60
-    const val RAIL_ITEM_W = 48
-    const val RAIL_ITEM_H = 48
-    const val RAIL_ICON = 17
+    const val RAIL_W = 80
+    const val RAIL_ITEM_W = 68
+    const val RAIL_ITEM_H = 52
+    const val RAIL_ICON = 22
     /** Search takes the list's place; Home marks the current screen, Inputs sits one item below it. */
     const val RAIL_SEARCH_Y = 75
     const val RAIL_HOME_Y = 131
     const val RAIL_INPUTS_Y = 187
     const val RAIL_SETTINGS_Y = 450
-    const val RAIL_BAR_W = 2
-    const val RAIL_BAR_H = 18
+    const val RAIL_BAR_W = Focus.MARKER_W
+    const val RAIL_BAR_H = Focus.MARKER_H
 
     // The app list, right of the rail. Ten rows show, the last ones fading out.
-    const val LIST_X = 84
+    const val LIST_X = 100
     const val LIST_Y = 70
     const val LIST_W = 280
     const val LIST_ROW_H = 32
@@ -34,8 +36,8 @@ object IndexTokens {
     /** Rows kept above the selected one before the list glides; the last rows never pass the fade. */
     const val ROWS_ABOVE = 3
     const val ROWS_SHOWN = 10
-    const val LIST_MARKER_W = 2
-    const val LIST_MARKER_H = 14
+    const val LIST_MARKER_W = Focus.MARKER_W
+    const val LIST_MARKER_H = Focus.MARKER_H
 
     // The menus and panels that share the list's look (Inputs, the remote's panels).
     const val ROW_H = 46
@@ -62,16 +64,17 @@ object IndexTokens {
     const val DOCK_H = 52
     const val FOOTER_Y = 505
 
-    val hours = Color.parseColor("#5E6865")
+    /** Meta text (hours, hints, section labels, state words): 6.6:1 on the background, 5.6:1 on a surface. */
+    val hours = Color.parseColor("#8E9894")
     /** The 2x2 icon of a folder row: a shade darker than an app's own icon square. */
     val folderIcon = Color.parseColor("#2A3330")
     val railIdle = Color.parseColor("#7D8784")
     val railActive = Color.parseColor("#F4F6F5")
-    val barOff = Color.parseColor("#2C3532")
-    val markerIdle = Color.parseColor("#3D4A45")
-    val description = Color.parseColor("#8E9894")
-    /** The footer's quiet text on the window background: 5.1:1 for labels, 8.5:1 for values. */
-    val footerLabel = Color.parseColor("#7A8481")
+    /** An empty chart bar: a graphic that carries meaning, so 3:1 or better. */
+    val barOff = Tokens.graphicIdle
+    val description = hours
+    /** The footer's quiet text on the window background: 6.6:1 for labels, 8.5:1 for values. */
+    val footerLabel = hours
     val footerValue = Color.parseColor("#A3ADAA")
     val pillText = Color.parseColor("#C4CCC9")
     /** Tokens.surface at 70%. */

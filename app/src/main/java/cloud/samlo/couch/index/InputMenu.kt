@@ -1,5 +1,6 @@
 package cloud.samlo.couch.index
 
+import cloud.samlo.couch.ui.Focus
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Dialog
@@ -18,6 +19,7 @@ import cloud.samlo.couch.data.Prefs
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -31,17 +33,7 @@ import cloud.samlo.couch.ui.dpf
 @SuppressLint("RtlHardcoded")
 class InputMenu(private val activity: Activity, private val inputs: List<Tile>, anchor: View) : Dialog(activity) {
     private val rows = inputs.map { InputMenuRow(activity, it) }
-    private val marker = GradientDrawable().apply {
-        cornerRadius = activity.dpf(1.5f)
-        setColor(Tokens.accent)
-    }
-    private val selection = FrameLayout(activity).apply {
-        background = GradientDrawable().apply {
-            cornerRadius = activity.dpf(6f)
-            setColor(Tokens.surfaceFocused)
-        }
-        addView(FlatView(activity).apply { background = marker }, FrameLayout.LayoutParams(activity.dp(3), activity.dp(IndexTokens.ROW_H - 22), Gravity.CENTER_VERTICAL))
-    }
+    private val selection = FlatView(activity).apply { background = Focus.plate(activity) }
     private val panel = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         background = GradientDrawable().apply {
@@ -55,7 +47,7 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
 
     init {
         requestWindowFeature(Window.FEATURE_NO_TITLE)
-        val title = IndexText(activity, 15f, 600, Tokens.textMuted).apply { setText(R.string.section_inputs) }
+        val title = IndexText(activity, Type.LABEL, 600, Tokens.textMuted).apply { setText(R.string.section_inputs) }
         panel.addView(title, title.stack(LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
             marginStart = activity.dp(15)
         }, bottom = activity.dp(10)))
@@ -65,7 +57,7 @@ class InputMenu(private val activity: Activity, private val inputs: List<Tile>, 
         rows.forEach { column.addView(it, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, activity.dp(IndexTokens.ROW_H)).apply { bottomMargin = activity.dp(IndexTokens.ROW_PITCH - IndexTokens.ROW_H) }) }
         list.addView(column)
         panel.addView(list, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
-        val hint = IndexText(activity, 11f, 500, IndexTokens.hours).apply { setText(R.string.input_menu_hint) }
+        val hint = IndexText(activity, Type.LABEL, 500, IndexTokens.hours).apply { setText(R.string.input_menu_hint) }
         panel.addView(hint, hint.stack(LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
             marginStart = activity.dp(15)
         }, top = activity.dp(8)))

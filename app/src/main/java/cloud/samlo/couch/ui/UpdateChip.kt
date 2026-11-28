@@ -11,7 +11,8 @@ import cloud.samlo.couch.R
 /** "Update 0.3.0" in the top bar, left of the weather. Hidden until a newer release exists. */
 class UpdateChip(context: Context) : TextView(context) {
     init {
-        textSize = 14f
+        textSize = Type.LABEL
+        typeface = Fonts.hanken(context, 500)
         gravity = Gravity.CENTER
         isFocusable = true
         visibility = View.GONE

@@ -1,5 +1,7 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Focus
+import cloud.samlo.couch.ui.Fonts
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.res.ColorStateList
@@ -15,6 +17,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -92,13 +95,15 @@ class RailItem(context: Context, icon: Int, title: String) : LinearLayout(contex
     private val image = ImageView(context).apply { setImageResource(icon) }
     val name = TextView(context).apply {
         text = title
-        textSize = 17f
+        textSize = Type.BODY
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textPrimary)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
     }
     val summary = TextView(context).apply {
-        textSize = 13f
+        textSize = Type.LABEL
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textMuted)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
@@ -152,14 +157,10 @@ class RailItem(context: Context, icon: Int, title: String) : LinearLayout(contex
     }
 }
 
-/** Focused: the accent ring rows use. The open group, unfocused: a quiet fill. */
+/** Focused: the plate and marker rows use. The open group, unfocused: a quiet fill. */
 private fun railBackground(context: Context) = StateListDrawable().apply {
     val radius = context.dpf(Tokens.CARD_RADIUS)
-    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-        cornerRadius = radius
-        setColor(Tokens.surfaceFocused)
-        setStroke(context.dp(2), Tokens.accent)
-    })
+    addState(intArrayOf(android.R.attr.state_focused), Focus.plate(context))
     addState(intArrayOf(android.R.attr.state_selected), GradientDrawable().apply {
         cornerRadius = radius
         setColor(Tokens.surface)

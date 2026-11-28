@@ -7,6 +7,7 @@ import android.view.Gravity
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import cloud.samlo.couch.ui.FlatView
+import cloud.samlo.couch.ui.Focus
 import cloud.samlo.couch.ui.Tokens
 import cloud.samlo.couch.ui.arrange
 import cloud.samlo.couch.ui.dp
@@ -102,7 +103,7 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
         if (painted != inRow to Tokens.accent) {
             painted = inRow to Tokens.accent
             fill.setColor(if (inRow) SELECTED_QUIET else SELECTED)
-            marker.setColor(if (inRow) IndexTokens.markerIdle else Tokens.accent)
+            marker.setColor(if (inRow) Tokens.graphicIdle else Tokens.accent)
         }
         place(column.indexOfChild(row), animate = true)
     }
@@ -204,8 +205,8 @@ class AppList(context: Context, private val makeRow: (IndexEntry) -> AppRow) : F
 
     private companion object {
         /** White at 6%, and a little less while focus is in the channel row. */
-        const val SELECTED = 0x0FFFFFFF
-        const val SELECTED_QUIET = 0x0AFFFFFF
+        const val SELECTED = Focus.PLATE
+        const val SELECTED_QUIET = Focus.PLATE_QUIET
         /** How far a lifted row steps to the right, and how high it floats. */
         const val LIFT_X = 6
         const val LIFT_Z = 8f

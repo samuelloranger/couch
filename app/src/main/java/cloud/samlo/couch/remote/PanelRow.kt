@@ -14,6 +14,7 @@ import cloud.samlo.couch.index.HomePill
 import cloud.samlo.couch.index.IndexText
 import cloud.samlo.couch.index.IndexTokens
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -25,13 +26,13 @@ import cloud.samlo.couch.ui.dpf
  */
 @SuppressLint("ViewConstructor")
 class PanelRow(context: Context, val item: PanelItem, compact: Boolean = false) : FrameLayout(context) {
-    private val name = IndexText(context, if (compact) 15f else 19f, 600, Tokens.textMuted).apply {
+    private val name = IndexText(context, if (compact) Type.LABEL else Type.HEADING, 600, Tokens.textMuted).apply {
         letterSpacing = -0.015f
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         text = item.label
     }
-    private val port = IndexText(context, 11f, 500, IndexTokens.hours).apply { maxLines = 1 }
+    private val port = IndexText(context, Type.LABEL, 500, IndexTokens.hours).apply { maxLines = 1 }
 
     /** A Home Assistant device's icon, redrawn on [refresh]. */
     private var home: ImageView? = null

@@ -18,7 +18,8 @@ class InputChip(context: Context) : TextView(context) {
     private val expire = Runnable { hide() }
 
     init {
-        textSize = 14f
+        textSize = Type.LABEL
+        typeface = Fonts.hanken(context, 500)
         gravity = Gravity.CENTER
         isFocusable = true
         visibility = View.GONE

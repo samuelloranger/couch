@@ -1,8 +1,8 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.app.Activity
 import android.graphics.Color
-import android.graphics.Typeface
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -13,6 +13,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 
 /** A value a [OptionList.choice] row can take: what it shows, and what is stored. */
@@ -39,9 +40,9 @@ class OptionList(
     fun header(text: String) {
         screen.list.addView(TextView(activity).apply {
             this.text = text
-            textSize = 14f
+            textSize = Type.LABEL
             letterSpacing = 0.06f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = Fonts.hanken(activity, 600)
             setTextColor(Tokens.textMuted)
             setPadding(activity.dp(20), activity.dp(if (screen.list.childCount == 0) 0 else 22), 0, activity.dp(8))
         })
@@ -51,7 +52,8 @@ class OptionList(
     fun note(text: String) {
         screen.list.addView(TextView(activity).apply {
             this.text = text
-            textSize = 15f
+            textSize = Type.LABEL
+            typeface = Fonts.hanken(activity, 500)
             setTextColor(Tokens.textMuted)
             setPadding(activity.dp(20), 0, 0, activity.dp(10))
         })

@@ -15,6 +15,7 @@ import android.view.View
 import cloud.samlo.couch.hass.HassDevice
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dpf
 
 /**
@@ -81,11 +82,11 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
     }
     private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Fonts.hanken(context, 500)
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 9f, resources.displayMetrics)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, Type.CAPTION, resources.displayMetrics)
     }
     private val small = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         typeface = Fonts.hanken(context, 500)
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 7.5f, resources.displayMetrics)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, Type.CAPTION, resources.displayMetrics)
     }
     private val rect = RectF()
     private val padStart = context.dpf(4f)
@@ -269,7 +270,7 @@ class HomePill(context: Context, val entityId: String, private val actions: Acti
         private val GOLD_LABEL = Color.parseColor("#FFE2A8")
         private val GOLD_BG = Color.parseColor("#2A2619")
         private val OFFLINE_BG = Color.parseColor("#141917")
-        private val OFFLINE_FG = Color.parseColor("#5E6865")
+        private val OFFLINE_FG = IndexTokens.hours
 
         private fun blend(base: Int, over: Int, amount: Float): Int {
             fun mix(shift: Int) = (((base shr shift) and 0xFF) * (1 - amount) + ((over shr shift) and 0xFF) * amount).toInt()

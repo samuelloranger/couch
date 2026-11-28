@@ -1,5 +1,7 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Focus
+import cloud.samlo.couch.ui.Fonts
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
@@ -14,6 +16,7 @@ import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.widget.LinearLayout
 import android.widget.TextView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -30,19 +33,22 @@ class OptionRow(
     panel: TextView,
 ) : LinearLayout(context) {
     val label = TextView(context).apply {
-        textSize = 17f
+        textSize = Type.BODY
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textPrimary)
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
     }
     val value = TextView(context).apply {
-        textSize = 16f
+        textSize = Type.BODY
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textMuted)
         maxLines = 1
         gravity = Gravity.END
     }
     private val help = TextView(context).apply {
-        textSize = 14f
+        textSize = Type.LABEL
+        typeface = Fonts.hanken(context, 500)
         setTextColor(Tokens.textMuted)
         setLineSpacing(0f, 1.2f)
         visibility = GONE
@@ -72,6 +78,7 @@ class OptionRow(
             if (focused) panel.text = ""
             help.visibility = if (focused && helpText.isNotEmpty()) VISIBLE else GONE
             value.setTextColor(if (focused) Tokens.textPrimary else Tokens.textMuted)
+            help.setTextColor(if (focused) Tokens.textMutedFocused else Tokens.textMuted)
         }
         refresh()
     }
@@ -100,12 +107,5 @@ class OptionRow(
 /** Ends the value of a row that leaves settings. */
 const val LEAVES = "↗"
 
-/** Rounded highlight in the accent colour while focused; call again after the accent changes. */
-fun optionBackground(context: Context) = StateListDrawable().apply {
-    addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-        cornerRadius = context.dpf(Tokens.CARD_RADIUS)
-        setColor(Tokens.surfaceFocused)
-        setStroke(context.dp(2), Tokens.accent)
-    })
-    addState(intArrayOf(), GradientDrawable().apply { cornerRadius = context.dpf(Tokens.CARD_RADIUS) })
-}
+/** The row focus plate and accent marker while focused; call again after the accent changes. */
+fun optionBackground(context: Context) = Focus.rowBackground(context)

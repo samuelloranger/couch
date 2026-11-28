@@ -13,6 +13,7 @@ import android.widget.TextView
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Config
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -118,7 +119,7 @@ class FrameHud(private val activity: Activity) {
         val c = activity
         val view = TextView(c).apply {
             typeface = Typeface.MONOSPACE
-            textSize = 12f
+            textSize = Type.CAPTION
             setTextColor(Tokens.textPrimary)
             setLineSpacing(0f, 1.15f)
             setPadding(c.dp(12), c.dp(9), c.dp(12), c.dp(9))

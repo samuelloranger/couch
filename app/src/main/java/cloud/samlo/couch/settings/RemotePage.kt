@@ -20,6 +20,7 @@ import cloud.samlo.couch.index.IndexText
 import cloud.samlo.couch.remote.RemoteButtons
 import cloud.samlo.couch.ui.Popover
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import kotlin.concurrent.thread
 
@@ -235,8 +236,8 @@ class RemotePage(private val ctx: SettingsContext) : SettingsPage {
         private const val PANEL_PAD = 10
         private const val DOT = 10
         private const val DOT_GAP = 9
-        private const val PROMPT_SP = 11.5f
-        private const val NOTE_SP = 8.5f
+        private const val PROMPT_SP = Type.LABEL
+        private const val NOTE_SP = Type.CAPTION
         private const val NOTE_TOP = 6
         private const val PULSE_MS = 700L
     }

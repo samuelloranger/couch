@@ -1,5 +1,6 @@
 package cloud.samlo.couch.remote
 
+import cloud.samlo.couch.ui.Focus
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
@@ -12,6 +13,7 @@ import cloud.samlo.couch.index.IndexText
 import cloud.samlo.couch.index.IndexTokens
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -38,20 +40,8 @@ class PanelView(
     private val pitch = if (grid) GRID_PITCH else IndexTokens.ROW_PITCH
     /** Each grid line's row indices, top to bottom. */
     private val lines = ArrayList<List<Int>>()
-    private val selection = FrameLayout(context).apply {
-        background = GradientDrawable().apply {
-            cornerRadius = context.dpf(6f)
-            setColor(Tokens.surfaceFocused)
-        }
-        addView(
-            FlatView(context).apply {
-                background = GradientDrawable().apply {
-                    cornerRadius = context.dpf(1.5f)
-                    setColor(Tokens.accent)
-                }
-            },
-            LayoutParams(context.dp(3), context.dp((if (columns > 1) GRID_ROW_H else IndexTokens.ROW_H) - 22), Gravity.CENTER_VERTICAL),
-        )
+    private val selection = FlatView(context).apply {
+        background = Focus.plate(context)
         visibility = INVISIBLE
     }
     private val column = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
@@ -111,7 +101,7 @@ class PanelView(
         track.addView(column, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         viewport.addView(track, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
         content.addView(viewport, LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        val hintView = IndexText(context, 11f, 500, IndexTokens.hours).apply { text = hint }
+        val hintView = IndexText(context, Type.LABEL, 500, IndexTokens.hours).apply { text = hint }
         content.addView(hintView, hintView.stack(LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
             marginStart = context.dp(15)
         }, top = context.dp(10)))
@@ -151,7 +141,7 @@ class PanelView(
     override fun dispatchKeyEvent(event: KeyEvent): Boolean = onKey?.invoke(event) == true || super.dispatchKeyEvent(event)
 
     private fun title(top: Int, text: String) {
-        val view = IndexText(context, 15f, 600, Tokens.textMuted).apply { this.text = text }
+        val view = IndexText(context, Type.LABEL, 600, Tokens.textMuted).apply { this.text = text }
         column.addView(view, view.stack(LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
             marginStart = context.dp(15)
         }, top = top, bottom = context.dp(12)))
