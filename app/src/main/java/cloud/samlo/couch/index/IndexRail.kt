@@ -59,6 +59,8 @@ class IndexRail(
         if (barColor == Tokens.accent) return
         barColor = Tokens.accent
         (bar.background as GradientDrawable).setColor(barColor)
+        // The items' focus glow bakes the accent in too.
+        listOf(search, home, inputs, settings).forEach { it.background = focusBackground() }
     }
 
     /** Search has the list's place: the bar glides up to it, and Home turns into OK-to-close. */
@@ -93,6 +95,11 @@ class IndexRail(
     /** The items the remote reaches, top to bottom: Home joins them only while it closes Search. */
     private fun focusable() = listOf(search, home, inputs, settings).filter { it.visibility == VISIBLE && it.isFocusable }
 
+    private fun focusBackground() = StateListDrawable().apply {
+        addState(intArrayOf(android.R.attr.state_focused), Focus.tileRing(context, 8f, 0x1AFFFFFF))
+        addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+    }
+
     private fun item(icon: Int, label: Int, y: Int, active: Boolean, onClick: () -> Unit): LinearLayout {
         val color = if (active) IndexTokens.railActive else IndexTokens.railIdle
         val glyph = ImageView(context).apply { setImageResource(icon); setColorFilter(color) }
@@ -115,10 +122,7 @@ class IndexRail(
             gravity = Gravity.CENTER
             contentDescription = context.getString(label)
             setOnClickListener { onClick() }
-            background = StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), Focus.tileRing(context, 8f, 0x1AFFFFFF))
-                addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
-            }
+            background = focusBackground()
             // Home marks the screen: it takes focus only while Search is open.
             isFocusable = !active
             isClickable = !active

@@ -83,7 +83,7 @@ class SearchPanel(
         background = GradientDrawable().apply {
             cornerRadius = context.dpf(FIELD_RADIUS)
             setColor(Tokens.surface)
-            setStroke(context.dp(Focus.RING_W), FIELD_IDLE)
+            setStroke(context.dp(Focus.RING_W), Tokens.graphicIdle)
         }
     }
     private val body = FrameLayout(context).apply { clipChildren = true }
@@ -371,7 +371,7 @@ class SearchPanel(
     private fun paintField(focused: Boolean) {
         (fieldBox.background as? GradientDrawable)?.setStroke(
             context.dp(Focus.RING_W),
-            if (focused) Tokens.ring else FIELD_IDLE,
+            if (focused) Tokens.ring else Tokens.graphicIdle,
         )
     }
 
@@ -520,8 +520,6 @@ class SearchPanel(
     private companion object {
         const val FIELD_H = 38
         const val FIELD_RADIUS = 19f
-        /** The unfocused field's outline, about 2:1 on the background. */
-        val FIELD_IDLE = Color.parseColor("#3A4540")
         const val FIELD_ICON = 14
         const val FIELD_PAD = 14
         const val FIELD_GAP = 9

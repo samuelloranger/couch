@@ -17,7 +17,8 @@ object Tokens {
     val textMutedFocused = Color.parseColor("#A3ADAA")
 
     /** Non-text graphics that carry meaning (an off switch or bar, an idle marker): 3.7:1 on the background, 3.1:1 on [surface]. */
-    val graphicIdle = Color.parseColor("#626E69")
+    const val GRAPHIC_IDLE_HEX = "#626E69"
+    val graphicIdle = Color.parseColor(GRAPHIC_IDLE_HEX)
     val surface = Color.parseColor("#1A201E")
     val surfaceFocused = Color.parseColor("#242B28")
     val ring = Color.parseColor("#FFFFFF")
