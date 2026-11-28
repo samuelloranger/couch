@@ -10,6 +10,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -20,13 +21,13 @@ import cloud.samlo.couch.ui.dpf
  */
 @SuppressLint("ViewConstructor")
 class InputMenuRow(context: Context, val tile: Tile) : FrameLayout(context) {
-    private val name = IndexText(context, 19f, 600, Tokens.textMuted).apply {
+    private val name = IndexText(context, Type.HEADING, 600, Tokens.textMuted).apply {
         letterSpacing = -0.015f
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
         text = tile.label
     }
-    private val port = IndexText(context, 11f, 500, IndexTokens.hours).apply {
+    private val port = IndexText(context, Type.LABEL, 500, IndexTokens.hours).apply {
         maxLines = 1
         text = tile.subtitle.orEmpty()
     }

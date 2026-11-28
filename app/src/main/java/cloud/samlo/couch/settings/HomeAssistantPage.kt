@@ -1,5 +1,6 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.view.Gravity
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -17,6 +18,7 @@ import cloud.samlo.couch.hass.QrCode
 import cloud.samlo.couch.index.HomeStatus
 import cloud.samlo.couch.ui.Popover
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -153,6 +155,7 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
         fun line(text: String, size: Float, color: Int) = TextView(activity).apply {
             this.text = text
             textSize = size
+            typeface = Fonts.hanken(activity, 500)
             setTextColor(color)
             gravity = Gravity.CENTER
         }
@@ -161,13 +164,13 @@ class HomeAssistantPage(private val ctx: SettingsContext) : SettingsPage {
             gravity = Gravity.CENTER_HORIZONTAL
             val pad = activity.dp(BODY_PAD)
             setPadding(pad, pad, pad, pad)
-            addView(line(ctx.str(R.string.hass_link_steps), 13f, Tokens.textMuted))
+            addView(line(ctx.str(R.string.hass_link_steps), Type.LABEL, Tokens.textMuted))
             addView(qr, LinearLayout.LayoutParams(activity.dp(QR_DP), activity.dp(QR_DP)).apply {
                 topMargin = activity.dp(12)
                 bottomMargin = activity.dp(12)
             })
-            addView(line(address, 15f, Tokens.textPrimary))
-            addView(line(ctx.str(R.string.hass_link_wait), 12f, Tokens.textMuted).apply { setPadding(0, activity.dp(10), 0, 0) })
+            addView(line(address, Type.LABEL, Tokens.textPrimary))
+            addView(line(ctx.str(R.string.hass_link_wait), Type.CAPTION, Tokens.textMuted).apply { setPadding(0, activity.dp(10), 0, 0) })
         }
         linkPopover = Popover(activity, anchor, body, QR_DP + 2 * BODY_PAD + 2 * PANEL_PAD).apply {
             setOnDismissListener { stopLink() }

@@ -1,10 +1,11 @@
 package cloud.samlo.couch.debloat
 
+import cloud.samlo.couch.ui.Focus
+import cloud.samlo.couch.ui.Fonts
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.StateListDrawable
 import android.text.Layout
@@ -14,6 +15,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.TextView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -35,7 +37,8 @@ class AppTile(
     private val icon = ImageView(context)
     private val glyph = TextView(context).apply {
         text = Kinds.glyph(kind)
-        textSize = 24f
+        textSize = Type.TITLE
+        typeface = Fonts.hanken(context, 500)
         gravity = Gravity.CENTER
         setTextColor(Kinds.color(kind))
         background = GradientDrawable().apply {
@@ -45,8 +48,8 @@ class AppTile(
     }
     private val tick = TextView(context).apply {
         text = "✓"
-        textSize = 13f
-        typeface = Typeface.DEFAULT_BOLD
+        textSize = Type.LABEL
+        typeface = Fonts.hanken(context, 700)
         gravity = Gravity.CENTER
         setTextColor(Tokens.background)
         background = GradientDrawable().apply {
@@ -71,7 +74,8 @@ class AppTile(
         addView(icon, LayoutParams(size, size, Gravity.CENTER_HORIZONTAL).apply { topMargin = context.dp(10) })
         addView(TextView(context).apply {
             text = name
-            textSize = 12f
+            textSize = Type.CAPTION
+            typeface = Fonts.hanken(context, 500)
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
             gravity = Gravity.CENTER_HORIZONTAL
@@ -103,11 +107,7 @@ class AppTile(
     override fun hasOverlappingRendering() = false
 
     private fun tileBackground(context: Context) = StateListDrawable().apply {
-        addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-            cornerRadius = context.dpf(Tokens.CARD_RADIUS)
-            setColor(Tokens.surfaceFocused)
-            setStroke(context.dp(2), Tokens.accent)
-        })
+        addState(intArrayOf(android.R.attr.state_focused), Focus.tileRing(context, Tokens.CARD_RADIUS, Tokens.surfaceFocused))
         addState(intArrayOf(), GradientDrawable().apply {
             cornerRadius = context.dpf(Tokens.CARD_RADIUS)
             setColor(Tokens.surface)
@@ -119,7 +119,7 @@ class AppTile(
         const val ICON_RADIUS = 12f
         const val WIDTH = 92
         const val HEIGHT = 108
-        private const val SCALE = 1.06f
+        private const val SCALE = Tokens.FOCUS_SCALE
         private const val LOCKED_ALPHA = 0.4f
     }
 }

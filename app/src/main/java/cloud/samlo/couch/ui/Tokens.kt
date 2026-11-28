@@ -10,7 +10,14 @@ import cloud.samlo.couch.data.Accents
  */
 object Tokens {
     val textPrimary = Color.parseColor("#EDEDEF")
+    /** 6.3:1 on the background, 5.3:1 on [surface]. On a focus plate use [textMutedFocused]. */
     val textMuted = Color.parseColor("#8A9490")
+
+    /** Muted text on a focused row's plate (5.3:1 there). */
+    val textMutedFocused = Color.parseColor("#A3ADAA")
+
+    /** Non-text graphics that carry meaning (an off switch or bar, an idle marker): 3.7:1 on the background, 3.1:1 on [surface]. */
+    val graphicIdle = Color.parseColor("#626E69")
     val surface = Color.parseColor("#1A201E")
     val surfaceFocused = Color.parseColor("#242B28")
     val ring = Color.parseColor("#FFFFFF")
@@ -53,7 +60,8 @@ object Tokens {
     /** Row and column glides; long enough to read as motion, short enough to keep up with key repeat. */
     const val GLIDE_MS = 260L
 
-    const val FOCUS_SCALE = 1.08f
+    /** Small tiles, icons and posters; wide cards use [Focus.scale]. */
+    const val FOCUS_SCALE = Focus.SCALE_SMALL
     const val PRESS_SCALE = 1.02f
     const val FOCUS_IN_MS = 200L
     const val FOCUS_OUT_MS = 140L

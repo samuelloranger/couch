@@ -1,12 +1,12 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
-import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -15,6 +15,7 @@ import android.view.View
 import android.widget.LinearLayout
 import android.widget.TextView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -30,7 +31,8 @@ class Segments(context: Context, labels: List<String>) : LinearLayout(context) {
     private val cells = labels.map { label ->
         TextView(context).apply {
             text = label
-            textSize = 14f
+            textSize = Type.LABEL
+            typeface = Fonts.hanken(context, 500)
             maxLines = 1
             setPadding(context.dp(12), context.dp(4), context.dp(12), context.dp(4))
         }
@@ -48,7 +50,7 @@ class Segments(context: Context, labels: List<String>) : LinearLayout(context) {
         val on = i == index
         cell.background = if (on) rounded(context, 7f, Tokens.textPrimary) else null
         cell.setTextColor(if (on) Tokens.background else Tokens.textMuted)
-        cell.typeface = Typeface.create(if (on) "sans-serif-medium" else "sans-serif", Typeface.NORMAL)
+        cell.typeface = Fonts.hanken(context, if (on) 600 else 500)
     }
 
     companion object {
@@ -123,7 +125,7 @@ class SwitchView(context: Context) : View(context) {
     }
 
     private companion object {
-        val OFF_TRACK = Color.parseColor("#2E3633")
+        val OFF_TRACK = Tokens.graphicIdle
     }
 }
 

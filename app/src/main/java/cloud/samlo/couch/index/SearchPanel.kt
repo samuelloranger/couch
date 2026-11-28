@@ -30,8 +30,10 @@ import cloud.samlo.couch.data.AppLabels
 import cloud.samlo.couch.data.Images
 import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.ui.FlatView
+import cloud.samlo.couch.ui.Focus
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.TvField
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
@@ -59,7 +61,7 @@ class SearchPanel(
 ) : FrameLayout(context) {
     private val field = TvField(context).apply {
         typeface = Fonts.hanken(context, 400)
-        setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, Type.BODY)
         setTextColor(Tokens.textPrimary)
         setHintTextColor(IndexTokens.railIdle)
         setHint(R.string.search_hint)
@@ -81,7 +83,7 @@ class SearchPanel(
         background = GradientDrawable().apply {
             cornerRadius = context.dpf(FIELD_RADIUS)
             setColor(Tokens.surface)
-            setStroke(context.dpf(FIELD_STROKE).toInt(), IndexTokens.barOff)
+            setStroke(context.dp(Focus.RING_W), FIELD_IDLE)
         }
     }
     private val body = FrameLayout(context).apply { clipChildren = true }
@@ -335,7 +337,7 @@ class SearchPanel(
     }
 
     private fun section(label: Int) {
-        val text = IndexText(context, 8.5f, 600, IndexTokens.hours).apply {
+        val text = IndexText(context, Type.CAPTION, 600, IndexTokens.hours).apply {
             this.text = context.getString(label).uppercase()
             letterSpacing = 0.07f
         }
@@ -349,7 +351,7 @@ class SearchPanel(
     }
 
     private fun nothing() {
-        val line = IndexText(context, 11f, 400, IndexTokens.description).apply { setText(R.string.search_nothing) }
+        val line = IndexText(context, Type.LABEL, 400, IndexTokens.description).apply { setText(R.string.search_nothing) }
         track.addView(line, line.stack(
             LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
                 marginStart = context.dp(ROW_PAD)
@@ -368,8 +370,8 @@ class SearchPanel(
 
     private fun paintField(focused: Boolean) {
         (fieldBox.background as? GradientDrawable)?.setStroke(
-            context.dpf(FIELD_STROKE).toInt(),
-            if (focused) Tokens.accent else IndexTokens.barOff,
+            context.dp(Focus.RING_W),
+            if (focused) Tokens.ring else FIELD_IDLE,
         )
     }
 
@@ -441,13 +443,13 @@ class SearchPanel(
                 setColor(Tokens.surface)
             }
         }
-        private val label = IndexText(context, 14f, 500, Tokens.textMuted).apply {
+        private val label = IndexText(context, Type.LABEL, 500, Tokens.textMuted).apply {
             letterSpacing = -0.01f
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
             this.text = text
         }
-        private val hours = IndexText(context, 8.5f, 500, IndexTokens.hours).apply {
+        private val hours = IndexText(context, Type.CAPTION, 500, IndexTokens.hours).apply {
             fontFeatureSettings = "tnum"
             maxLines = 1
             this.text = meta
@@ -518,7 +520,8 @@ class SearchPanel(
     private companion object {
         const val FIELD_H = 38
         const val FIELD_RADIUS = 19f
-        const val FIELD_STROKE = 1.5f
+        /** The unfocused field's outline, about 2:1 on the background. */
+        val FIELD_IDLE = Color.parseColor("#3A4540")
         const val FIELD_ICON = 14
         const val FIELD_PAD = 14
         const val FIELD_GAP = 9
@@ -529,7 +532,7 @@ class SearchPanel(
         const val HOME_APPS = 5
         const val CONTINUE_MAX = 3
         /** White at 6%, as the list's selected row. */
-        const val SELECTED = 0x0FFFFFFF
+        const val SELECTED = Focus.PLATE
         /** A row glyph keeps this much of its 22dp slot all round, so every glyph is drawn at one size. */
         const val GLYPH_INSET = 4
         /** One tone for the panel's glyphs, as for the rows' labels. */

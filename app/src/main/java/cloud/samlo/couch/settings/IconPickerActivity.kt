@@ -1,10 +1,10 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.widget.LinearLayout
@@ -19,6 +19,7 @@ import cloud.samlo.couch.data.Tile
 import cloud.samlo.couch.data.UserFiles
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 
 /**
@@ -102,14 +103,15 @@ class IconPickerActivity : Activity() {
         setPadding(0, dp(Tokens.OVERSCAN_V + 10), 0, 0)
         addView(TextView(context).apply {
             text = getString(R.string.picker_title, inputName)
-            textSize = 30f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            textSize = Type.DISPLAY
+            typeface = Fonts.hanken(context, 600)
             setTextColor(Tokens.textPrimary)
             setPadding(dp(Tokens.OVERSCAN_H), 0, 0, 0)
         })
         addView(TextView(context).apply {
             text = getString(R.string.picker_hint)
-            textSize = 15f
+            textSize = Type.LABEL
+            typeface = Fonts.hanken(context, 500)
             setTextColor(Tokens.textMuted)
             setPadding(dp(Tokens.OVERSCAN_H), dp(4), 0, dp(16))
         })

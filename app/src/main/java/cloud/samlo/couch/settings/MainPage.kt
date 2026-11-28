@@ -1,5 +1,6 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.content.Intent
 import android.view.Gravity
 import android.view.KeyEvent
@@ -20,6 +21,7 @@ import cloud.samlo.couch.godmode.PRESSES
 import cloud.samlo.couch.godmode.Unlock
 import cloud.samlo.couch.sync.Sync
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.accentChip
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.plainChip
@@ -281,7 +283,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
         val fetcher = Fetcher(activity)
         val check = UpdateCheck(activity, fetcher)
         val status = TextView(activity).apply {
-            textSize = 15f
+            textSize = Type.LABEL
+            typeface = Fonts.hanken(activity, 500)
             setTextColor(Tokens.textMuted)
             setPadding(activity.dp(20), activity.dp(6), activity.dp(20), activity.dp(10))
         }
@@ -350,7 +353,8 @@ class MainPage(private val ctx: SettingsContext) : SettingsPage {
     /** A pill like the home screen's Update chip; [accent] marks the main action. */
     private fun pill(text: String, accent: Boolean) = TextView(ctx.activity).apply {
         this.text = text
-        textSize = 16f
+        textSize = Type.BODY
+        typeface = Fonts.hanken(ctx.activity, 500)
         gravity = Gravity.CENTER
         id = View.generateViewId()
         isFocusable = true

@@ -6,7 +6,6 @@ import android.animation.PropertyValuesHolder
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
@@ -33,19 +32,21 @@ class Ambient(context: Context, private val images: Images) : FrameLayout(contex
     private val belowDrift = drift(below)
     private val aboveDrift = drift(above)
     private val weather = TextView(context).apply {
-        textSize = 20f
+        textSize = Type.HEADING
+        typeface = Fonts.hanken(context, 500)
         setTextColor(0xE6FFFFFF.toInt())
         setShadowLayer(12f, 0f, 2f, 0x99000000.toInt())
     }
     private val time = TextClock(context).apply {
         textSize = 96f
-        typeface = Typeface.create("sans-serif-thin", Typeface.NORMAL)
+        typeface = Fonts.hanken(context, 300)
         setTextColor(0xFFFFFFFF.toInt())
         includeFontPadding = false
         setShadowLayer(18f, 0f, 2f, 0x99000000.toInt())
     }
     private val date = TextClock(context).apply {
-        textSize = 22f
+        textSize = Type.TITLE
+        typeface = Fonts.hanken(context, 500)
         setTextColor(0xE6FFFFFF.toInt())
         showLongDate()
         setShadowLayer(12f, 0f, 2f, 0x99000000.toInt())

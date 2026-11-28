@@ -13,6 +13,7 @@ import cloud.samlo.couch.R
 import cloud.samlo.couch.index.IndexText
 import cloud.samlo.couch.index.IndexTokens
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -27,7 +28,7 @@ class PinPad private constructor(context: Context, private val done: (String?) -
     private val windows = context.getSystemService(WindowManager::class.java)
     private val digits = IntArray(LENGTH)
     private var at = 0
-    private val boxes = List(LENGTH) { IndexText(context, 34f, 600, Tokens.textPrimary).apply { gravity = Gravity.CENTER } }
+    private val boxes = List(LENGTH) { IndexText(context, Type.DISPLAY, 600, Tokens.textPrimary).apply { gravity = Gravity.CENTER } }
 
     init {
         isFocusable = true
@@ -41,11 +42,11 @@ class PinPad private constructor(context: Context, private val done: (String?) -
                 setColor(Tokens.background and 0x00FFFFFF or 0xF2000000.toInt())
             }
         }
-        card.addView(IndexText(context, 15f, 600, Tokens.textPrimary).apply { setText(R.string.pin_title) })
+        card.addView(IndexText(context, Type.BODY, 600, Tokens.textPrimary).apply { setText(R.string.pin_title) })
         val row = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL }
         boxes.forEach { row.addView(it, LinearLayout.LayoutParams(context.dp(56), context.dp(68)).apply { marginStart = context.dp(6); marginEnd = context.dp(6) }) }
         card.addView(row, LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(12) })
-        card.addView(IndexText(context, 11f, 500, IndexTokens.hours).apply { setText(R.string.pin_hint) },
+        card.addView(IndexText(context, Type.LABEL, 500, IndexTokens.hours).apply { setText(R.string.pin_hint) },
             LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply { topMargin = context.dp(12) })
         addView(card, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL).apply {
             bottomMargin = context.dp(Tokens.OVERSCAN_V + 8)

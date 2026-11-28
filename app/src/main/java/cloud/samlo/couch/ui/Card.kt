@@ -29,6 +29,7 @@ class Card(
     thinRing: Boolean = false,
     private val onFocused: (Card) -> Unit,
 ) : FrameLayout(context) {
+    private val focusScale = Focus.scale(widthDp)
     private val ring = FlatView(context)
     private val ringDrawable: LayerDrawable = cardRing(context, radiusDp, thinRing)
 
@@ -63,7 +64,7 @@ class Card(
     }
 
     private fun belowLabel(inset: Int, height: Int) =
-        cardLabel(context, tile.label, 13f, Tokens.textMuted).apply {
+        cardLabel(context, tile.label, Type.LABEL, Tokens.textMuted).apply {
             layoutParams = LayoutParams(LayoutParams.MATCH_PARENT, height, Gravity.BOTTOM).apply {
                 leftMargin = inset
                 rightMargin = inset
@@ -90,7 +91,7 @@ class Card(
 
     private fun animateFocus(hasFocus: Boolean) {
         val duration = if (hasFocus) Tokens.FOCUS_IN_MS else Tokens.FOCUS_OUT_MS
-        scaleTo(if (hasFocus) Tokens.FOCUS_SCALE else 1f, duration)
+        scaleTo(if (hasFocus) focusScale else 1f, duration)
         ring.animate().alpha(if (hasFocus) 1f else 0f)
             .setDuration(duration).setInterpolator(Tokens.ease).start()
         // The focused card draws above its neighbours: rows reorder drawing, and a Z bump covers
@@ -106,7 +107,7 @@ class Card(
     }
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
-        if (isConfirmKey(keyCode) && hasFocus()) scaleTo(Tokens.FOCUS_SCALE, Tokens.FOCUS_IN_MS)
+        if (isConfirmKey(keyCode) && hasFocus()) scaleTo(focusScale, Tokens.FOCUS_IN_MS)
         return super.onKeyUp(keyCode, event)
     }
 

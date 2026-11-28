@@ -11,6 +11,7 @@ import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -33,12 +34,12 @@ class AppRow(context: Context, entry: IndexEntry) : FrameLayout(context) {
             setColor(Tokens.surface)
         }
     }
-    private val name = IndexText(context, 14f, 500, Tokens.textMuted).apply {
+    private val name = IndexText(context, Type.LABEL, 500, Tokens.textMuted).apply {
         letterSpacing = -0.01f
         maxLines = 1
         ellipsize = TextUtils.TruncateAt.END
     }
-    private val hours = IndexText(context, 8.5f, 500, IndexTokens.hours).apply {
+    private val hours = IndexText(context, Type.CAPTION, 500, IndexTokens.hours).apply {
         fontFeatureSettings = "tnum"
         maxLines = 1
     }

@@ -21,7 +21,7 @@ fun cardRing(context: Context, radiusDp: Float = Tokens.CARD_RADIUS, thin: Boole
         setStroke(context.dp(2), Tokens.glow)
     }
     // The card sits RING_INSET inside these bounds; a thin ring keeps 2dp clear of it.
-    val (strokePx, outside) = if (thin) context.dpf(1.5f).toInt().coerceAtLeast(2) to context.dpf(3.5f) else context.dp(3) to context.dpf(4f)
+    val (strokePx, outside) = if (thin) context.dpf(1.5f).toInt().coerceAtLeast(2) to context.dpf(3.5f) else context.dp(Focus.RING_W) to context.dpf(4f)
     val ring = GradientDrawable().apply {
         cornerRadius = radius + outside
         setStroke(strokePx, Tokens.ring)

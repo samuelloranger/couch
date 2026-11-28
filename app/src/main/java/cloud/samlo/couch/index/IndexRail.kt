@@ -1,5 +1,6 @@
 package cloud.samlo.couch.index
 
+import cloud.samlo.couch.ui.Focus
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
@@ -12,6 +13,7 @@ import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.ui.FlatView
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.appear
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
@@ -94,13 +96,16 @@ class IndexRail(
     private fun item(icon: Int, label: Int, y: Int, active: Boolean, onClick: () -> Unit): LinearLayout {
         val color = if (active) IndexTokens.railActive else IndexTokens.railIdle
         val glyph = ImageView(context).apply { setImageResource(icon); setColorFilter(color) }
-        val text = IndexText(context, 7.5f, 500, color).apply {
+        val text = IndexText(context, Type.CAPTION, 500, color).apply {
             maxLines = 1
             this.text = context.getString(label)
         }
         return object : LinearLayout(context) {
             override fun onFocusChanged(gainFocus: Boolean, direction: Int, previouslyFocusedRect: android.graphics.Rect?) {
                 super.onFocusChanged(gainFocus, direction, previouslyFocusedRect)
+                val scale = if (gainFocus) Tokens.FOCUS_SCALE else 1f
+                animate().scaleX(scale).scaleY(scale)
+                    .setDuration(if (gainFocus) Tokens.FOCUS_IN_MS else Tokens.FOCUS_OUT_MS).setInterpolator(Tokens.ease).start()
                 val c = if (gainFocus || active) IndexTokens.railActive else IndexTokens.railIdle
                 glyph.setColorFilter(c)
                 text.setTextColor(c)
@@ -111,11 +116,7 @@ class IndexRail(
             contentDescription = context.getString(label)
             setOnClickListener { onClick() }
             background = StateListDrawable().apply {
-                addState(intArrayOf(android.R.attr.state_focused), GradientDrawable().apply {
-                    cornerRadius = context.dpf(8f)
-                    setColor(0x1AFFFFFF)
-                    setStroke(context.dp(2), RING)
-                })
+                addState(intArrayOf(android.R.attr.state_focused), Focus.tileRing(context, 8f, 0x1AFFFFFF))
                 addState(intArrayOf(), android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
             }
             // Home marks the screen: it takes focus only while Search is open.
@@ -128,10 +129,5 @@ class IndexRail(
                 topMargin = context.dp(y)
             }
         }
-    }
-
-    private companion object {
-        /** Tokens.ring, a little quieter than on the pills: the rail stands all the time. */
-        val RING = 0x99FFFFFF.toInt()
     }
 }

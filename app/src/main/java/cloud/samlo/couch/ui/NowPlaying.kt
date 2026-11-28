@@ -1,5 +1,6 @@
 package cloud.samlo.couch.ui
 
+import cloud.samlo.couch.index.IndexTokens
 import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
@@ -50,10 +51,10 @@ class NowPlaying(context: Context) : LinearLayout(context) {
         // The title beside it says what plays; the cover adds nothing for a screen reader.
         importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
     }
-    private val title = text(11.5f, 600, Tokens.textPrimary)
-    private val subtitle = text(9f, 400, Tokens.textMuted)
+    private val title = text(Type.LABEL, 600, Tokens.textPrimary)
+    private val subtitle = text(Type.CAPTION, 400, Tokens.textMuted)
     private val progress = ProgressLine(context)
-    private val time = text(8.5f, 400, TIME_TEXT).apply {
+    private val time = text(Type.CAPTION, 400, TIME_TEXT).apply {
         gravity = Gravity.END or Gravity.CENTER_VERTICAL
         fontFeatureSettings = "tnum"
         minimumWidth = context.dp(TIME_W)
@@ -390,4 +391,4 @@ private val TRACK = Color.parseColor("#2C3532")
 private val BAR = Color.parseColor("#C4CCC9")
 private val GLYPH_IDLE = Color.parseColor("#C4CCC9")
 private val GLYPH_FOCUSED = Color.parseColor("#0A0D0C")
-private val TIME_TEXT = Color.parseColor("#7A8481")
+private val TIME_TEXT = IndexTokens.hours

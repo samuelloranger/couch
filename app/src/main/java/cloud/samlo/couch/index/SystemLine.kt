@@ -15,6 +15,7 @@ import cloud.samlo.couch.data.SystemInfo
 import cloud.samlo.couch.data.SystemReading
 import cloud.samlo.couch.ui.Fonts
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import java.util.Locale
 
 /**
@@ -115,7 +116,7 @@ class SystemLine(context: Context) : LinearLayout(context) {
     /** A real minus sign reads better than a hyphen. */
     private fun minus(value: Int) = if (value < 0) "−${-value}" else value.toString()
 
-    private fun item() = IndexText(context, 9f, 500, IndexTokens.footerLabel).apply {
+    private fun item() = IndexText(context, Type.CAPTION, 500, IndexTokens.footerLabel).apply {
         fontFeatureSettings = "tnum"
         maxLines = 1
     }

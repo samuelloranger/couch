@@ -9,6 +9,7 @@ import android.widget.LinearLayout
 import cloud.samlo.couch.R
 import cloud.samlo.couch.data.Usage
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import cloud.samlo.couch.ui.dpf
 
@@ -18,16 +19,16 @@ import cloud.samlo.couch.ui.dpf
  * get them.
  */
 class StatsBar(context: Context) : LinearLayout(context) {
-    private val weekValue = text(16f, 600, Tokens.textPrimary).apply {
+    private val weekValue = text(Type.BODY, 600, Tokens.textPrimary).apply {
         letterSpacing = -0.02f
         fontFeatureSettings = "tnum"
     }
-    private val weekLine = text(9.5f, 400, Tokens.textMuted).apply { ellipsize = TextUtils.TruncateAt.END }
+    private val weekLine = text(Type.CAPTION, 400, Tokens.textMuted).apply { ellipsize = TextUtils.TruncateAt.END }
     private val bars = List(Usage.DAYS) { View(context) }
     private val barFills = List(Usage.DAYS) { GradientDrawable().apply { cornerRadius = context.dpf(2f) } }
-    private val letters = List(Usage.DAYS) { text(8f, 500, Tokens.textMuted) }
+    private val letters = List(Usage.DAYS) { text(Type.CAPTION, 500, Tokens.textMuted) }
     private val figures: LinearLayout
-    private val missing = text(10f, 500, Tokens.textMuted, 1.4f).apply { maxLines = 3 }
+    private val missing = text(Type.LABEL, 500, Tokens.textMuted, 1.4f).apply { maxLines = 3 }
 
     init {
         orientation = VERTICAL

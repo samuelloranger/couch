@@ -1,5 +1,6 @@
 package cloud.samlo.couch.settings
 
+import cloud.samlo.couch.ui.Fonts
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
@@ -33,6 +34,7 @@ import cloud.samlo.couch.phone.Phones
 import cloud.samlo.couch.ui.Card
 import cloud.samlo.couch.ui.Popover
 import cloud.samlo.couch.ui.Tokens
+import cloud.samlo.couch.ui.Type
 import cloud.samlo.couch.ui.dp
 import org.json.JSONObject
 import java.util.UUID
@@ -61,7 +63,7 @@ class WallpaperGalleryActivity : Activity() {
         Tokens.applyAccent(Config.load(files.dir).accent)
         grid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; clipChildren = false }
         hint = TextView(this).apply {
-            setText(R.string.gallery_help); textSize = 15f; setTextColor(Tokens.textMuted)
+            setText(R.string.gallery_help); textSize = Type.LABEL; typeface = Fonts.hanken(this@WallpaperGalleryActivity, 500); setTextColor(Tokens.textMuted)
             setPadding(0, dp(8), 0, dp(16))
         }
         val root = LinearLayout(this).apply {
@@ -69,7 +71,7 @@ class WallpaperGalleryActivity : Activity() {
             setBackgroundColor(0xFF0B0F0E.toInt())
             setPadding(dp(Tokens.OVERSCAN_H), dp(Tokens.OVERSCAN_V), dp(Tokens.OVERSCAN_H), 0)
             addView(TextView(this@WallpaperGalleryActivity).apply {
-                setText(R.string.gallery_title); textSize = 28f; setTextColor(Tokens.textPrimary)
+                setText(R.string.gallery_title); textSize = Type.TITLE; typeface = Fonts.hanken(this@WallpaperGalleryActivity, 600); setTextColor(Tokens.textPrimary)
             })
             addView(LinearLayout(this@WallpaperGalleryActivity).apply {
                 addView(action(R.string.gallery_add) { pick() })
@@ -104,7 +106,7 @@ class WallpaperGalleryActivity : Activity() {
     }
 
     private fun action(label: Int, click: () -> Unit) = Button(this).apply {
-        setText(label); textSize = 15f; isAllCaps = false; setOnClickListener { click() }
+        setText(label); textSize = Type.LABEL; typeface = Fonts.hanken(this@WallpaperGalleryActivity, 500); isAllCaps = false; setOnClickListener { click() }
     }
 
     /** Ambient mode takes the whole folder, so this picks the source, as the toolbar's button does. */
@@ -171,7 +173,7 @@ class WallpaperGalleryActivity : Activity() {
             scaleType = ImageView.ScaleType.FIT_CENTER
             contentDescription = entry.file.name
         }
-        val name = IndexText(this, 11.5f, 500, Tokens.textMuted).apply { text = entry.file.name }
+        val name = IndexText(this, Type.CAPTION, 500, Tokens.textMuted).apply { text = entry.file.name }
         val overlay = FrameLayout(this).apply {
             setBackgroundColor(Color.BLACK)
             isFocusable = true
