@@ -15,10 +15,10 @@ import cloud.samlo.couch.ui.dpf
 
 /**
  * The week under the channel row: its total as one figure, a line saying when the app was last
- * opened, and a bar per day with today in the accent. Without usage access, one line says how to
- * get them.
+ * opened, and a bar per day with today in the accent. Without usage access, a button asks for it in
+ * Android's own screen, with a line on what it is for.
  */
-class StatsBar(context: Context) : LinearLayout(context) {
+class StatsBar(context: Context, onAllowUsage: () -> Unit) : LinearLayout(context) {
     private val weekValue = text(Type.BODY, 600, Tokens.textPrimary).apply {
         letterSpacing = -0.02f
         fontFeatureSettings = "tnum"
@@ -28,7 +28,21 @@ class StatsBar(context: Context) : LinearLayout(context) {
     private val barFills = List(Usage.DAYS) { GradientDrawable().apply { cornerRadius = context.dpf(2f) } }
     private val letters = List(Usage.DAYS) { text(Type.CAPTION, 500, Tokens.textMuted) }
     private val figures: LinearLayout
-    private val missing = text(Type.LABEL, 500, Tokens.textMuted, 1.4f).apply { maxLines = 3 }
+    /** Asks for usage access; focusable, reached with Down from the cards. */
+    val allow = ActionButton(context, filled = false).sizedFor(ALLOW_W).apply {
+        text = context.getString(R.string.index_allow_usage)
+        setOnClickListener { onAllowUsage() }
+    }
+    private val why = text(Type.CAPTION, 400, IndexTokens.hours, 1f).apply {
+        text = context.getString(R.string.index_allow_usage_why)
+        ellipsize = TextUtils.TruncateAt.END
+    }
+    private val missing = LinearLayout(context).apply {
+        orientation = HORIZONTAL
+        gravity = Gravity.CENTER_VERTICAL
+        addView(allow, LayoutParams(context.dp(ALLOW_W), context.dp(ALLOW_H)))
+        addView(why, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f).apply { marginStart = context.dp(12) })
+    }
 
     init {
         orientation = VERTICAL
@@ -44,14 +58,19 @@ class StatsBar(context: Context) : LinearLayout(context) {
             addView(chart(), LayoutParams(LayoutParams.WRAP_CONTENT, context.dp(BAR_MAX + LETTER_ROW)))
         }
         addView(figures, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
-        missing.text = context.getString(R.string.index_no_usage)
-        addView(missing, missing.stack(LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT)))
+        addView(missing, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
     }
+
+    /** Where Down from the cards lands here: the request for usage access, while it is showing. */
+    fun entry(): View? = allow.takeIf { visibility == VISIBLE && missing.visibility == VISIBLE }
 
     fun show(entry: IndexEntry, usageKnown: Boolean, now: Long, clock24h: Boolean) {
         figures.visibility = if (usageKnown) VISIBLE else GONE
         missing.visibility = if (usageKnown) GONE else VISIBLE
-        if (!usageKnown) return
+        if (!usageKnown) {
+            allow.restyle()
+            return
+        }
         val usage = entry.usage
         val opens = usage?.opens ?: 0
         // A week without use is a real zero, not a missing value: a dash this size reads as loading.
@@ -100,6 +119,8 @@ class StatsBar(context: Context) : LinearLayout(context) {
         IndexText(context, sizeSp, weight, color, lineHeight).apply { maxLines = 1 }
 
     private companion object {
+        const val ALLOW_W = 176
+        const val ALLOW_H = 32
         const val BAR_W = 12
         const val BAR_GAP = 5
         const val BAR_MAX = 30

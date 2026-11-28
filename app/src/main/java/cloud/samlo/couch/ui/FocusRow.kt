@@ -113,6 +113,9 @@ class FocusRow(context: Context) : HorizontalScrollView(context) {
         strip.translationX = 0f
     }
 
+    /** The card focused last time, or the one now at its position if it's gone; null for an empty row. */
+    fun current(): Card? = remembered() as? Card
+
     /** The card focused last time, or the one now at its position if it's gone. */
     private fun remembered(): View? {
         if (strip.childCount == 0) return null

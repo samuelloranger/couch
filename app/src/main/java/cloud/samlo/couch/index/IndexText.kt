@@ -17,7 +17,7 @@ import kotlin.math.roundToInt
  * margins with [stack].
  */
 @SuppressLint("ViewConstructor")
-class IndexText(context: Context, sizeSp: Float, weight: Int, color: Int, lineHeight: Float = 1f) : TextView(context) {
+open class IndexText(context: Context, sizeSp: Float, weight: Int, color: Int, lineHeight: Float = 1f) : TextView(context) {
     /** Pixels this view stands taller than the design's line box, at its top and again at its bottom. */
     val inset: Int
 
