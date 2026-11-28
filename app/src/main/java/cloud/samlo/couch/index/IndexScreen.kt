@@ -63,9 +63,9 @@ class IndexScreen(
     private val onMoved: (List<String>, String, Int) -> Unit,
 ) : FrameLayout(activity) {
     val topBar = IndexTopBar(activity, onUpdate)
-    private val rail = IndexRail(activity, { openSearch() }, { pickInput() }, onSettings, { closeSearch() })
+    private val rail = IndexRail(activity, { openSearch() }, { pickInput() }, onSettings, { if (searchOpen) closeSearch() else returnTarget()?.requestFocus() })
     private val list = AppList(activity) { entry -> row(entry) }
-    private val search = SearchPanel(activity, images, { from -> toRail(from)?.requestFocus() }, { entry, program -> preview(entry, program) }, { openFolder(it) })
+    private val search = SearchPanel(activity, images, { toRail().requestFocus() }, { entry, program -> preview(entry, program) }, { columnShown(false) }, { openFolder(it) })
     private val spotlight = Spotlight(activity)
     private val programs = FocusRow(activity).apply {
         gapDp = IndexTokens.CARD_GAP
@@ -137,7 +137,7 @@ class IndexScreen(
         // layer here covers the screen: each full-screen layer costs the TV's GPU.
         place(rail, 0, 0, IndexTokens.RAIL_W, LayoutParams.MATCH_PARENT)
         // Focus in the rail quietens the list's selection, as focus in the channel row does.
-        listOf(rail.search, rail.inputs, rail.settings).forEach { item ->
+        listOf(rail.search, rail.home, rail.inputs, rail.settings).forEach { item ->
             item.setOnFocusChangeListener { _, has -> if (has) selectedRow()?.let { list.select(it, inRow = true) } }
         }
         place(list, IndexTokens.LIST_X, IndexTokens.LIST_Y, IndexTokens.LIST_W, IndexTokens.LIST_H)
@@ -308,6 +308,7 @@ class IndexScreen(
         if (!searchOpen) return
         searchOpen = false
         search.close()
+        columnShown(true)
         rail.setSearch(false)
         list.animate().cancel()
         list.visibility = VISIBLE
@@ -506,11 +507,21 @@ class IndexScreen(
 
     /** A search result has focus: the right column shows its app, and its program when it has one. */
     private fun preview(entry: IndexEntry, program: Tile?) {
+        columnShown(true)
         selectedKey = entry.key
         list.rows().firstOrNull { it.entry.key == entry.key }?.let { list.select(it, inRow = false) }
         // The result is already picked: its cards come at once rather than after the row's settle.
         show(entry, deferStrip = false)
         if (program != null) showProgram(entry, program)
+    }
+
+    /**
+     * The right column's content shows only for a chosen app: while Search's field, mic or letter
+     * strip has focus nothing is chosen, and another app's channel would read as a result.
+     */
+    private fun columnShown(shown: Boolean) {
+        val a = if (shown) 1f else 0f
+        listOf(spotlight, programs, banner, stats, folderGrid).forEach { it.alpha = a }
     }
 
     /** A folder found by search: the list comes back with it selected, and focus moves into its tiles. */
@@ -555,7 +566,7 @@ class IndexScreen(
                 when (direction) {
                     FOCUS_UP -> rows.getOrNull(i - 1) ?: homeRow.takeIf { homeLayout }?.entry() ?: firstTopTarget() ?: focused
                     FOCUS_DOWN -> rows.getOrNull(i + 1) ?: focused
-                    FOCUS_LEFT -> toRail(focused)
+                    FOCUS_LEFT -> toRail()
                     FOCUS_RIGHT -> if (focused.entry.isFolder) {
                         // Right enters the folder's grid, which the column filled with the row.
                         folderGrid.first() ?: focused
@@ -596,7 +607,7 @@ class IndexScreen(
             }
             inHome -> when (direction) {
                 FOCUS_DOWN -> target ?: focused
-                FOCUS_LEFT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: toRail(focused)
+                FOCUS_LEFT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: toRail()
                 FOCUS_RIGHT -> super.focusSearch(focused, direction)?.takeIf { homeRow.isAncestorOf(it) } ?: firstTopTarget() ?: focused
                 else -> focused
             }
@@ -620,11 +631,8 @@ class IndexScreen(
     private fun firstTopTarget(): View? = listOf<View>(topBar.inputOffer, topBar.update)
         .firstOrNull { it.visibility == VISIBLE && it.isFocusable }
 
-    /** The rail item level with [from]'s middle. */
-    private fun toRail(from: View): View? {
-        val at = IntArray(2).also { from.getLocationOnScreen(it) }
-        return rail.nearest(at[1] + from.height / 2)
-    }
+    /** Left from the list or the panel lands on the rail's current item, whatever row it left from. */
+    private fun toRail(): View = rail.current()
 
     private fun View.isAncestorOf(view: View): Boolean {
         var p: View? = view
